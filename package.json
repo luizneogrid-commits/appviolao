@@ -1,0 +1,32 @@
+{
+  "name": "violao-diario",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Violão Diário: o mesmo index.html publicado como site (PWA) e como app nativo Android e iOS via Capacitor.",
+  "scripts": {
+    "build": "node scripts/build-www.mjs",
+    "icons": "node scripts/make-icons.mjs",
+    "sync": "npm run build && cap sync",
+    "android": "npm run sync && cap open android",
+    "ios": "npm run sync && cap open ios",
+    "apk": "npm run sync && node scripts/android-build.mjs debug",
+    "apk:release": "npm run sync && node scripts/android-build.mjs release",
+    "aab": "npm run sync && node scripts/android-build.mjs bundle",
+    "chave": "node scripts/criar-chave.mjs"
+  },
+  "dependencies": {
+    "@capacitor-community/keep-awake": "^8.0.1",
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/haptics": "^8.0.2",
+    "@capacitor/ios": "^8.5.2",
+    "@capacitor/preferences": "^8.0.1",
+    "@capacitor/splash-screen": "^8.0.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.2",
+    "@fontsource-variable/archivo": "^5.3.0",
+    "@resvg/resvg-js": "^2.6.2"
+  }
+}

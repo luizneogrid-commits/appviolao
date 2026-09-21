@@ -1,0 +1,7 @@
+* text=auto
+# o gradlew roda no Linux do GitHub Actions: precisa de fim de linha LF
+android/gradlew text eol=lf
+*.bat text eol=crlf
+*.png binary
+*.woff2 binary
+*.jar binary

@@ -1,0 +1,19 @@
+{
+  "name": "Violão Diário",
+  "short_name": "Violão",
+  "description": "Treino diário de violão: plano por nível, metrônomo, afinador, batidas para tocar junto, acordes e notas.",
+  "lang": "pt-BR",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F2EEF0",
+  "theme_color": "#7A2E4D",
+  "categories": ["music", "education"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

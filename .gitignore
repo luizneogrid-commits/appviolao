@@ -1,0 +1,9 @@
+# dependências e arquivos gerados
+node_modules/
+www/
+dist/
+
+# chave de assinatura das lojas: nunca publicar
+android/keystore.properties
+*.jks
+*.keystore

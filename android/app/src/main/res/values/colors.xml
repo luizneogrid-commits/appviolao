@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Cor da tela de abertura: a mesma do ícone -->
+    <color name="splash_background">#7A2E4D</color>
+</resources>

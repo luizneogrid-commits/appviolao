@@ -1,0 +1,100 @@
+# Gera o APK do Violão Diário na nuvem a cada envio para a branch main
+# (ou pelo botão "Run workflow", na aba Actions do GitHub).
+# O APK fica anexado ao Release da versão (vX.Y.Z, o <meta name="app-version"> do index.html), com um link fixo:
+#   https://github.com/<dono>/<repositório>/releases/latest/download/violao-diario.apk
+# Sem os Secrets da chave do app (veja o README), sai um APK de teste com assinatura temporária.
+name: App Android
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['**.md']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: app-android
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Chave de assinatura do app
+        if: env.KEYSTORE_BASE64 != ''
+        env:
+          STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 --decode > android/upload.jks
+          printf 'storeFile=upload.jks\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' "$STORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD" > android/keystore.properties
+
+      - name: Gerar o app
+        id: build
+        run: |
+          chmod +x android/gradlew
+          VERSION=$(grep -oP '<meta name="app-version" content="\K[^"]+' index.html)
+          if [ -f android/keystore.properties ]; then
+            npm run apk:release
+            npm run aab
+            cp "dist/violao-diario-$VERSION.apk" violao-diario.apk
+            cp "dist/violao-diario-$VERSION.aab" violao-diario.aab
+            echo "signed=true" >> "$GITHUB_OUTPUT"
+          else
+            npm run apk
+            cp "dist/violao-diario-$VERSION-teste.apk" violao-diario.apk
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: violao-diario-${{ steps.build.outputs.version }}
+          path: dist/
+
+      - name: Publicar no Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.build.outputs.version }}
+          SIGNED: ${{ steps.build.outputs.signed }}
+        run: |
+          TAG="v$VERSION"
+          FILES="violao-diario.apk"
+          if [ "$SIGNED" = "true" ]; then
+            FILES="$FILES violao-diario.aab"
+            NOTES="Assinado com a chave do app: instala por cima da versão anterior, sem perder o progresso. O arquivo .aab é o que se envia para a Play Store."
+          else
+            NOTES="APK de teste, com assinatura temporária: para instalar uma compilação nova é preciso desinstalar a anterior, e o progresso se perde. Crie a chave do app (README, parte \"Chave do app\") para as próximas atualizações instalarem por cima."
+          fi
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            gh release upload "$TAG" $FILES --clobber
+            gh release edit "$TAG" --notes "$NOTES"
+          else
+            gh release create "$TAG" $FILES --title "Violão Diário $VERSION" --notes "$NOTES" --target "$GITHUB_SHA"
+          fi
+          LINK="https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/violao-diario.apk"
+          echo "### Violão Diário $VERSION" >> "$GITHUB_STEP_SUMMARY"
+          echo "APK: $LINK" >> "$GITHUB_STEP_SUMMARY"
+          echo "Assinado com a chave do app: $SIGNED" >> "$GITHUB_STEP_SUMMARY"
