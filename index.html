@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Violão Diário</title>
-<meta name="app-version" content="1.0.1">
+<meta name="app-version" content="1.1.0">
 <meta name="description" content="Treino diário de violão: plano por nível, metrônomo, afinador, batidas para tocar junto, acordes e notas.">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#F2EEF0" media="(prefers-color-scheme: light)">
@@ -88,6 +88,7 @@ h3{font-weight:700;font-size:1.02rem;line-height:1.25}
 .seg{display:flex;background:var(--surface-2);border:1px solid var(--line);border-radius:999px;padding:4px;gap:2px;margin-bottom:16px}
 .seg button{flex:1;border:0;background:none;min-height:42px;padding:0 6px;border-radius:999px;font-weight:650;font-size:.92rem;color:var(--muted)}
 .seg button[aria-pressed="true"]{background:var(--primary);color:var(--on-primary)}
+.seg.tight button{padding:0 2px;font-stretch:86%;line-height:1.15}
 
 /* week neck */
 .neck{margin:0 -4px 18px}
@@ -259,6 +260,22 @@ select{min-height:46px;border-radius:12px;border:1.5px solid var(--line);backgro
 .song:first-child{border-top:0}
 .song .cif{color:var(--muted);font-weight:600;margin-top:2px;word-break:break-word}
 
+/* meu treino */
+.seq{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 4px;min-height:42px;align-items:center}
+.chip.on{border-color:var(--primary);background:var(--primary);color:var(--on-primary)}
+.btn:disabled,.chip:disabled{opacity:.45;cursor:default}
+.grp{font-size:.8rem;font-weight:700;color:var(--muted);margin:16px 0 8px}
+.cmini{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px}
+.cmini .chord{border:0;background:none;padding:0;text-align:center;border-radius:12px}
+.cmini strong{font-stretch:75%;font-size:1.1rem}
+.patprev{margin-top:14px}
+.patprev>b{display:block;font-size:.9rem;margin-bottom:6px}
+.ct .acts{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center}
+.cs-pair{margin-top:14px}
+.cs-pair .chord{border-radius:14px;padding:8px 8px 2px}
+.cs-pair .chord:first-child{background:var(--primary-soft)}
+.cs-pair .chord>span{display:block}
+
 /* onboarding */
 .choice{display:block;width:100%;text-align:left;border:1.5px solid var(--line);background:var(--surface);border-radius:16px;padding:14px 16px;min-height:56px}
 .choice[aria-pressed="true"]{border-color:var(--primary);background:var(--primary-soft)}
@@ -302,12 +319,13 @@ const buzz=ms=>{if(NATIVE){if(ms<30)native('Haptics','impact',{style:'LIGHT'});e
 
 /* ---------- state ---------- */
 const KEY='violao-diario-v1';
-const DEF={v:1,onboarded:false,level:1,goal:15,skills:{},days:{},changes:{},chords:{},songs:[],ear:{ok:0,total:0},maxBpm:0,bpm:70,beats:4,altOut:false,installDismissed:false};
+const DEF={v:1,onboarded:false,level:1,goal:15,skills:{},days:{},changes:{},chords:{},songs:[],custom:[],ear:{ok:0,total:0},maxBpm:0,bpm:70,beats:4,altOut:false,installDismissed:false};
 let S,hadLocal=false;
 function adopt(o){
   S=Object.assign(JSON.parse(JSON.stringify(DEF)),o&&typeof o==='object'?o:{});
   ['skills','days','changes','chords'].forEach(k=>{if(!S[k]||typeof S[k]!=='object')S[k]={};});
   if(!Array.isArray(S.songs))S.songs=[];
+  S.custom=Array.isArray(S.custom)?S.custom.filter(t=>t&&typeof t==='object'&&Array.isArray(t.chords)&&Array.isArray(t.pats)):[];
   if(!S.ear||typeof S.ear!=='object')S.ear={ok:0,total:0};
 }
 adopt(null);
@@ -547,29 +565,116 @@ function mPaint(){
 }
 
 /* ---------- batidas: tocar junto ---------- */
-const GR={on:false,pid:'baixo',bpm:60,prog:null,click:true,next:0,step:0,timer:null};
-function grStart(){
+// O motor toca uma configuração {pid,bpm,prog,click,guitar}: a da aba Batidas (BAT) ou a de um treino montado pela pessoa (CS.cfg).
+const BAT={pid:'baixo',bpm:60,prog:null,click:true,touched:false};
+const GR={on:false,cfg:BAT,onBar:null,run:0,next:0,step:0,timer:null};
+function grStart(cfg,onBar){
   const ac=audio();if(!ac)return;if(M.on)mStop();
-  GR.on=true;GR.step=-PAT[GR.pid].cells.length;GR.next=ac.currentTime+.12;GR.timer=setInterval(grSched,25);render();
+  GR.cfg=cfg||BAT;GR.onBar=onBar||null;GR.run++;
+  GR.on=true;GR.step=-PAT[GR.cfg.pid].cells.length;GR.next=ac.currentTime+.12;GR.timer=setInterval(grSched,25);render();
 }
 function grStop(quiet){if(!GR.on)return;GR.on=false;clearInterval(GR.timer);if(AC)dampAll(AC.currentTime+.05);if(!quiet)render();}
 function grSched(){
   if(!GR.on||!AC)return;
-  while(GR.next<AC.currentTime+.15){grStep(GR.step,GR.next);GR.next+=30/GR.bpm;GR.step++;}
+  while(GR.next<AC.currentTime+.15){grStep(GR.step,GR.next);GR.next+=30/GR.cfg.bpm;GR.step++;}
 }
 function grStep(step,t){
-  const P=PAT[GR.pid],n=P.cells.length,dur=30/GR.bpm,later=fn=>setTimeout(()=>{if(GR.on)fn();},Math.max(0,(t-AC.currentTime)*1000));
+  const G=GR.cfg,run=GR.run,onBar=GR.onBar,P=PAT[G.pid],n=P.cells.length,dur=30/G.bpm,later=fn=>setTimeout(()=>{if(GR.on&&GR.run===run)fn();},Math.max(0,(t-AC.currentTime)*1000));
   if(step<0){const i=step+n;if(i%2===0){tick(t,i===0?2:0,.9);later(()=>{const s=$('#gr-status');if(s)s.textContent='Contagem: '+(i/2+1);});}return;}
-  const bar=Math.floor(step/n),i=step%n,ci=bar%GR.prog.length,c=CH[GR.prog[ci]],cell=P.cells[i];
+  const bar=Math.floor(step/n),i=step%n,ci=bar%G.prog.length,c=CH[G.prog[ci]],cell=P.cells[i];
   const played=[];c.f.forEach((f,si)=>{if(f>=0)played.push(si);});const m=si=>OPEN[si]+c.f[si];
-  if(GR.click&&i%2===0)tick(t,i===0?2:0,.35);
-  if(cell==='↓'){played.forEach((si,k)=>pluckAt(m(si),t+k*.016,i===0?.36:.3,si));if(P.stac)dampAll(t+dur*.8);}
-  else if(cell==='↑'){played.slice(-4).reverse().forEach((si,k)=>pluckAt(m(si),t+k*.012,.22,si));}
-  else if(cell==='x')slapAt(t);
-  else if(cell==='B'||cell==='P'){const si=played[(cell==='B'&&i>0&&played.length>1)?1:0];pluckAt(m(si),t,.55,si);}
-  else if(cell==='I'||cell==='M'||cell==='A'){const si={I:3,M:4,A:5}[cell];if(c.f[si]>=0)pluckAt(m(si),t,.42,si);}
+  if(G.click&&i%2===0)tick(t,i===0?2:0,.35);
+  if(G.guitar!==false){
+    if(cell==='↓'){played.forEach((si,k)=>pluckAt(m(si),t+k*.016,i===0?.36:.3,si));if(P.stac)dampAll(t+dur*.8);}
+    else if(cell==='↑'){played.slice(-4).reverse().forEach((si,k)=>pluckAt(m(si),t+k*.012,.22,si));}
+    else if(cell==='x')slapAt(t);
+    else if(cell==='B'||cell==='P'){const si=played[(cell==='B'&&i>0&&played.length>1)?1:0];pluckAt(m(si),t,.55,si);}
+    else if(cell==='I'||cell==='M'||cell==='A'){const si={I:3,M:4,A:5}[cell];if(c.f[si]>=0)pluckAt(m(si),t,.42,si);}
+  }
   later(()=>{document.querySelectorAll('#gr-grid>div').forEach((el,k)=>el.classList.toggle('now',k===i));
-    if(i===0){document.querySelectorAll('#gr-prog>span').forEach((el,k)=>el.classList.toggle('now',k===ci));const s=$('#gr-status');if(s)s.textContent='Tocando '+GR.prog[ci]+'. Entre quando se sentir pronto.';}});
+    if(i===0){document.querySelectorAll('#gr-prog>span').forEach((el,k)=>el.classList.toggle('now',k===ci));const s=$('#gr-status');if(s)s.textContent='Tocando '+G.prog[ci]+'. Entre quando se sentir pronto.';if(onBar)onBar(ci);}});
+}
+
+/* ---------- meu treino: acordes e batidas escolhidos pela pessoa ---------- */
+// CE: treino sendo montado ou editado. CS: treino tocando ou pausado, com o tempo que falta.
+const CT_MAX=8,CT_MINS=[5,10,15,20,30];
+let CE=null,CS=null,ceDelArmed=false;
+const ctName=t=>t.name||t.chords.join(' ');
+const chordBox=c=>'<strong>'+esc(c)+'</strong>'+chordSVG(c);
+function ctClean(t){return {id:t.id,name:String(t.name||'').slice(0,40),chords:t.chords.filter(c=>CH[c]).slice(0,CT_MAX),pats:t.pats.filter(p=>PAT[p]),bpm:Math.max(40,Math.min(160,Math.round(+t.bpm)||70)),min:CT_MINS.includes(+t.min)?+t.min:10};}
+function ceNew(){CE={id:null,name:'',chords:[],pats:[],bpm:LEVELS[S.level-1].bpm,min:10};ceDelArmed=false;}
+function ceSave(){
+  const t=ctClean(Object.assign({},CE,{id:CE.id||'t'+Date.now().toString(36),name:CE.name.trim()}));
+  const i=S.custom.findIndex(x=>x.id===t.id);if(i>=0)S.custom[i]=t;else S.custom.push(t);
+  save();CE=null;ceDelArmed=false;return t;
+}
+function csStart(t){
+  if(!t)return;t=ctClean(t);if(!t.chords.length||!t.pats.length)return;
+  if(CS&&!CS.done)csCredit(); // outro treino estava pausado: o tempo já tocado não se perde
+  CS={t,pi:0,seg:0,ci:0,total:t.min*60,left:t.min*60,last:0,done:null,cfg:{pid:t.pats[0],bpm:t.bpm,prog:t.chords,click:true,guitar:true}};
+  sub.treinar='meu';if(view!=='treinar')go('treinar');
+  csPlay();window.scrollTo(0,0);
+}
+const csOn=()=>!!(CS&&GR.on&&GR.cfg===CS.cfg);
+function csPlay(){if(!CS||CS.done)return;CS.last=Date.now();grStart(CS.cfg,csBar);}
+function csBar(ci){CS.ci=ci;const p=CS.cfg.prog,a=$('#cs-now'),b=$('#cs-next');if(a)a.innerHTML=chordBox(p[ci]);if(b)b.innerHTML=chordBox(p[(ci+1)%p.length]);}
+function csNextPat(){
+  const n=CS.t.pats.length;if(n<2)return;CS.pi=(CS.pi+1)%n;CS.cfg.pid=CS.t.pats[CS.pi];CS.ci=0;
+  if(csOn()){grStop(true);csPlay();}else render(); // recomeça com um compasso de contagem na batida nova
+}
+function csCredit(){const min=Math.round((CS.total-Math.max(0,CS.left))/60);if(min>0)addMinutes(min);return min;}
+function csFinish(){
+  if(csOn())grStop(true);
+  CS.done={min:csCredit(),full:CS.left<=0};
+  strum(chordMidis(CS.t.chords[0]));buzz(120);render();
+}
+function csTick(now){ // o tempo só corre enquanto o treino está tocando
+  if(!csOn())return;
+  CS.left-=(now-CS.last)/1000;CS.last=now;
+  const el=$('#cs-time');if(el){el.textContent=mmss(CS.left);const b=$('#cs-bar');if(b)b.style.width=Math.max(0,CS.left/CS.total*100)+'%';}
+  if(CS.left<=0){csFinish();return;}
+  const seg=Math.floor((CS.total-CS.left)/(CS.total/CS.t.pats.length)); // o tempo é dividido igualmente entre as batidas
+  if(seg>CS.seg){CS.seg=seg;csNextPat();}
+}
+
+function ctView(){
+  if(CS)return CS.done?ctDone():ctRun();
+  if(!CE&&!S.custom.length)ceNew();
+  return CE?ctBuilder():ctList();
+}
+function ctList(){
+  return '<section class="panel ct"><h2>Seus treinos</h2><div style="margin-top:4px">'+S.custom.map(t=>{t=ctClean(t);
+    return '<div class="song"><div class="between"><h3>'+esc(ctName(t))+'</h3><span class="muted small">'+t.min+' min</span></div>'+(t.name?'<p class="cif">'+esc(t.chords.join(' '))+'</p>':'')+'<p class="muted small">'+esc(t.pats.map(p=>PAT[p].name).join(', '))+', '+t.bpm+' BPM</p><div class="acts"><button class="btn sm" data-act="cs-start" data-id="'+esc(t.id)+'">Começar</button><button class="link" data-act="ce-edit" data-id="'+esc(t.id)+'">Editar</button></div></div>';}).join('')+
+    '</div></section><button class="btn block quiet" style="margin-top:14px" data-act="ce-new">Montar outro treino</button>';
+}
+function ctBuilder(){
+  const e=CE,full=e.chords.length>=CT_MAX,ok=e.chords.length>0&&e.pats.length>0,uniq=[...new Set(e.chords)];
+  let h='<section class="panel ct"><h2>'+(e.id?'Editar treino':'Monte seu treino')+'</h2><p class="sub">Escolha os acordes e as batidas. O app toca junto, um acorde por compasso, e o tempo entra na sua sequência de dias.</p>'+(e.chords.length||e.pats.length?'':'<button class="link" data-act="ce-suggest">Começar pela sugestão do seu nível</button>')+'</section>';
+  h+='<section class="panel ct"><div class="between"><h2>1. Acordes</h2><span class="muted small">'+e.chords.length+' de '+CT_MAX+'</span></div><p class="sub small">Toque na ordem em que quer tocar; pode repetir. Para tirar, toque no acorde da sequência.</p>';
+  h+='<div class="seq">'+(e.chords.length?e.chords.map((c,i)=>'<button class="chip on" data-act="ce-del" data-i="'+i+'" aria-label="Tirar '+esc(c)+', posição '+(i+1)+'">'+esc(c)+' <span aria-hidden="true">×</span></button>').join(''):'<span class="muted small">Nenhum acorde ainda.</span>')+'</div>';
+  [['abertos','Abertos'],['setima','Com sétima'],['pestana','Pestana']].forEach(g=>{h+='<p class="grp">'+g[1]+'</p><div class="chips">'+CHORDS.filter(c=>c.g===g[0]).map(c=>'<button class="chip" data-act="ce-add" data-c="'+esc(c.n)+'"'+(full?' disabled':'')+'>'+esc(c.n)+'</button>').join('')+'</div>';});
+  if(uniq.length)h+='<div class="cmini">'+uniq.map(c=>'<button class="chord" data-act="chord-play" data-c="'+esc(c)+'" aria-label="Ouvir '+esc(c)+'">'+chordBox(c)+'</button>').join('')+'</div><p class="muted small" style="margin-top:6px">Toque num diagrama para ouvir o acorde.</p>';
+  h+='</section>';
+  h+='<section class="panel ct"><h2>2. Batidas</h2><p class="sub small">Escolha uma ou mais. O tempo do treino é dividido entre elas, na ordem em que você escolher.</p><div class="chips" style="margin-top:12px">'+PATTERNS.map(p=>{const k=e.pats.indexOf(p.id);return '<button class="chip" data-act="ce-pat" data-v="'+p.id+'" aria-pressed="'+(k>=0)+'">'+(k>=0?(k+1)+'. ':'')+esc(p.name)+'</button>';}).join('')+'</div>'+e.pats.map(id=>'<div class="patprev"><b>'+esc(PAT[id].name)+'</b>'+rhythmHTML(PAT[id])+'</div>').join('')+'</section>';
+  h+='<section class="panel ct"><h2>3. Andamento e duração</h2><div class="bpmrow"><button data-act="ce-bpm" data-d="-4" aria-label="Mais devagar">−</button><div style="text-align:center"><span class="num">'+e.bpm+'</span> <span class="muted small">BPM</span><div class="muted small">'+tempoName(e.bpm)+'</div></div><button data-act="ce-bpm" data-d="4" aria-label="Mais rápido">+</button></div><div class="row" style="margin-top:16px">'+CT_MINS.map(m=>'<button class="chip" data-act="ce-min" data-v="'+m+'" aria-pressed="'+(e.min===m)+'">'+m+' min</button>').join('')+'</div><input class="inp" id="ce-name" maxlength="40" placeholder="Nome do treino (opcional)" aria-label="Nome do treino" value="'+esc(e.name)+'" style="margin-top:16px"></section>';
+  h+='<div class="stack" style="margin-top:14px"><button class="btn block" data-act="ce-start"'+(ok?'':' disabled')+'>Começar treino</button><button class="btn block line" data-act="ce-save"'+(ok?'':' disabled')+'>Salvar para depois</button>'+(ok?'':'<p class="muted small" style="text-align:center">Escolha pelo menos um acorde e uma batida.</p>')+(S.custom.length?'<button class="btn block line" data-act="ce-cancel">Voltar sem salvar</button>':'')+(e.id?'<button class="btn block danger" data-act="ce-remove">'+(ceDelArmed?'Toque de novo para apagar':'Apagar este treino')+'</button>':'')+'</div>';
+  return h;
+}
+function ctRun(){
+  const s=CS,G=s.cfg,P=PAT[G.pid],n=s.t.pats.length,on=csOn(),p=G.prog,ci=s.ci%p.length;
+  let h='<section class="panel ct"><div class="between"><h2>'+esc(ctName(s.t))+'</h2><span class="num" style="font-size:1.8rem" id="cs-time">'+mmss(s.left)+'</span></div><div class="bar" style="margin:10px 0 12px"><i id="cs-bar" style="width:'+Math.max(0,s.left/s.total*100)+'%"></i></div>';
+  h+='<h3>'+(n>1?'Batida '+(s.pi+1)+' de '+n+': ':'')+esc(P.name)+'</h3><p class="sub small">'+esc(P.tip)+'</p><div style="margin-top:12px">'+rhythmHTML(P,'gr-grid')+'</div>';
+  h+='<div class="progrow" id="gr-prog">'+p.map((c,k)=>'<span'+(on&&k===ci?' class="now"':'')+'>'+esc(c)+'</span>').join('')+'</div>';
+  h+='<div class="pair cs-pair"><div class="chord"><span class="muted small">Agora</span><div id="cs-now">'+chordBox(p[ci])+'</div></div><div class="chord"><span class="muted small">Depois</span><div id="cs-next">'+chordBox(p[(ci+1)%p.length])+'</div></div></div>';
+  h+='<div class="bpmrow"><button data-act="cs-bpm" data-d="-4" aria-label="Mais devagar">−</button><div style="text-align:center"><span class="num" id="cs-bpm">'+G.bpm+'</span> <span class="muted small">BPM</span></div><button data-act="cs-bpm" data-d="4" aria-label="Mais rápido">+</button></div>';
+  h+='<p class="sub small" id="gr-status" style="margin:14px 0 10px;min-height:1.4em" aria-live="polite">'+(on?(GR.step<0?'Contagem':'Tocando '+esc(p[ci])+'.'):'Pausado. O tempo só corre enquanto o treino toca.')+'</p>';
+  h+='<div class="stack"><button class="btn block" data-act="cs-toggle">'+(on?'Pausar':'Continuar')+'</button>'+(n>1?'<button class="btn block line" data-act="cs-nextpat">Próxima batida</button>':'')+'</div>';
+  h+='<div class="between" style="margin-top:18px"><span>Violão do app</span><button class="chip" data-act="cs-guitar" aria-pressed="'+(G.guitar!==false)+'">'+(G.guitar!==false?'Ligado':'Desligado')+'</button></div><div class="between" style="margin-top:10px"><span>Clique do metrônomo</span><button class="chip" data-act="cs-click" aria-pressed="'+G.click+'">'+(G.click?'Ligado':'Desligado')+'</button></div><p class="muted small" style="margin-top:8px">Quando já souber a batida, desligue o violão do app e toque só com o clique.</p>';
+  return h+'<button class="link" style="margin-top:6px" data-act="cs-end">Encerrar treino</button></section>';
+}
+function ctDone(){
+  const s=CS,d=s.done;
+  return '<section class="panel ct" style="text-align:center"><p class="sub">'+esc(ctName(s.t))+'</p><div class="big num">'+d.min+'</div><p><b>'+(d.min===1?'minuto':'minutos')+' de treino</b></p><p class="sub">'+(d.full?'Treino completo. ':'')+(d.min?'O tempo já entrou na sua sequência de hoje.':'Menos de meio minuto não entra na conta.')+'</p><div class="stack" style="margin-top:18px"><button class="btn block" data-act="cs-again">Repetir</button><button class="btn block line" data-act="cs-close">Voltar aos treinos</button></div></section>';
 }
 
 /* ---------- tuner ---------- */
@@ -622,6 +727,7 @@ setInterval(()=>{
   if(B&&B.running){B.left-=(now-B.last)/1000;B.last=now;const el=$('#blk-time');if(el)el.textContent=mmss(B.left);if(B.left<=0)blockDone(B.id,B.total);}
   if(T.phase==='count'){const el=$('#t-count');if(el)el.textContent=Math.max(1,Math.ceil((T.startAt-now)/1000));if(now>=T.startAt){T.phase='run';T.endAt=now+60000;T.count=0;pluck(76,0,.5);render();}}
   else if(T.phase==='run'){const left=(T.endAt-now)/1000,el=$('#t-left');if(el){el.textContent=mmss(left);$('#t-bar').style.width=Math.max(0,left/60*100)+'%';}if(left<=0)changesDone();}
+  csTick(now);
 },200);
 function blockDone(id,credit){
   const d=day(today());if(!d.done[id]){d.done[id]=true;d.min+=credit;}
@@ -685,9 +791,9 @@ function spark(arr){const v=arr.slice(-10).map(r=>r.n);if(v.length<2)return '';c
 
 /* ---------- views ---------- */
 let view='hoje';
-const sub={acordes:'acordes',fball:false,treinar:'trocas',ferramentas:'metronomo',evolucao:'numeros',ouvido:'mm',filtro:'todos'};
+const sub={acordes:'acordes',fball:false,treinar:'meu',ferramentas:'metronomo',evolucao:'numeros',ouvido:'mm',filtro:'todos'};
 let ob={level:1,goal:15},resetArmed=false;
-const seg=(group,opts)=>'<div class="seg" role="group">'+opts.map(o=>'<button data-act="sub" data-g="'+group+'" data-v="'+o[0]+'" aria-pressed="'+(sub[group]===o[0])+'">'+o[1]+'</button>').join('')+'</div>';
+const seg=(group,opts)=>'<div class="seg'+(opts.length>3?' tight':'')+'" role="group">'+opts.map(o=>'<button data-act="sub" data-g="'+group+'" data-v="'+o[0]+'" aria-pressed="'+(sub[group]===o[0])+'">'+o[1]+'</button>').join('')+'</div>';
 
 const V={};
 V.hoje=function(){
@@ -721,13 +827,17 @@ V.hoje=function(){
     h+='</div></li>';
   });
   h+='</ol></section>';
-  h+='<section class="panel">'+(all?'<h3>Treino de hoje concluído.</h3><p class="sub">Volte amanhã para manter a sequência. Se quiser tocar mais, registre abaixo.</p>':'<h3>Tocou fora do treino?</h3><p class="sub">Prática livre também conta para a sequência.</p>')+'<div class="acts" style="margin-top:12px"><button class="btn sm line" data-act="free-add" data-v="5">Somar 5 min</button> <button class="btn sm line" data-act="free-add" data-v="15">Somar 15 min</button></div></section>';
+  if(S.custom.length)h+='<section class="panel ct"><div class="between"><h2>Seus treinos</h2><button class="link" style="padding:0;min-height:0" data-act="open-meu">Ver todos</button></div>'+S.custom.slice(-3).reverse().map(t=>{t=ctClean(t);
+    return '<div class="between" style="margin-top:12px;align-items:center"><div><b>'+esc(ctName(t))+'</b><div class="muted small">'+t.min+' min, '+t.bpm+' BPM</div></div><button class="btn sm" data-act="cs-start" data-id="'+esc(t.id)+'">Começar</button></div>';}).join('')+'</section>';
+  h+='<section class="panel">'+(all?'<h3>Treino de hoje concluído.</h3><p class="sub">Volte amanhã para manter a sequência. Se quiser tocar mais, registre abaixo.</p>':'<h3>Tocou fora do treino?</h3><p class="sub">Prática livre também conta para a sequência.</p>')+'<div class="acts" style="margin-top:12px"><button class="btn sm line" data-act="free-add" data-v="5">Somar 5 min</button> <button class="btn sm line" data-act="free-add" data-v="15">Somar 15 min</button></div>'+(S.custom.length?'':'<button class="link" style="margin-top:4px" data-act="open-meu">Montar um treino com os seus acordes e batidas</button>')+'</section>';
   return h;
 };
 
 V.treinar=function(){
-  let h='<header class="top"><div><h1>Treinar</h1><p class="sub">Exercícios que mostram sua evolução em números.</p></div></header>'+seg('treinar',[['trocas','Trocas'],['batidas','Batidas'],['ouvido','Ouvido']]);
-  if(sub.treinar==='trocas'){
+  let h='<header class="top"><div><h1>Treinar</h1><p class="sub">Monte seu próprio treino ou meça sua evolução nos exercícios.</p></div></header>'+seg('treinar',[['meu','Meu treino'],['trocas','Trocas'],['batidas','Batidas'],['ouvido','Ouvido']]);
+  if(sub.treinar==='meu'){
+    h+=ctView();
+  }else if(sub.treinar==='trocas'){
     const k=pairKey(T.a,T.b),best=bestOf(k);
     if(T.phase==='idle'){
       const opts=s=>CHORDS.map(c=>'<option'+(c.n===s?' selected':'')+'>'+esc(c.n)+'</option>').join('');
@@ -743,13 +853,13 @@ V.treinar=function(){
       h+='<section class="panel" style="text-align:center"><p class="sub">'+esc(T.a)+' e '+esc(T.b)+'</p><div class="big num">'+T.count+'</div><p><b>'+(T.count===1?'troca':'trocas')+' em 1 minuto</b></p><p class="sub">'+(T.prevBest===0?'Primeira medição deste par. Agora você tem uma marca para bater.':rec?'Novo recorde. O anterior era '+T.prevBest+'.':'Seu recorde é '+T.prevBest+'. Dias mais lentos fazem parte.')+'</p><div class="stack" style="margin-top:18px"><button class="btn block" data-act="t-start">Tentar de novo</button><button class="btn block line" data-act="t-reset">Escolher outro par</button></div></section>';
     }
   }else if(sub.treinar==='batidas'){
-    if(!GR.prog){const L=LEVELS[S.level-1];GR.prog=L.prog[0];if(!GR.touched){GR.pid=L.rhythm;GR.bpm=L.bpm;}}const P=PAT[GR.pid];
-    h+='<div class="chips" style="margin-bottom:14px">'+PATTERNS.map(p=>'<button class="chip" data-act="gr-pat" data-v="'+p.id+'" aria-pressed="'+(p.id===GR.pid)+'">'+esc(p.name)+'</button>').join('')+'</div>';
+    if(!BAT.prog){const L=LEVELS[S.level-1];BAT.prog=L.prog[0];if(!BAT.touched){BAT.pid=L.rhythm;BAT.bpm=L.bpm;}}const P=PAT[BAT.pid],on=GR.on&&GR.cfg===BAT;
+    h+='<div class="chips" style="margin-bottom:14px">'+PATTERNS.map(p=>'<button class="chip" data-act="gr-pat" data-v="'+p.id+'" aria-pressed="'+(p.id===BAT.pid)+'">'+esc(p.name)+'</button>').join('')+'</div>';
     h+='<section class="panel"><h2>'+esc(P.name)+'</h2><p class="sub">'+esc(P.tip)+'</p><div style="margin-top:14px">'+rhythmHTML(P,'gr-grid')+'</div><p class="muted small" style="margin-top:10px">↓ para baixo, ↑ para cima, x abafada, B baixo com o polegar. Casa vazia: a mão passa sem tocar.</p>';
-    h+='<div class="progrow" id="gr-prog">'+GR.prog.map(c=>'<span>'+esc(c)+'</span>').join('')+'</div>';
-    h+='<div class="bpmrow"><button data-act="gr-bpm" data-d="-4" aria-label="Mais devagar">−</button><div style="text-align:center"><span class="num" id="gr-bpm">'+GR.bpm+'</span> <span class="muted small">BPM</span></div><button data-act="gr-bpm" data-d="4" aria-label="Mais rápido">+</button></div>';
-    h+='<p class="sub small" id="gr-status" style="margin:14px 0 10px;min-height:1.4em" aria-live="polite">'+(GR.on?'Contagem':'Começa com um compasso de contagem. Um acorde por compasso.')+'</p><button class="btn block" data-act="gr-toggle">'+(GR.on?'Parar':'Ouvir e tocar junto')+'</button></section>';
-    h+='<section class="panel"><h3>Acordes do exemplo</h3><div class="chips" style="margin-top:10px">'+PROGS.map((p,i)=>'<button class="chip" data-act="gr-prog" data-i="'+i+'" aria-pressed="'+(p.join()===GR.prog.join())+'">'+p.join(' ')+'</button>').join('')+'</div><div class="between" style="margin-top:16px"><span>Clique do metrônomo junto</span><button class="chip" data-act="gr-click" aria-pressed="'+GR.click+'">'+(GR.click?'Ligado':'Desligado')+'</button></div></section>';
+    h+='<div class="progrow" id="gr-prog">'+BAT.prog.map(c=>'<span>'+esc(c)+'</span>').join('')+'</div>';
+    h+='<div class="bpmrow"><button data-act="gr-bpm" data-d="-4" aria-label="Mais devagar">−</button><div style="text-align:center"><span class="num" id="gr-bpm">'+BAT.bpm+'</span> <span class="muted small">BPM</span></div><button data-act="gr-bpm" data-d="4" aria-label="Mais rápido">+</button></div>';
+    h+='<p class="sub small" id="gr-status" style="margin:14px 0 10px;min-height:1.4em" aria-live="polite">'+(on?'Contagem':'Começa com um compasso de contagem. Um acorde por compasso.')+'</p><button class="btn block" data-act="gr-toggle">'+(on?'Parar':'Ouvir e tocar junto')+'</button></section>';
+    h+='<section class="panel"><h3>Acordes do exemplo</h3><div class="chips" style="margin-top:10px">'+PROGS.map((p,i)=>'<button class="chip" data-act="gr-prog" data-i="'+i+'" aria-pressed="'+(p.join()===BAT.prog.join())+'">'+p.join(' ')+'</button>').join('')+'</div><div class="between" style="margin-top:16px"><span>Clique do metrônomo junto</span><button class="chip" data-act="gr-click" aria-pressed="'+BAT.click+'">'+(BAT.click?'Ligado':'Desligado')+'</button></div><p class="muted small" style="margin-top:12px">Quer escolher os acordes? Monte um treino seu em <button class="link" style="padding:0;min-height:0" data-act="sub" data-g="treinar" data-v="meu">Meu treino</button>.</p></section>';
   }else{
     if(!E.q)earNew();
     h+=seg('ouvido',[['mm','Maior ou menor'],['qual','Qual acorde']]);
@@ -875,7 +985,7 @@ function render(){
   $('#tabs').innerHTML=TABS.map(t=>'<button data-act="nav" data-v="'+t[0]+'"'+(view===t[0]?' aria-current="page"':'')+'><svg viewBox="0 0 24 24" aria-hidden="true">'+t[2]+'</svg>'+t[1]+'</button>').join('');
   mPaint();awakeSync();
 }
-function go(v){grStop(true);if(!(v==='ferramentas'&&sub.ferramentas==='afinador'))micStop();if(T.phase==='count'||T.phase==='run')T.phase='idle';resetArmed=false;view=v;render();window.scrollTo(0,0);}
+function go(v){grStop(true);if(!(v==='ferramentas'&&sub.ferramentas==='afinador'))micStop();if(T.phase==='count'||T.phase==='run')T.phase='idle';resetArmed=false;ceDelArmed=false;view=v;render();window.scrollTo(0,0);}
 
 const ACT={
   nav:el=>go(el.dataset.v),
@@ -889,12 +999,34 @@ const ACT={
   'free-add':el=>{addMinutes(+el.dataset.v);render();},
   'open-metro':el=>{mSet(+el.dataset.bpm);sub.ferramentas='metronomo';go('ferramentas');},
   'open-trocas':el=>{T.a=el.dataset.a;T.b=el.dataset.b;sub.treinar='trocas';go('treinar');},
-  'open-batida':el=>{GR.touched=true;GR.pid=el.dataset.p;GR.bpm=+el.dataset.bpm;sub.treinar='batidas';go('treinar');},
-  'gr-toggle':()=>{GR.on?grStop():grStart();},
-  'gr-pat':el=>{grStop(true);GR.pid=el.dataset.v;GR.bpm=PAT[GR.pid].bpm;render();},
-  'gr-prog':el=>{grStop(true);GR.prog=PROGS[+el.dataset.i];render();},
-  'gr-bpm':el=>{GR.bpm=Math.max(40,Math.min(160,GR.bpm+(+el.dataset.d)));const n=$('#gr-bpm');if(n)n.textContent=GR.bpm;},
-  'gr-click':()=>{GR.click=!GR.click;if(GR.on){const b=document.querySelector('[data-act="gr-click"]');if(b){b.setAttribute('aria-pressed',GR.click);b.textContent=GR.click?'Ligado':'Desligado';}}else render();},
+  'open-batida':el=>{BAT.touched=true;BAT.pid=el.dataset.p;BAT.bpm=+el.dataset.bpm;sub.treinar='batidas';go('treinar');},
+  'gr-toggle':()=>{GR.on?grStop():grStart(BAT);},
+  'gr-pat':el=>{grStop(true);BAT.pid=el.dataset.v;BAT.bpm=PAT[BAT.pid].bpm;render();},
+  'gr-prog':el=>{grStop(true);BAT.prog=PROGS[+el.dataset.i];render();},
+  'gr-bpm':el=>{BAT.bpm=Math.max(40,Math.min(160,BAT.bpm+(+el.dataset.d)));const n=$('#gr-bpm');if(n)n.textContent=BAT.bpm;},
+  'gr-click':()=>{BAT.click=!BAT.click;if(GR.on){const b=document.querySelector('[data-act="gr-click"]');if(b){b.setAttribute('aria-pressed',BAT.click);b.textContent=BAT.click?'Ligado':'Desligado';}}else render();},
+  'open-meu':()=>{sub.treinar='meu';go('treinar');},
+  'ce-new':()=>{ceNew();render();window.scrollTo(0,0);},
+  'ce-edit':el=>{const t=S.custom.find(x=>x.id===el.dataset.id);if(!t)return;CE=ctClean(t);ceDelArmed=false;render();window.scrollTo(0,0);},
+  'ce-cancel':()=>{CE=null;ceDelArmed=false;render();window.scrollTo(0,0);},
+  'ce-suggest':()=>{const L=LEVELS[S.level-1];CE.chords=L.prog[0].slice();CE.pats=[L.rhythm];CE.bpm=L.bpm;render();},
+  'ce-add':el=>{if(CE.chords.length>=CT_MAX)return;CE.chords.push(el.dataset.c);strum(chordMidis(el.dataset.c),.045);render();},
+  'ce-del':el=>{CE.chords.splice(+el.dataset.i,1);render();},
+  'ce-pat':el=>{const v=el.dataset.v,k=CE.pats.indexOf(v);if(k>=0)CE.pats.splice(k,1);else CE.pats.push(v);render();},
+  'ce-bpm':el=>{CE.bpm=Math.max(40,Math.min(160,CE.bpm+(+el.dataset.d)));render();},
+  'ce-min':el=>{CE.min=+el.dataset.v;render();},
+  'ce-save':()=>{if(!CE.chords.length||!CE.pats.length)return;ceSave();render();window.scrollTo(0,0);},
+  'ce-start':()=>{if(!CE.chords.length||!CE.pats.length)return;csStart(ceSave());},
+  'ce-remove':()=>{if(!ceDelArmed){ceDelArmed=true;render();return;}S.custom=S.custom.filter(x=>x.id!==CE.id);save();CE=null;ceDelArmed=false;render();window.scrollTo(0,0);},
+  'cs-start':el=>{csStart(S.custom.find(x=>x.id===el.dataset.id));},
+  'cs-toggle':()=>{if(csOn())grStop();else csPlay();},
+  'cs-nextpat':()=>{csNextPat();},
+  'cs-bpm':el=>{CS.cfg.bpm=Math.max(40,Math.min(160,CS.cfg.bpm+(+el.dataset.d)));const n=$('#cs-bpm');if(n)n.textContent=CS.cfg.bpm;},
+  'cs-guitar':el=>{CS.cfg.guitar=CS.cfg.guitar===false;el.setAttribute('aria-pressed',CS.cfg.guitar);el.textContent=CS.cfg.guitar?'Ligado':'Desligado';},
+  'cs-click':el=>{CS.cfg.click=!CS.cfg.click;el.setAttribute('aria-pressed',CS.cfg.click);el.textContent=CS.cfg.click?'Ligado':'Desligado';},
+  'cs-end':()=>{csFinish();},
+  'cs-again':()=>{csStart(CS.t);},
+  'cs-close':()=>{CS=null;render();window.scrollTo(0,0);},
   note:el=>{const si=+el.dataset.si,f=+el.dataset.f,m=OPEN[si]+f,pc=m%12;if(audio())pluckAt(m,AC.currentTime+.01,.7,si);
     document.querySelectorAll('.fb .hit,.scale .hit').forEach(x=>x.classList.remove('hit'));
     const cell=document.querySelector('.fb [data-si="'+si+'"][data-f="'+f+'"]');if(cell)cell.classList.add('hit');if(el.closest('.scale'))el.classList.add('hit');
@@ -932,16 +1064,17 @@ const ACT={
   'song-add':()=>{const t=$('#s-title').value.trim(),c=$('#s-chords').value.trim();if(!t){$('#s-title').focus();return;}S.songs.push({id:'s'+Date.now().toString(36),title:t.slice(0,80),chords:c.slice(0,120),status:'aprendendo'});save();render();},
   'song-del':el=>{S.songs=S.songs.filter(s=>s.id!==el.dataset.id);save();render();},
   goal:el=>{S.goal=+el.dataset.v;B=null;save();render();},
-  reset:()=>{if(!resetArmed){resetArmed=true;render();return;}try{localStorage.removeItem(KEY);}catch(e){}if(NATIVE)native('Preferences','remove',{key:KEY});adopt(null);B=null;E.q=null;E.ok=E.total=0;resetArmed=false;view='hoje';render();}
+  reset:()=>{if(!resetArmed){resetArmed=true;render();return;}try{localStorage.removeItem(KEY);}catch(e){}if(NATIVE)native('Preferences','remove',{key:KEY});adopt(null);B=null;CE=null;CS=null;E.q=null;E.ok=E.total=0;resetArmed=false;view='hoje';render();}
 };
-const NOISY=/^(tone|chord-play|ear-play|ear-next|gr-toggle|m-toggle|note|scale-play|blk-start|t-start)$/;
+const NOISY=/^(tone|chord-play|ear-play|ear-next|gr-toggle|m-toggle|note|scale-play|blk-start|t-start|ce-add|ce-start|cs-start|cs-toggle|cs-again)$/;
 document.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if(!el||el.disabled)return;const a=el.dataset.act,fn=ACT[a];if(fn)fn(el);if(NOISY.test(a)){sndAsked=true;setTimeout(sndPaint,900);}});
 document.addEventListener('pointerdown',e=>{const el=e.target.closest('[data-tap]');if(!el||T.phase!=='run')return;e.preventDefault();T.count++;const n=$('#t-n');if(n)n.textContent=T.count;buzz(12);});
 document.addEventListener('input',e=>{const id=e.target.id;
   if(id==='m-slider')mSet(+e.target.value);
   else if(id==='r-step')M.ramp.step=Math.max(1,Math.min(20,+e.target.value||5));
   else if(id==='r-bars')M.ramp.bars=Math.max(1,Math.min(32,+e.target.value||4));
-  else if(id==='r-target')M.ramp.target=Math.max(40,Math.min(240,+e.target.value||120));});
+  else if(id==='r-target')M.ramp.target=Math.max(40,Math.min(240,+e.target.value||120));
+  else if(id==='ce-name'&&CE)CE.name=e.target.value;});
 document.addEventListener('change',e=>{const t=e.target;
   if(t.id==='t-a'){T.a=t.value;render();}else if(t.id==='t-b'){T.b=t.value;render();}
   else if(t.dataset&&t.dataset.song){const s=S.songs.find(x=>x.id===t.dataset.song);if(s){s.status=t.value;save();}}});
