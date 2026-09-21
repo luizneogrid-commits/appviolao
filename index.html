@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Violão Diário</title>
-<meta name="app-version" content="1.1.0">
+<meta name="app-version" content="1.2.0">
 <meta name="description" content="Treino diário de violão: plano por nível, metrônomo, afinador, batidas para tocar junto, acordes e notas.">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#F2EEF0" media="(prefers-color-scheme: light)">
@@ -284,10 +284,11 @@ select{min-height:46px;border-radius:12px;border:1.5px solid var(--line);backgro
 
 /* tab bar */
 .tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding-bottom:var(--sab);z-index:6}
-.tabs nav{max-width:520px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr)}
-.tabs button{border:0;background:none;padding:9px 2px 8px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:.7rem;font-weight:650;color:var(--muted);min-height:60px}
+.tabs nav{max-width:520px;margin:0 auto;display:grid;grid-template-columns:repeat(6,1fr)}
+.tabs button{border:0;background:none;padding:9px 1px 8px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:.7rem;font-weight:650;font-stretch:82%;white-space:nowrap;color:var(--muted);min-height:60px;min-width:0}
 .tabs svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .tabs button[aria-current="page"]{color:var(--primary)}
+@media (max-width:350px){.tabs button{font-stretch:70%;font-size:.66rem}}
 </style>
 </head>
 <body>
@@ -319,13 +320,14 @@ const buzz=ms=>{if(NATIVE){if(ms<30)native('Haptics','impact',{style:'LIGHT'});e
 
 /* ---------- state ---------- */
 const KEY='violao-diario-v1';
-const DEF={v:1,onboarded:false,level:1,goal:15,skills:{},days:{},changes:{},chords:{},songs:[],custom:[],ear:{ok:0,total:0},maxBpm:0,bpm:70,beats:4,altOut:false,installDismissed:false};
+const DEF={v:1,onboarded:false,level:1,goal:15,skills:{},days:{},changes:{},chords:{},songs:[],custom:[],ctLog:{},ear:{ok:0,total:0},maxBpm:0,bpm:70,beats:4,altOut:false,installDismissed:false};
 let S,hadLocal=false;
 function adopt(o){
   S=Object.assign(JSON.parse(JSON.stringify(DEF)),o&&typeof o==='object'?o:{});
   ['skills','days','changes','chords'].forEach(k=>{if(!S[k]||typeof S[k]!=='object')S[k]={};});
   if(!Array.isArray(S.songs))S.songs=[];
   S.custom=Array.isArray(S.custom)?S.custom.filter(t=>t&&typeof t==='object'&&Array.isArray(t.chords)&&Array.isArray(t.pats)):[];
+  if(!S.ctLog||typeof S.ctLog!=='object'||Array.isArray(S.ctLog))S.ctLog={};
   if(!S.ear||typeof S.ear!=='object')S.ear={ok:0,total:0};
 }
 adopt(null);
@@ -573,7 +575,10 @@ function grStart(cfg,onBar){
   GR.cfg=cfg||BAT;GR.onBar=onBar||null;GR.run++;
   GR.on=true;GR.step=-PAT[GR.cfg.pid].cells.length;GR.next=ac.currentTime+.12;GR.timer=setInterval(grSched,25);render();
 }
-function grStop(quiet){if(!GR.on)return;GR.on=false;clearInterval(GR.timer);if(AC)dampAll(AC.currentTime+.05);if(!quiet)render();}
+function grStop(quiet){
+  if(!GR.on)return;const mine=CS&&GR.cfg===CS.cfg;if(mine)csAccrue(Date.now()); // parou um treino montado: grava o tempo tocado
+  GR.on=false;clearInterval(GR.timer);if(AC)dampAll(AC.currentTime+.05);if(mine)csFlush();if(!quiet)render();
+}
 function grSched(){
   if(!GR.on||!AC)return;
   while(GR.next<AC.currentTime+.15){grStep(GR.step,GR.next);GR.next+=30/GR.cfg.bpm;GR.step++;}
@@ -596,9 +601,10 @@ function grStep(step,t){
 }
 
 /* ---------- meu treino: acordes e batidas escolhidos pela pessoa ---------- */
-// CE: treino sendo montado ou editado. CS: treino tocando ou pausado, com o tempo que falta.
+// CE: treino sendo montado ou editado. CS: treino tocando ou pausado. CHI: treino com o histórico aberto.
+// O tempo tocado vai para S.ctLog[id][dia] = {s: segundos, n: vezes} e, em minutos inteiros, para o dia.
 const CT_MAX=8,CT_MINS=[5,10,15,20,30];
-let CE=null,CS=null,ceDelArmed=false;
+let CE=null,CS=null,CHI=null,ceDelArmed=false,ctMsg='';
 const ctName=t=>t.name||t.chords.join(' ');
 const chordBox=c=>'<strong>'+esc(c)+'</strong>'+chordSVG(c);
 function ctClean(t){return {id:t.id,name:String(t.name||'').slice(0,40),chords:t.chords.filter(c=>CH[c]).slice(0,CT_MAX),pats:t.pats.filter(p=>PAT[p]),bpm:Math.max(40,Math.min(160,Math.round(+t.bpm)||70)),min:CT_MINS.includes(+t.min)?+t.min:10};}
@@ -610,9 +616,9 @@ function ceSave(){
 }
 function csStart(t){
   if(!t)return;t=ctClean(t);if(!t.chords.length||!t.pats.length)return;
-  if(CS&&!CS.done)csCredit(); // outro treino estava pausado: o tempo já tocado não se perde
-  CS={t,pi:0,seg:0,ci:0,total:t.min*60,left:t.min*60,last:0,done:null,cfg:{pid:t.pats[0],bpm:t.bpm,prog:t.chords,click:true,guitar:true}};
-  sub.treinar='meu';if(view!=='treinar')go('treinar');
+  if(CS&&!CS.done)csSettle(); // outro treino estava pausado: o tempo já tocado fica registrado
+  CS={t,pi:0,seg:0,ci:0,total:t.min*60,left:t.min*60,last:0,played:0,pending:0,credited:0,counted:false,done:null,cfg:{pid:t.pats[0],bpm:t.bpm,prog:t.chords,click:true,guitar:true}};
+  CHI=null;if(view!=='meu')go('meu');
   csPlay();window.scrollTo(0,0);
 }
 const csOn=()=>!!(CS&&GR.on&&GR.cfg===CS.cfg);
@@ -622,34 +628,65 @@ function csNextPat(){
   const n=CS.t.pats.length;if(n<2)return;CS.pi=(CS.pi+1)%n;CS.cfg.pid=CS.t.pats[CS.pi];CS.ci=0;
   if(csOn()){grStop(true);csPlay();}else render(); // recomeça com um compasso de contagem na batida nova
 }
-function csCredit(){const min=Math.round((CS.total-Math.max(0,CS.left))/60);if(min>0)addMinutes(min);return min;}
+function csAccrue(now){const dt=Math.min(Math.max(0,(now-CS.last)/1000),Math.max(0,CS.left));CS.left-=dt;CS.pending+=dt;CS.last=now;}
+function csFlush(){ // grava o tempo tocado desde a última vez: histórico do treino e minutos inteiros do dia
+  if(!CS||CS.pending<=0)return;
+  const log=S.ctLog[CS.t.id]||(S.ctLog[CS.t.id]={}),e=log[today()]||(log[today()]={s:0,n:0});
+  CS.played+=CS.pending;e.s=Math.round((e.s+CS.pending)*10)/10;CS.pending=0;
+  if(!CS.counted&&CS.played>=30){e.n++;CS.counted=true;}
+  const whole=Math.floor(CS.played/60);if(whole>CS.credited){addMinutes(whole-CS.credited);CS.credited=whole;}else save();
+}
+function csSettle(){ // fecha o treino: grava o que falta e arredonda os minutos do dia a partir de meio minuto
+  if(csOn())grStop(true);else csFlush();
+  if(CS.played-CS.credited*60>=30){addMinutes(1);CS.credited++;}
+  return CS.credited;
+}
 function csFinish(){
-  if(csOn())grStop(true);
-  CS.done={min:csCredit(),full:CS.left<=0};
+  CS.done={min:csSettle(),full:CS.left<=0};
   strum(chordMidis(CS.t.chords[0]));buzz(120);render();
 }
 function csTick(now){ // o tempo só corre enquanto o treino está tocando
   if(!csOn())return;
-  CS.left-=(now-CS.last)/1000;CS.last=now;
+  csAccrue(now);
   const el=$('#cs-time');if(el){el.textContent=mmss(CS.left);const b=$('#cs-bar');if(b)b.style.width=Math.max(0,CS.left/CS.total*100)+'%';}
   if(CS.left<=0){csFinish();return;}
+  if(Math.floor((CS.played+CS.pending)/60)>CS.credited)csFlush(); // grava a cada minuto completo
   const seg=Math.floor((CS.total-CS.left)/(CS.total/CS.t.pats.length)); // o tempo é dividido igualmente entre as batidas
   if(seg>CS.seg){CS.seg=seg;csNextPat();}
 }
+function ctStats(id){const log=S.ctLog[id]||{},ks=Object.keys(log).filter(k=>log[k]&&log[k].s>0).sort();let s=0,n=0;ks.forEach(k=>{s+=log[k].s;n+=log[k].n||0;});return {s,n,ks,log};}
+function durTxt(s){const m=Math.round(s/60);if(!m)return s>0?'menos de 1 min':'0 min';const h=Math.floor(m/60);return h?h+' h'+(m%60?' '+m%60+' min':''):m+' min';}
+const dayTxt=k=>k===today()?'hoje':k===dkey(addDays(new Date(),-1))?'ontem':parseKey(k).toLocaleDateString('pt-BR',{day:'numeric',month:'short'});
 
 function ctView(){
   if(CS)return CS.done?ctDone():ctRun();
-  if(!CE&&!S.custom.length)ceNew();
-  return CE?ctBuilder():ctList();
+  if(CE)return ctBuilder();
+  if(CHI&&!S.custom.some(t=>t.id===CHI))CHI=null;
+  if(CHI)return ctHist();
+  if(!S.custom.length){ceNew();return ctBuilder();}
+  return ctList();
 }
+function ctNote(){const m=ctMsg;ctMsg='';return m?'<p class="sub small" role="status" style="margin-top:6px">'+esc(m)+'</p>':'';}
 function ctList(){
-  return '<section class="panel ct"><h2>Seus treinos</h2><div style="margin-top:4px">'+S.custom.map(t=>{t=ctClean(t);
-    return '<div class="song"><div class="between"><h3>'+esc(ctName(t))+'</h3><span class="muted small">'+t.min+' min</span></div>'+(t.name?'<p class="cif">'+esc(t.chords.join(' '))+'</p>':'')+'<p class="muted small">'+esc(t.pats.map(p=>PAT[p].name).join(', '))+', '+t.bpm+' BPM</p><div class="acts"><button class="btn sm" data-act="cs-start" data-id="'+esc(t.id)+'">Começar</button><button class="link" data-act="ce-edit" data-id="'+esc(t.id)+'">Editar</button></div></div>';}).join('')+
+  return '<section class="panel ct"><h2>Seus treinos</h2>'+ctNote()+'<div style="margin-top:4px">'+S.custom.map(t=>{t=ctClean(t);const st=ctStats(t.id);
+    return '<div class="song"><div class="between"><h3>'+esc(ctName(t))+'</h3><span class="muted small">'+t.min+' min</span></div>'+(t.name?'<p class="cif">'+esc(t.chords.join(' '))+'</p>':'')+'<p class="muted small">'+esc(t.pats.map(p=>PAT[p].name).join(', '))+', '+t.bpm+' BPM</p>'+
+      '<p class="small" style="margin-top:6px">'+(st.s?'Praticado: <b>'+durTxt(st.s)+'</b> em '+st.ks.length+(st.ks.length===1?' dia':' dias')+', o último '+esc(dayTxt(st.ks[st.ks.length-1]))+'.':'<span class="muted">Ainda não praticado.</span>')+'</p>'+
+      '<div class="acts"><button class="btn sm" data-act="cs-start" data-id="'+esc(t.id)+'">Começar</button><button class="link" data-act="ct-hist" data-id="'+esc(t.id)+'">Histórico</button><button class="link" data-act="ce-edit" data-id="'+esc(t.id)+'">Editar</button></div></div>';}).join('')+
     '</div></section><button class="btn block quiet" style="margin-top:14px" data-act="ce-new">Montar outro treino</button>';
+}
+function ctHist(){
+  const t=ctClean(S.custom.find(x=>x.id===CHI)),st=ctStats(t.id),days=[];for(let i=13;i>=0;i--)days.push(addDays(new Date(),-i));
+  const mins=Math.round(st.s/60),vals=days.map(d=>Math.round(((st.log[dkey(d)]||{}).s||0)/60));
+  let h='<section class="panel ct"><div class="between"><h2>'+esc(ctName(t))+'</h2><span class="muted small">'+t.min+' min, '+t.bpm+' BPM</span></div>'+ctNote()+(t.name?'<p class="cif">'+esc(t.chords.join(' '))+'</p>':'')+'<p class="muted small">'+esc(t.pats.map(p=>PAT[p].name).join(', '))+'</p>'+
+    '<div class="acts"><button class="btn sm" data-act="cs-start" data-id="'+esc(t.id)+'">Começar</button><button class="link" data-act="ce-edit" data-id="'+esc(t.id)+'">Editar</button><button class="link" data-act="ct-back">Todos os treinos</button></div></section>';
+  h+='<div class="stats" style="margin-top:14px"><div><b class="num">'+mins+'</b><span>'+(mins===1?'minuto praticado':'minutos praticados')+'</span></div><div><b class="num">'+st.n+'</b><span>'+(st.n===1?'vez':'vezes')+'</span></div><div><b class="num">'+st.ks.length+'</b><span>'+(st.ks.length===1?'dia':'dias')+'</span></div><div><b class="num">'+(st.n?Math.round(st.s/60/st.n):0)+'</b><span>minutos por vez</span></div></div>';
+  h+='<section class="panel chart" style="margin-top:14px"><div class="between"><h2>Últimos 14 dias</h2><span class="muted small">minutos neste treino</span></div><div style="margin-top:14px">'+dayBars(days,vals,0)+'</div></section>';
+  h+='<section class="panel ct"><h2>Histórico</h2>'+(st.ks.length?'<ul class="hist" style="margin-top:6px">'+st.ks.slice().reverse().slice(0,90).map(k=>{const e=st.log[k];return '<li><span>'+esc(dayTxt(k))+'</span><b>'+durTxt(e.s)+(e.n>1?', '+e.n+' vezes':'')+'</b></li>';}).join('')+'</ul>':'<p class="sub">O tempo aparece aqui assim que você tocar este treino.</p>')+'</section>';
+  return h;
 }
 function ctBuilder(){
   const e=CE,full=e.chords.length>=CT_MAX,ok=e.chords.length>0&&e.pats.length>0,uniq=[...new Set(e.chords)];
-  let h='<section class="panel ct"><h2>'+(e.id?'Editar treino':'Monte seu treino')+'</h2><p class="sub">Escolha os acordes e as batidas. O app toca junto, um acorde por compasso, e o tempo entra na sua sequência de dias.</p>'+(e.chords.length||e.pats.length?'':'<button class="link" data-act="ce-suggest">Começar pela sugestão do seu nível</button>')+'</section>';
+  let h='<section class="panel ct"><h2>'+(e.id?'Editar treino':'Monte seu treino')+'</h2><p class="sub">Escolha os acordes e as batidas. O app toca junto, um acorde por compasso, e o tempo entra na sua sequência de dias. Os treinos ficam salvos, cada um com o seu histórico.</p>'+(e.chords.length||e.pats.length?'':'<button class="link" data-act="ce-suggest">Começar pela sugestão do seu nível</button>')+'</section>';
   h+='<section class="panel ct"><div class="between"><h2>1. Acordes</h2><span class="muted small">'+e.chords.length+' de '+CT_MAX+'</span></div><p class="sub small">Toque na ordem em que quer tocar; pode repetir. Para tirar, toque no acorde da sequência.</p>';
   h+='<div class="seq">'+(e.chords.length?e.chords.map((c,i)=>'<button class="chip on" data-act="ce-del" data-i="'+i+'" aria-label="Tirar '+esc(c)+', posição '+(i+1)+'">'+esc(c)+' <span aria-hidden="true">×</span></button>').join(''):'<span class="muted small">Nenhum acorde ainda.</span>')+'</div>';
   [['abertos','Abertos'],['setima','Com sétima'],['pestana','Pestana']].forEach(g=>{h+='<p class="grp">'+g[1]+'</p><div class="chips">'+CHORDS.filter(c=>c.g===g[0]).map(c=>'<button class="chip" data-act="ce-add" data-c="'+esc(c.n)+'"'+(full?' disabled':'')+'>'+esc(c.n)+'</button>').join('')+'</div>';});
@@ -657,7 +694,7 @@ function ctBuilder(){
   h+='</section>';
   h+='<section class="panel ct"><h2>2. Batidas</h2><p class="sub small">Escolha uma ou mais. O tempo do treino é dividido entre elas, na ordem em que você escolher.</p><div class="chips" style="margin-top:12px">'+PATTERNS.map(p=>{const k=e.pats.indexOf(p.id);return '<button class="chip" data-act="ce-pat" data-v="'+p.id+'" aria-pressed="'+(k>=0)+'">'+(k>=0?(k+1)+'. ':'')+esc(p.name)+'</button>';}).join('')+'</div>'+e.pats.map(id=>'<div class="patprev"><b>'+esc(PAT[id].name)+'</b>'+rhythmHTML(PAT[id])+'</div>').join('')+'</section>';
   h+='<section class="panel ct"><h2>3. Andamento e duração</h2><div class="bpmrow"><button data-act="ce-bpm" data-d="-4" aria-label="Mais devagar">−</button><div style="text-align:center"><span class="num">'+e.bpm+'</span> <span class="muted small">BPM</span><div class="muted small">'+tempoName(e.bpm)+'</div></div><button data-act="ce-bpm" data-d="4" aria-label="Mais rápido">+</button></div><div class="row" style="margin-top:16px">'+CT_MINS.map(m=>'<button class="chip" data-act="ce-min" data-v="'+m+'" aria-pressed="'+(e.min===m)+'">'+m+' min</button>').join('')+'</div><input class="inp" id="ce-name" maxlength="40" placeholder="Nome do treino (opcional)" aria-label="Nome do treino" value="'+esc(e.name)+'" style="margin-top:16px"></section>';
-  h+='<div class="stack" style="margin-top:14px"><button class="btn block" data-act="ce-start"'+(ok?'':' disabled')+'>Começar treino</button><button class="btn block line" data-act="ce-save"'+(ok?'':' disabled')+'>Salvar para depois</button>'+(ok?'':'<p class="muted small" style="text-align:center">Escolha pelo menos um acorde e uma batida.</p>')+(S.custom.length?'<button class="btn block line" data-act="ce-cancel">Voltar sem salvar</button>':'')+(e.id?'<button class="btn block danger" data-act="ce-remove">'+(ceDelArmed?'Toque de novo para apagar':'Apagar este treino')+'</button>':'')+'</div>';
+  h+='<div class="stack" style="margin-top:14px"><button class="btn block" data-act="ce-start"'+(ok?'':' disabled')+'>Começar treino</button><button class="btn block line" data-act="ce-save"'+(ok?'':' disabled')+'>Salvar treino</button>'+(ok?'':'<p class="muted small" style="text-align:center">Escolha pelo menos um acorde e uma batida.</p>')+(S.custom.length?'<button class="btn block line" data-act="ce-cancel">Voltar sem salvar</button>':'')+(e.id?'<button class="btn block danger" data-act="ce-remove">'+(ceDelArmed?'Toque de novo para apagar':'Apagar este treino')+'</button>':'')+'</div>';
   return h;
 }
 function ctRun(){
@@ -673,8 +710,9 @@ function ctRun(){
   return h+'<button class="link" style="margin-top:6px" data-act="cs-end">Encerrar treino</button></section>';
 }
 function ctDone(){
-  const s=CS,d=s.done;
-  return '<section class="panel ct" style="text-align:center"><p class="sub">'+esc(ctName(s.t))+'</p><div class="big num">'+d.min+'</div><p><b>'+(d.min===1?'minuto':'minutos')+' de treino</b></p><p class="sub">'+(d.full?'Treino completo. ':'')+(d.min?'O tempo já entrou na sua sequência de hoje.':'Menos de meio minuto não entra na conta.')+'</p><div class="stack" style="margin-top:18px"><button class="btn block" data-act="cs-again">Repetir</button><button class="btn block line" data-act="cs-close">Voltar aos treinos</button></div></section>';
+  const s=CS,d=s.done,st=ctStats(s.t.id);
+  return '<section class="panel ct" style="text-align:center"><p class="sub">'+esc(ctName(s.t))+'</p><div class="big num">'+d.min+'</div><p><b>'+(d.min===1?'minuto':'minutos')+' de treino</b></p><p class="sub">'+(d.full?'Treino completo. ':'')+(d.min?'O tempo já entrou na sua sequência de hoje.':'Menos de meio minuto não entra na conta.')+'</p>'+(st.s?'<p class="sub small" style="margin-top:6px">Total neste treino: '+durTxt(st.s)+' em '+st.ks.length+(st.ks.length===1?' dia':' dias')+'.</p>':'')+
+    '<div class="stack" style="margin-top:18px"><button class="btn block" data-act="cs-again">Repetir</button><button class="btn block line" data-act="ct-hist" data-id="'+esc(s.t.id)+'">Ver histórico</button><button class="btn block line" data-act="cs-close">Voltar aos treinos</button></div></section>';
 }
 
 /* ---------- tuner ---------- */
@@ -787,11 +825,18 @@ function neckSVG(){
   return s+'</svg>';
 }
 function rhythmHTML(P,id){const cnt=['1','e','2','e','3','e','4','e'],n=P.cells.length;return '<div class="rhy"'+(id?' id="'+id+'"':'')+' style="grid-template-columns:repeat('+n+',1fr);max-width:'+(n*40)+'px" aria-label="Padrão: '+esc(P.name)+'">'+P.cells.map((a,i)=>'<div'+(a?' class="on"':'')+'><b>'+a+'</b><span>'+cnt[i]+'</span></div>').join('')+'</div>';}
+function dayBars(days,vals,goal){ // minutos por dia; goal > 0 desenha a linha da meta
+  const mx=Math.max(goal,1,Math.max.apply(null,vals)),bw=16,gap=8,H=96;
+  let c='<svg viewBox="0 0 336 124" role="img" aria-label="Minutos por dia nos últimos '+days.length+' dias">';
+  vals.forEach((v,i)=>{const x=4+i*(bw+gap),bh=v?Math.max(4,v/mx*H):3;c+='<rect class="'+(v?'b':'b0')+'" x="'+x+'" y="'+(4+H-bh)+'" width="'+bw+'" height="'+bh+'" rx="4"/>';if(i%2===1)c+='<text x="'+(x+bw/2)+'" y="120">'+days[i].getDate()+'</text>';});
+  if(goal){const gy=4+H-goal/mx*H;c+='<line class="goal" x1="0" x2="336" y1="'+gy+'" y2="'+gy+'"/>';}
+  return c+'</svg>';
+}
 function spark(arr){const v=arr.slice(-10).map(r=>r.n);if(v.length<2)return '';const mn=Math.min.apply(null,v),mx=Math.max.apply(null,v),r=(mx-mn)||1;return '<svg viewBox="0 0 90 28" aria-hidden="true"><polyline points="'+v.map((n,i)=>(3+i*(84/(v.length-1))).toFixed(1)+','+(24-(n-mn)/r*20).toFixed(1)).join(' ')+'"/></svg>';}
 
 /* ---------- views ---------- */
 let view='hoje';
-const sub={acordes:'acordes',fball:false,treinar:'meu',ferramentas:'metronomo',evolucao:'numeros',ouvido:'mm',filtro:'todos'};
+const sub={acordes:'acordes',fball:false,treinar:'trocas',ferramentas:'metronomo',evolucao:'numeros',ouvido:'mm',filtro:'todos'};
 let ob={level:1,goal:15},resetArmed=false;
 const seg=(group,opts)=>'<div class="seg'+(opts.length>3?' tight':'')+'" role="group">'+opts.map(o=>'<button data-act="sub" data-g="'+group+'" data-v="'+o[0]+'" aria-pressed="'+(sub[group]===o[0])+'">'+o[1]+'</button>').join('')+'</div>';
 
@@ -833,11 +878,13 @@ V.hoje=function(){
   return h;
 };
 
+V.meu=function(){
+  return '<header class="top"><div><h1>Meu treino</h1><p class="sub">Seus acordes, suas batidas, no seu ritmo.</p></div></header>'+ctView();
+};
+
 V.treinar=function(){
-  let h='<header class="top"><div><h1>Treinar</h1><p class="sub">Monte seu próprio treino ou meça sua evolução nos exercícios.</p></div></header>'+seg('treinar',[['meu','Meu treino'],['trocas','Trocas'],['batidas','Batidas'],['ouvido','Ouvido']]);
-  if(sub.treinar==='meu'){
-    h+=ctView();
-  }else if(sub.treinar==='trocas'){
+  let h='<header class="top"><div><h1>Treinar</h1><p class="sub">Exercícios que mostram sua evolução em números.</p></div></header>'+seg('treinar',[['trocas','Trocas'],['batidas','Batidas'],['ouvido','Ouvido']]);
+  if(sub.treinar==='trocas'){
     const k=pairKey(T.a,T.b),best=bestOf(k);
     if(T.phase==='idle'){
       const opts=s=>CHORDS.map(c=>'<option'+(c.n===s?' selected':'')+'>'+esc(c.n)+'</option>').join('');
@@ -859,7 +906,7 @@ V.treinar=function(){
     h+='<div class="progrow" id="gr-prog">'+BAT.prog.map(c=>'<span>'+esc(c)+'</span>').join('')+'</div>';
     h+='<div class="bpmrow"><button data-act="gr-bpm" data-d="-4" aria-label="Mais devagar">−</button><div style="text-align:center"><span class="num" id="gr-bpm">'+BAT.bpm+'</span> <span class="muted small">BPM</span></div><button data-act="gr-bpm" data-d="4" aria-label="Mais rápido">+</button></div>';
     h+='<p class="sub small" id="gr-status" style="margin:14px 0 10px;min-height:1.4em" aria-live="polite">'+(on?'Contagem':'Começa com um compasso de contagem. Um acorde por compasso.')+'</p><button class="btn block" data-act="gr-toggle">'+(on?'Parar':'Ouvir e tocar junto')+'</button></section>';
-    h+='<section class="panel"><h3>Acordes do exemplo</h3><div class="chips" style="margin-top:10px">'+PROGS.map((p,i)=>'<button class="chip" data-act="gr-prog" data-i="'+i+'" aria-pressed="'+(p.join()===BAT.prog.join())+'">'+p.join(' ')+'</button>').join('')+'</div><div class="between" style="margin-top:16px"><span>Clique do metrônomo junto</span><button class="chip" data-act="gr-click" aria-pressed="'+BAT.click+'">'+(BAT.click?'Ligado':'Desligado')+'</button></div><p class="muted small" style="margin-top:12px">Quer escolher os acordes? Monte um treino seu em <button class="link" style="padding:0;min-height:0" data-act="sub" data-g="treinar" data-v="meu">Meu treino</button>.</p></section>';
+    h+='<section class="panel"><h3>Acordes do exemplo</h3><div class="chips" style="margin-top:10px">'+PROGS.map((p,i)=>'<button class="chip" data-act="gr-prog" data-i="'+i+'" aria-pressed="'+(p.join()===BAT.prog.join())+'">'+p.join(' ')+'</button>').join('')+'</div><div class="between" style="margin-top:16px"><span>Clique do metrônomo junto</span><button class="chip" data-act="gr-click" aria-pressed="'+BAT.click+'">'+(BAT.click?'Ligado':'Desligado')+'</button></div><p class="muted small" style="margin-top:12px">Quer escolher os acordes? Monte um treino seu em <button class="link" style="padding:0;min-height:0" data-act="nav" data-v="meu">Meu treino</button>.</p></section>';
   }else{
     if(!E.q)earNew();
     h+=seg('ouvido',[['mm','Maior ou menor'],['qual','Qual acorde']]);
@@ -907,11 +954,8 @@ V.evolucao=function(){
     const ks=Object.keys(S.days).filter(practiced),tot=ks.reduce((a,k)=>a+S.days[k].min,0);
     h+='<div class="stats"><div><b class="num">'+streak()+'</b><span>dias seguidos</span></div><div><b class="num">'+bestStreak()+'</b><span>maior sequência</span></div><div><b class="num">'+tot+'</b><span>minutos tocados</span></div><div><b class="num">'+ks.length+'</b><span>dias praticados</span></div></div>';
     const days=[];for(let i=13;i>=0;i--)days.push(addDays(new Date(),-i));
-    const vals=days.map(d=>(S.days[dkey(d)]||{}).min||0),mx=Math.max(S.goal,Math.max.apply(null,vals)),bw=16,gap=8,H=96;
-    let c='<svg viewBox="0 0 336 124" role="img" aria-label="Minutos por dia nos últimos 14 dias">';
-    vals.forEach((v,i)=>{const x=4+i*(bw+gap),bh=v?Math.max(4,v/mx*H):3;c+='<rect class="'+(v?'b':'b0')+'" x="'+x+'" y="'+(4+H-bh)+'" width="'+bw+'" height="'+bh+'" rx="4"/>';if(i%2===1)c+='<text x="'+(x+bw/2)+'" y="120">'+days[i].getDate()+'</text>';});
-    const gy=4+H-S.goal/mx*H;c+='<line class="goal" x1="0" x2="336" y1="'+gy+'" y2="'+gy+'"/></svg>';
-    h+='<section class="panel chart" style="margin-top:14px"><div class="between"><h2>Últimos 14 dias</h2><span class="muted small">linha: meta de '+S.goal+' min</span></div><div style="margin-top:14px">'+c+'</div></section>';
+    const vals=days.map(d=>(S.days[dkey(d)]||{}).min||0);
+    h+='<section class="panel chart" style="margin-top:14px"><div class="between"><h2>Últimos 14 dias</h2><span class="muted small">linha: meta de '+S.goal+' min</span></div><div style="margin-top:14px">'+dayBars(days,vals,S.goal)+'</div></section>';
     const dom=CHORDS.filter(x=>S.chords[x.n]==='dominado').length,pk=Object.keys(S.changes).filter(x=>S.changes[x].length).sort((a,b)=>bestOf(b)-bestOf(a))[0];
     h+='<section class="panel"><h2>Marcas</h2><div style="margin-top:6px"><div class="kv"><span>Acordes dominados</span><b>'+dom+' de '+CHORDS.length+'</b></div><div class="kv"><span>Melhor troca em 1 minuto</span><b>'+(pk?bestOf(pk)+' ('+esc(pk.replace('|',' e '))+')':'ainda sem medição')+'</b></div><div class="kv"><span>Metrônomo mais rápido por 1 minuto</span><b>'+(S.maxBpm?S.maxBpm+' BPM':'ainda sem registro')+'</b></div><div class="kv"><span>Acertos no treino de ouvido</span><b>'+(S.ear.total?Math.round(S.ear.ok/S.ear.total*100)+'% de '+S.ear.total:'ainda sem respostas')+'</b></div></div></section>';
   }else if(sub.evolucao==='trilha'){
@@ -979,7 +1023,7 @@ if(PWA.host){
 }
 
 /* ---------- render + nav ---------- */
-const TABS=[['hoje','Hoje','<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.8 2.8L16 9.5"/>'],['treinar','Treinar','<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/>'],['ferramentas','Ferramentas','<path d="M9 3h6l4 18H5L9 3zM12 17l4-11M7.2 13h9.6"/>'],['acordes','Acordes','<path d="M5 4v16M12 4v16M19 4v16M5 4h14M5 10h14M5 16h14"/><circle cx="12" cy="7" r="1.7" fill="currentColor"/>'],['evolucao','Evolução','<path d="M5 20V11M12 20V4M19 20v-6M2 20h20"/>']];
+const TABS=[['hoje','Hoje','<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.8 2.8L16 9.5"/>'],['meu','Meu treino','<path d="M4 6h8M16 6h4M4 12h2M10 12h10M4 18h10M18 18h2"/><circle cx="14" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="18" r="2"/>'],['treinar','Treinar','<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/>'],['ferramentas','Ferramentas','<path d="M9 3h6l4 18H5L9 3zM12 17l4-11M7.2 13h9.6"/>'],['acordes','Acordes','<path d="M5 4v16M12 4v16M19 4v16M5 4h14M5 10h14M5 16h14"/><circle cx="12" cy="7" r="1.7" fill="currentColor"/>'],['evolucao','Evolução','<path d="M5 20V11M12 20V4M19 20v-6M2 20h20"/>']];
 function render(){
   $('#view').innerHTML=V[view]();
   $('#tabs').innerHTML=TABS.map(t=>'<button data-act="nav" data-v="'+t[0]+'"'+(view===t[0]?' aria-current="page"':'')+'><svg viewBox="0 0 24 24" aria-hidden="true">'+t[2]+'</svg>'+t[1]+'</button>').join('');
@@ -1005,7 +1049,7 @@ const ACT={
   'gr-prog':el=>{grStop(true);BAT.prog=PROGS[+el.dataset.i];render();},
   'gr-bpm':el=>{BAT.bpm=Math.max(40,Math.min(160,BAT.bpm+(+el.dataset.d)));const n=$('#gr-bpm');if(n)n.textContent=BAT.bpm;},
   'gr-click':()=>{BAT.click=!BAT.click;if(GR.on){const b=document.querySelector('[data-act="gr-click"]');if(b){b.setAttribute('aria-pressed',BAT.click);b.textContent=BAT.click?'Ligado':'Desligado';}}else render();},
-  'open-meu':()=>{sub.treinar='meu';go('treinar');},
+  'open-meu':()=>{go('meu');},
   'ce-new':()=>{ceNew();render();window.scrollTo(0,0);},
   'ce-edit':el=>{const t=S.custom.find(x=>x.id===el.dataset.id);if(!t)return;CE=ctClean(t);ceDelArmed=false;render();window.scrollTo(0,0);},
   'ce-cancel':()=>{CE=null;ceDelArmed=false;render();window.scrollTo(0,0);},
@@ -1015,9 +1059,11 @@ const ACT={
   'ce-pat':el=>{const v=el.dataset.v,k=CE.pats.indexOf(v);if(k>=0)CE.pats.splice(k,1);else CE.pats.push(v);render();},
   'ce-bpm':el=>{CE.bpm=Math.max(40,Math.min(160,CE.bpm+(+el.dataset.d)));render();},
   'ce-min':el=>{CE.min=+el.dataset.v;render();},
-  'ce-save':()=>{if(!CE.chords.length||!CE.pats.length)return;ceSave();render();window.scrollTo(0,0);},
+  'ce-save':()=>{if(!CE.chords.length||!CE.pats.length)return;ceSave();ctMsg='Treino salvo.';render();window.scrollTo(0,0);},
   'ce-start':()=>{if(!CE.chords.length||!CE.pats.length)return;csStart(ceSave());},
-  'ce-remove':()=>{if(!ceDelArmed){ceDelArmed=true;render();return;}S.custom=S.custom.filter(x=>x.id!==CE.id);save();CE=null;ceDelArmed=false;render();window.scrollTo(0,0);},
+  'ce-remove':()=>{if(!ceDelArmed){ceDelArmed=true;render();return;}S.custom=S.custom.filter(x=>x.id!==CE.id);delete S.ctLog[CE.id];save();CE=null;ceDelArmed=false;render();window.scrollTo(0,0);},
+  'ct-hist':el=>{if(CS&&CS.done)CS=null;CE=null;CHI=el.dataset.id;render();window.scrollTo(0,0);},
+  'ct-back':()=>{CHI=null;render();window.scrollTo(0,0);},
   'cs-start':el=>{csStart(S.custom.find(x=>x.id===el.dataset.id));},
   'cs-toggle':()=>{if(csOn())grStop();else csPlay();},
   'cs-nextpat':()=>{csNextPat();},
@@ -1064,7 +1110,7 @@ const ACT={
   'song-add':()=>{const t=$('#s-title').value.trim(),c=$('#s-chords').value.trim();if(!t){$('#s-title').focus();return;}S.songs.push({id:'s'+Date.now().toString(36),title:t.slice(0,80),chords:c.slice(0,120),status:'aprendendo'});save();render();},
   'song-del':el=>{S.songs=S.songs.filter(s=>s.id!==el.dataset.id);save();render();},
   goal:el=>{S.goal=+el.dataset.v;B=null;save();render();},
-  reset:()=>{if(!resetArmed){resetArmed=true;render();return;}try{localStorage.removeItem(KEY);}catch(e){}if(NATIVE)native('Preferences','remove',{key:KEY});adopt(null);B=null;CE=null;CS=null;E.q=null;E.ok=E.total=0;resetArmed=false;view='hoje';render();}
+  reset:()=>{if(!resetArmed){resetArmed=true;render();return;}try{localStorage.removeItem(KEY);}catch(e){}if(NATIVE)native('Preferences','remove',{key:KEY});adopt(null);B=null;CE=null;CS=null;CHI=null;E.q=null;E.ok=E.total=0;resetArmed=false;view='hoje';render();}
 };
 const NOISY=/^(tone|chord-play|ear-play|ear-next|gr-toggle|m-toggle|note|scale-play|blk-start|t-start|ce-add|ce-start|cs-start|cs-toggle|cs-again)$/;
 document.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if(!el||el.disabled)return;const a=el.dataset.act,fn=ACT[a];if(fn)fn(el);if(NOISY.test(a)){sndAsked=true;setTimeout(sndPaint,900);}});
