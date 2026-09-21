@@ -20,7 +20,7 @@ concurrency:
 
 jobs:
   apk:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
       KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -55,7 +55,7 @@ jobs:
         id: build
         run: |
           chmod +x android/gradlew
-          VERSION=$(grep -oP '<meta name="app-version" content="\K[^"]+' index.html)
+          VERSION=$(grep -m1 -oP '<meta name="app-version" content="\K[^"]+' index.html)
           if [ -f android/keystore.properties ]; then
             npm run apk:release
             npm run aab
