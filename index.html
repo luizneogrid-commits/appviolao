@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Violão Diário</title>
-<meta name="app-version" content="1.0.0">
+<meta name="app-version" content="1.0.1">
 <meta name="description" content="Treino diário de violão: plano por nível, metrônomo, afinador, batidas para tocar junto, acordes e notas.">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#F2EEF0" media="(prefers-color-scheme: light)">
@@ -693,7 +693,7 @@ const V={};
 V.hoje=function(){
   if(!S.onboarded){
     const lv=[[1,'Nunca toquei','Começo do zero: postura, afinação, Em e Am.'],[2,'Sei um ou dois acordes','Hora de aprender C, G, D e companhia.'],[3,'Toco acordes, mas troco devagar','Foco em trocas rápidas e batidas.'],[4,'Quero vencer a pestana','F, Bm e depois dedilhado.']];
-    return '<header class="top"><div><h1>Violão Diário</h1><p class="sub">Um treino curto por dia, montado para o seu nível.</p></div></header>'+
+    return '<header class="top"><div><h1>Violão Diário</h1><p class="sub">Um treino curto por dia, montado para o seu nível.</p></div></header>'+installBanner()+
       '<div class="stack"><h2>Onde você está hoje?</h2>'+lv.map(l=>'<button class="choice" data-act="ob-level" data-v="'+l[0]+'" aria-pressed="'+(ob.level===l[0])+'"><b>'+l[1]+'</b><span>'+l[2]+'</span></button>').join('')+
       '<h2 style="margin-top:26px">Quanto tempo por dia?</h2><div class="row">'+[10,15,20,30].map(g=>'<button class="chip" data-act="ob-goal" data-v="'+g+'" aria-pressed="'+(ob.goal===g)+'">'+g+' min</button>').join('')+'</div>'+
       '<p class="muted small">Quinze minutos todo dia rendem mais que duas horas no sábado.</p><button class="btn block" data-act="ob-go">Montar meu treino</button></div>';
@@ -849,7 +849,7 @@ function installPanel(){
 }
 function installBanner(){
   if(!PWA.host||standalone()||S.installDismissed)return '';
-  return '<section class="panel" style="margin-bottom:14px"><h3>Instale no celular</h3><p class="sub">Vira um app com ícone, abre em tela cheia, funciona sem internet e se atualiza sozinho.</p>'+(PWA.help&&!PWA.prompt?installSteps():'')+'<div class="acts" style="margin-top:12px;display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center">'+(PWA.prompt?'<button class="btn sm" data-act="pwa-install">Instalar app</button>':(PWA.help?'':'<button class="btn sm" data-act="pwa-help">Ver como instalar</button>'))+'<button class="link" data-act="pwa-dismiss">Agora não</button></div></section>';
+  return '<section class="panel" style="margin-bottom:14px"><h3>Instale no celular</h3><p class="sub">Vira um app com ícone, abre em tela cheia, funciona sem internet e se atualiza sozinho.</p>'+(IOS&&!S.onboarded?'<p class="sub small">No iPhone, instale antes de começar: o app instalado e o Safari guardam o progresso separados.</p>':'')+(PWA.help&&!PWA.prompt?installSteps():'')+'<div class="acts" style="margin-top:12px;display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center">'+(PWA.prompt?'<button class="btn sm" data-act="pwa-install">Instalar app</button>':(PWA.help?'':'<button class="btn sm" data-act="pwa-help">Ver como instalar</button>'))+'<button class="link" data-act="pwa-dismiss">Agora não</button></div></section>';
 }
 function updPaint(){const w=$('#upd-wrap');if(w)w.hidden=!PWA.update;}
 async function checkUpdate(force){
