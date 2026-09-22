@@ -41,6 +41,9 @@ jobs:
       - name: Instalar dependências
         run: npm ci
 
+      - name: Testes (sintaxe e dados do app)
+        run: npm test
+
       - name: Chave de assinatura do app
         if: env.KEYSTORE_BASE64 != ''
         env:

@@ -17,7 +17,7 @@ O mesmo `index.html` vira três coisas:
 | `android/` | Projeto do app Android (ícones, tela de abertura, permissão do microfone). |
 | `ios/` | Projeto do app iPhone (Xcode). |
 | `capacitor.config.json`, `package.json` | Configuração do Capacitor, a ponte entre o `index.html` e os apps nativos. |
-| `scripts/` | Montagem do app (`build-www`), ícones (`make-icons`), compilação Android (`android-build`) e chave de assinatura (`criar-chave`). |
+| `scripts/` | Montagem do app (`build-www`), ícones (`make-icons`), compilação Android (`android-build`), chave de assinatura (`criar-chave`) e verificações (`check-syntax`, `check-data`, rodadas por `npm test` e pelo GitHub antes de compilar). |
 | `.github/workflows/android.yml` | Gera o APK na nuvem a cada envio para a branch `main`. |
 
 ## App Android
@@ -117,7 +117,7 @@ No navegador, nada disso muda: o site continua igual.
 
 ## Bom saber
 
-- O progresso fica salvo no aparelho de cada pessoa. O app Android, o site instalado e o link do Claude guardam progressos separados.
+- O progresso fica salvo no aparelho de cada pessoa. O app Android, o site instalado e o link do Claude guardam progressos separados. Para mover de um para o outro, ou antes de trocar de celular, use Exportar e Importar em Evolução, Perfil, Seus dados.
 - No iPhone, o site instalado e o Safari também guardam dados separados. Peça para a pessoa instalar primeiro e começar a usar depois.
 - Som e microfone funcionam melhor no app ou no site instalado do que dentro de outros aplicativos.
 - No iPhone, o microfone (afinador e contagem de trocas) exige iOS 13.4 ou mais novo. Se ele ligar mas não chegar som, o app mostra o nível do microfone e o botão "Religar o microfone"; feche outros apps que usem o microfone antes.

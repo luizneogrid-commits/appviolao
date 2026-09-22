@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Violão Diário</title>
-<meta name="app-version" content="1.9.0">
+<meta name="app-version" content="1.10.0">
 <meta name="description" content="Treino diário de violão: plano por nível, metrônomo, afinador, batidas para tocar junto, acordes e notas.">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#F2EEF0" media="(prefers-color-scheme: light)">
@@ -42,8 +42,9 @@
   --brass:#E9B44C; --brass-soft:#44361A; --ok:#5CC2A8; --ok-soft:#1C3A33; --warn:#F08A7B;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-html{scroll-padding-top:var(--sat);-webkit-text-size-adjust:100%}
-body{background:var(--bg);color:var(--ink);font-family:"Archivo","Helvetica Neue",Arial,system-ui,sans-serif;font-size:16px;line-height:1.45;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
+html{scroll-padding-top:var(--sat);-webkit-text-size-adjust:100%;font-size:16px}
+html.f1{font-size:17.5px}html.f2{font-size:19px} /* letra maior, escolhida em Perfil: tudo em rem acompanha */
+body{background:var(--bg);color:var(--ink);font-family:"Archivo","Helvetica Neue",Arial,system-ui,sans-serif;font-size:1rem;line-height:1.45;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
 /* faixa atrás da barra de status: o conteúdo rola por baixo dela sem encostar no relógio e na bateria */
 body::before{content:"";position:fixed;top:0;left:0;right:0;height:var(--sat);background:var(--bg);z-index:7}
 button,input,select{font:inherit;color:inherit}
@@ -465,7 +466,7 @@ const buzz=ms=>{if(NATIVE){if(ms<30)native('Haptics','impact',{style:'LIGHT'});e
 
 /* ---------- state ---------- */
 const KEY='violao-diario-v1';
-const DEF={v:1,onboarded:false,name:'',level:1,levelSince:'',goal:15,cntMode:'tap',skills:{},days:{},changes:{},chords:{},songs:[],custom:[],ctLog:{},stats:{tuned:0,play:{},prog4:false},proven:{},badges:{},rest:0,startLevel:0,lastWeekSeen:'',rev:{},adj:null,quick:'',remind:'',bpmLog:{},ear:{ok:0,total:0},maxBpm:0,bpm:70,beats:4,altOut:false,installDismissed:false};
+const DEF={v:1,onboarded:false,name:'',level:1,levelSince:'',goal:15,cntMode:'tap',skills:{},days:{},changes:{},chords:{},songs:[],custom:[],ctLog:{},stats:{tuned:0,play:{},prog4:false},proven:{},badges:{},rest:0,startLevel:0,lastWeekSeen:'',rev:{},adj:null,quick:'',remind:'',bpmLog:{},font:0,theme:'',seenVer:'',ear:{ok:0,total:0},maxBpm:0,bpm:70,beats:4,altOut:false,installDismissed:false};
 let S,hadLocal=false;
 function adopt(o){
   S=Object.assign(JSON.parse(JSON.stringify(DEF)),o&&typeof o==='object'?o:{});
@@ -480,6 +481,8 @@ function adopt(o){
   if(!S.rev||typeof S.rev!=='object'||Array.isArray(S.rev))S.rev={};if(!S.adj||typeof S.adj!=='object')S.adj=null;S.quick=typeof S.quick==='string'?S.quick:'';
   S.remind=typeof S.remind==='string'?S.remind:'';if(!S.bpmLog||typeof S.bpmLog!=='object')S.bpmLog={};if(!S.stats.timing||typeof S.stats.timing!=='object')S.stats.timing={};
   S.songs.forEach(s=>{if(typeof s.cifra!=='string')s.cifra='';});
+  S.font=[0,1,2].includes(+S.font)?+S.font:0;S.theme=['light','dark'].includes(S.theme)?S.theme:'';
+  if(typeof S.seenVer!=='string')S.seenVer='';if(!S.seenVer&&S.onboarded&&!(o&&'seenVer' in o))S.seenVer='1.6.1'; // quem já usava o app antes deste recurso vê as novidades desde então
   S.level=Math.max(1,Math.min(6,Math.round(+S.level)||1)); // 6 = quantidade de níveis em LEVELS (definido mais abaixo)
   if(!S.ear||typeof S.ear!=='object')S.ear={ok:0,total:0};
 }
@@ -487,6 +490,40 @@ adopt(null);
 try{const raw=localStorage.getItem(KEY);if(raw){const o=JSON.parse(raw);if(o&&typeof o==='object'){hadLocal=true;adopt(o);}}}catch(e){}
 // No app nativo, cada gravação também vai para o armazenamento do aparelho (Preferences), que o sistema não apaga sozinho.
 function save(){const j=JSON.stringify(S);try{localStorage.setItem(KEY,j);}catch(e){}if(NATIVE)native('Preferences','set',{key:KEY,value:j});}
+
+/* ---------- aparência: tamanho da letra e tema, escolhidos em Perfil ---------- */
+const THEME_META=[...document.querySelectorAll('meta[name="theme-color"]')].map(m=>[m,m.content]);
+function applyLook(){
+  const h=document.documentElement;h.className=S.font?'f'+S.font:'';
+  if(S.theme)h.dataset.theme=S.theme;else delete h.dataset.theme;
+  THEME_META.forEach(([m,orig])=>{m.content=S.theme==='dark'?'#171014':S.theme==='light'?'#F2EEF0':orig;});
+}
+applyLook();
+
+/* ---------- erros: o app nunca fica mudo ---------- */
+// Os últimos 5 erros ficam guardados fora do progresso e aparecem no Diagnóstico (Perfil), para mandar no suporte.
+const ERRS=(()=>{try{const a=JSON.parse(localStorage.getItem(KEY+'-erros')||'[]');return Array.isArray(a)?a:[];}catch(e){return [];}})();
+function logErr(msg){ERRS.unshift(new Date().toISOString().slice(0,16).replace('T',' ')+' '+String(msg).slice(0,200));ERRS.length=Math.min(ERRS.length,5);try{localStorage.setItem(KEY+'-erros',JSON.stringify(ERRS));}catch(e){}}
+window.addEventListener('error',e=>{logErr((e.message||'erro')+(e.lineno?' @'+e.lineno:''));toast('Algo deu errado. Detalhes em Evolução, Perfil, Diagnóstico.');});
+window.addEventListener('unhandledrejection',e=>{logErr('promessa: '+(e.reason&&e.reason.message||e.reason));});
+
+/* ---------- exportar e importar o progresso ---------- */
+const IMP={data:null,summary:'',text:''};
+function exportData(){
+  const payload=JSON.stringify({app:'violao-diario',version:VER,exported:new Date().toISOString(),data:S}),name='violao-diario-'+today()+'.json';
+  let file=null;try{file=new File([payload],name,{type:'application/json'});}catch(e){}
+  if(NATIVE&&file&&navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){navigator.share({files:[file],title:'Progresso do Violão Diário'}).catch(()=>{});return;} // no app, compartilhar é o jeito de salvar em arquivo
+  try{const url=URL.createObjectURL(new Blob([payload],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},1000);toast('Arquivo '+name+' gerado.');}
+  catch(e){IMP.text=payload;render();}
+}
+function importParse(txt){
+  let o=null;try{o=JSON.parse(txt);}catch(e){}
+  const d=o&&o.app==='violao-diario'&&o.data&&typeof o.data==='object'?o.data:(o&&o.days&&typeof o.level!=='undefined'?o:null);
+  if(!d){toast('Não reconheci esse conteúdo como um progresso do Violão Diário.');return;}
+  const days=Object.keys(d.days||{}).filter(k=>d.days[k]&&d.days[k].min>0).length,min=Object.keys(d.days||{}).reduce((a,k)=>a+((d.days[k]||{}).min||0),0);
+  IMP.data=d;IMP.summary=(o.exported?'Exportado em '+new Date(o.exported).toLocaleDateString('pt-BR')+(o.version?', versão '+o.version:'')+'. ':'')+'Nível '+(d.level||1)+', '+days+(days===1?' dia praticado':' dias praticados')+', '+min+' minutos, '+((d.songs||[]).length)+((d.songs||[]).length===1?' música.':' músicas.');
+  render();
+}
 
 const today=()=>dkey();
 const day=k=>S.days[k]||(S.days[k]={min:0,done:{}});
@@ -766,11 +803,11 @@ function sndState(){
   if(DIAG.sig>.01)return 'O app está enviando som: medi o sinal na saída. Se você não ouve, ligue “Outra saída de som” abaixo e teste de novo.';
   return 'O motor de som está ligado, mas não saiu sinal. Isso é defeito do app: me avise.';
 }
-function sndDiag(){
+function diagRows(){
   const ua=navigator.userAgent,dev=IOS?'iPhone ou iPad':/Android/.test(ua)?'Android':'computador';let fr='não';try{fr=window.top!==window.self?'sim':'não';}catch(e){fr='sim';}
-  const L=[['Aparelho',dev],['Motor de som',AC?AC.state+(DIAG.clock!==null?', relógio '+(DIAG.clock>.2?'andando':'parado'):''):'desligado'],['Sinal na saída do app',DIAG.sig===null?'não medido':DIAG.sig>.01?'sim ('+DIAG.sig.toFixed(2)+')':'não'],['Modo mídia',DIAG.sil||'não se aplica'],['Outra saída',S.altOut?(DIAG.alt||'ligada'):'desligada'],['Áudio simples',DIAG.html||'não testado'],['Dentro de moldura',fr]];
-  return L.map(x=>'<div class="kv"><span>'+esc(x[0])+'</span><b>'+esc(x[1])+'</b></div>').join('');
+  return [['Versão',VER||'sem número'],['Onde roda',NATIVE?'app instalado':standalone()?'site instalado':'navegador'],['Aparelho',dev],['Motor de som',AC?AC.state+(DIAG.clock!==null?', relógio '+(DIAG.clock>.2?'andando':'parado'):''):'desligado'],['Sinal na saída do app',DIAG.sig===null?'não medido':DIAG.sig>.01?'sim ('+DIAG.sig.toFixed(2)+')':'não'],['Modo mídia',DIAG.sil||'não se aplica'],['Outra saída',S.altOut?(DIAG.alt||'ligada'):'desligada'],['Áudio simples',DIAG.html||'não testado'],['Dentro de moldura',fr],['Erros recentes',ERRS.length?ERRS.join(' | '):'nenhum']];
 }
+function sndDiag(){return diagRows().map(x=>'<div class="kv"><span>'+esc(x[0])+'</span><b'+(x[0]==='Erros recentes'&&ERRS.length?' style="font-weight:600;text-align:left;word-break:break-word"':'')+'>'+esc(x[1])+'</b></div>').join('');}
 function sndPaint(){
   const w=$('#snd-wrap');if(!w)return;let msg='';
   if(sndAsked){if(!(window.AudioContext||window.webkitAudioContext))msg='Este navegador não tem suporte a som. Abra o link no Chrome ou no Safari.';
@@ -1462,7 +1499,14 @@ function perfilView(){
   h+='<section class="panel"><h2>Seu nome</h2><p class="sub small">Opcional. Aparece no cumprimento da tela Hoje.</p><input class="inp" id="p-name" maxlength="30" placeholder="Como quer ser chamado?" aria-label="Seu nome" value="'+esc(S.name)+'" style="margin-top:12px"></section>';
   h+='<section class="panel"><h2>Lembrete diário</h2>'+(NATIVE?'<p class="sub small">Uma notificação no horário escolhido, todo dia. Quem pratica sempre na mesma hora falta menos.</p><div class="chips" style="margin-top:12px"><button class="chip" data-act="remind" data-v="" aria-pressed="'+!S.remind+'">Desligado</button>'+REMIND_TIMES.map(t=>'<button class="chip" data-act="remind" data-v="'+t+'" aria-pressed="'+(S.remind===t)+'">'+t+'</button>').join('')+'</div>':'<p class="sub small">Os lembretes ficam disponíveis no app instalado pela loja ou pelo APK. No site, escolha um horário fixo e crie um lembrete no relógio do celular: quem pratica sempre na mesma hora falta menos.</p>')+'</section>';
   h+=installPanel()+sndPanel();
-  h+='<section class="panel"><h2>Seus dados</h2><p class="sub">'+(NATIVE?'Seu progresso fica salvo neste aparelho, dentro do app.':'Seu progresso fica salvo neste aparelho, neste navegador. Cada pessoa que abrir o link tem o próprio progresso, separado do seu.')+'</p><button class="btn block danger" style="margin-top:14px" data-act="reset">'+(resetArmed?'Toque de novo para apagar tudo':'Apagar meu progresso')+'</button></section>';
+  h+='<section class="panel"><h2>Aparência</h2><p class="grp">Tamanho da letra</p><div class="chips">'+[[0,'Normal'],[1,'Maior'],[2,'Bem maior']].map(o=>'<button class="chip" data-act="font" data-v="'+o[0]+'" aria-pressed="'+(S.font===o[0])+'">'+o[1]+'</button>').join('')+'</div><p class="grp">Tema</p><div class="chips">'+[['','Automático'],['light','Claro'],['dark','Escuro']].map(o=>'<button class="chip" data-act="theme" data-v="'+o[0]+'" aria-pressed="'+(S.theme===o[0])+'">'+o[1]+'</button>').join('')+'</div></section>';
+  h+='<section class="panel"><h2>Seus dados</h2><p class="sub">'+(NATIVE?'Seu progresso fica salvo neste aparelho, dentro do app.':'Seu progresso fica salvo neste aparelho, neste navegador. Cada pessoa que abrir o link tem o próprio progresso, separado do seu.')+' É a única cópia: exporte de tempos em tempos, e antes de trocar de celular.</p>';
+  h+='<div class="acts" style="margin-top:12px"><button class="btn sm" data-act="export">Exportar progresso</button><label class="btn sm line" for="imp-file">Importar progresso</label><input type="file" id="imp-file" accept=".json,application/json,text/plain" style="display:none"></div>';
+  if(IMP.text)h+='<div class="snd" style="margin-top:14px"><p>Não consegui gerar o arquivo aqui. Copie o texto abaixo e guarde num lugar seguro (um e-mail para você mesmo serve).</p><textarea class="inp" rows="4" readonly aria-label="Progresso exportado">'+esc(IMP.text)+'</textarea><div class="acts"><button class="btn sm" data-act="exp-copy">Copiar</button><button class="link" data-act="exp-close">Fechar</button></div></div>';
+  if(IMP.data)h+='<div class="snd" style="margin-top:14px"><p><b>Arquivo lido.</b> '+esc(IMP.summary)+'</p><p class="small" style="margin-bottom:10px">Importar substitui tudo o que está neste aparelho. O estado atual fica guardado para desfazer.</p><div class="acts"><button class="btn sm" data-act="imp-go">Substituir e importar</button><button class="link" data-act="imp-cancel">Cancelar</button></div></div>';
+  else if(localStorage.getItem(KEY+'-anterior'))h+='<button class="link" data-act="imp-undo">Desfazer a última importação</button>';
+  h+='<details class="tcard" style="margin-top:8px"><summary>Colar um progresso exportado</summary><div><textarea class="inp" id="imp-text" rows="4" placeholder="Cole aqui o conteúdo do arquivo exportado" aria-label="Progresso a importar"></textarea><button class="btn block line" style="margin-top:8px" data-act="imp-paste">Ler o texto colado</button></div></details>';
+  h+='<button class="btn block danger" style="margin-top:14px" data-act="reset">'+(resetArmed?'Toque de novo para apagar tudo':'Apagar meu progresso')+'</button></section>';
   return h;
 }
 
@@ -1478,7 +1522,7 @@ function scheduleReminder(){
 }
 
 /* ---------- cifras: cifra com rolagem automática e sugestões de músicas ---------- */
-const SV={id:null,speed:0,big:false,edit:false};let svTimer=null;
+const SV={id:null,speed:0,big:false,edit:false,editId:null};let svTimer=null;
 // Arranjos simplificados, em tons fáceis, só com os nomes dos acordes. Para o tom original, capotraste.
 const SONGBOOK=[
  ['Knockin\' on Heaven\'s Door','Bob Dylan',['G','D','Am','C']],['Stand by Me','Ben E. King',['G','Em','C','D']],['Let It Be','The Beatles',['C','G','Am','F']],
@@ -1599,7 +1643,7 @@ V.hoje=function(){
   const dateStr=new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'}),hr=new Date().getHours();
   const hello=S.name?(hr<12?'Bom dia':hr<18?'Boa tarde':'Boa noite')+', '+esc(S.name)+'. ':'';
   let h='<header class="top"><div><h1>Hoje</h1><p class="sub">'+hello+esc(hello?dateStr.charAt(0).toUpperCase()+dateStr.slice(1):dateStr)+'</p></div><div class="streak" aria-label="'+st+' dias seguidos"><span class="num">'+st+'</span><span class="lbl">'+(st===1?'dia<br>seguido':'dias<br>seguidos')+'</span></div></header>';
-  h+=installBanner();
+  h+=installBanner()+newsPanel();
   if(new Date().getDay()===1&&S.lastWeekSeen!==wkKey(new Date())&&weekStats(1).min>0){const a=weekStats(1),b=weekStats(2); // segunda-feira: resumo da semana passada
     h+='<section class="panel"><div class="between"><h3>Sua semana passada</h3><button class="link" style="padding:0;min-height:0" data-act="week-seen">Fechar</button></div><p class="sub">'+a.min+' min em '+a.days+(a.days===1?' dia':' dias')+(b.min?' ('+(a.min>=b.min?'+':'')+(a.min-b.min)+' min em relação à anterior)':'')+'. '+(a.days>=5?'Ritmo ótimo: cinco dias ou mais.':a.days>=3?'Bom ritmo. Tente cinco dias esta semana.':'Semana curta. Dez minutos por dia já mantêm a sequência.')+'</p></section>';}
   h+='<section class="neck">'+neckSVG()+'</section>';
@@ -1759,7 +1803,9 @@ V.evolucao=function(){
     if(SV.id&&S.songs.some(s=>s.id===SV.id))h+=songView();
     else{
     h+='<section class="panel"><h2>Adicionar música</h2><p class="sub small">As músicas que você está aprendendo entram no bloco de repertório do treino diário.</p><div class="stack" style="margin-top:12px"><input class="inp" id="s-title" maxlength="80" placeholder="Nome da música" aria-label="Nome da música"><input class="inp" id="s-chords" maxlength="120" placeholder="Acordes, por exemplo: G D Em C" aria-label="Acordes da música"><textarea class="inp" id="s-cifra" rows="4" maxlength="6000" placeholder="Cifra ou letra com os acordes (opcional). Cole aqui: dá para abrir com rolagem automática na hora de tocar." aria-label="Cifra"></textarea><button class="btn block" data-act="song-add">Adicionar música</button></div></section>';
-    h+='<section class="panel">'+(S.songs.length?S.songs.map(s=>'<div class="song"><div class="between"><h3>'+esc(s.title)+'</h3><button class="link" style="padding:0;min-height:32px" data-act="song-del" data-id="'+esc(s.id)+'">Remover</button></div>'+(s.chords?'<p class="cif">'+esc(s.chords)+'</p>':'')+'<select data-song="'+esc(s.id)+'" style="margin-top:10px" aria-label="Situação da música">'+[['aprendendo','Aprendendo'],['devagar','Toco devagar'],['dominada','Dominada']].map(o=>'<option value="'+o[0]+'"'+(s.status===o[0]?' selected':'')+'>'+o[1]+'</option>').join('')+'</select><div class="acts"><button class="btn sm quiet" data-act="song-play" data-id="'+esc(s.id)+'">'+(s.cifra?'Abrir a cifra':'Adicionar cifra')+'</button></div></div>').join(''):'<h3>Nenhuma música ainda.</h3><p class="sub">Escolha uma música de que você gosta e que use acordes do seu nível. É ela que vai fazer você pegar o violão todo dia.</p>')+'</section>';
+    h+='<section class="panel">'+(S.songs.length?S.songs.map(s=>{
+      if(SV.editId===s.id)return '<div class="song"><div class="stack"><input class="inp" data-song-title="'+esc(s.id)+'" maxlength="80" value="'+esc(s.title)+'" aria-label="Nome da música"><input class="inp" data-song-chords="'+esc(s.id)+'" maxlength="120" value="'+esc(s.chords)+'" placeholder="Acordes" aria-label="Acordes da música"><div class="acts"><button class="btn sm" data-act="song-save" data-id="'+esc(s.id)+'">Salvar</button><button class="link" data-act="song-edit-cancel">Cancelar</button></div></div></div>';
+      return '<div class="song"><div class="between"><h3>'+esc(s.title)+'</h3><button class="link" style="padding:0;min-height:32px" data-act="song-del" data-id="'+esc(s.id)+'">Remover</button></div>'+(s.chords?'<p class="cif">'+esc(s.chords)+'</p>':'')+'<select data-song="'+esc(s.id)+'" style="margin-top:10px" aria-label="Situação da música">'+[['aprendendo','Aprendendo'],['devagar','Toco devagar'],['dominada','Dominada']].map(o=>'<option value="'+o[0]+'"'+(s.status===o[0]?' selected':'')+'>'+o[1]+'</option>').join('')+'</select><div class="acts"><button class="btn sm quiet" data-act="song-play" data-id="'+esc(s.id)+'">'+(s.cifra?'Abrir a cifra':'Adicionar cifra')+'</button><button class="link" data-act="song-edit-title" data-id="'+esc(s.id)+'">Editar</button></div></div>';}).join(''):'<h3>Nenhuma música ainda.</h3><p class="sub">Escolha uma música de que você gosta e que use acordes do seu nível. É ela que vai fazer você pegar o violão todo dia.</p>')+'</section>';
     h+=songSuggestions();
     }
   }else{
@@ -1768,7 +1814,7 @@ V.evolucao=function(){
   return h;
 };
 
-function sndPanel(){return '<section class="panel"><h2>Sem som?</h2><p class="sub" id="snd-state">'+esc(sndState())+'</p><button class="btn block" style="margin:14px 0 10px" data-act="snd-test">Testar o som</button><button class="btn block line" data-act="snd-reset">Reiniciar o som</button><p class="muted small" style="margin:6px 0 10px">Se o som parou depois de uma chamada, de o app ficar em segundo plano ou de trocar de fone, reiniciar o som resolve sem fechar o app.</p><button class="btn block line" data-act="snd-html">Testar com áudio simples</button><div class="between" style="margin-top:16px"><span>Outra saída de som</span><button class="chip" data-act="snd-alt" aria-pressed="'+!!S.altOut+'">'+(S.altOut?'Ligada':'Desligada')+'</button></div><p class="muted small" style="margin-top:6px">Manda o som pelo canal de mídia do aparelho, o mesmo de vídeos e chamadas. Ajuda quando o iPhone está no silencioso.</p><h3 style="margin-top:18px">Diagnóstico</h3><div class="small" id="snd-diag" style="margin-top:4px">'+sndDiag()+'</div><ol class="muted small" style="padding-left:1.2em;line-height:1.6;margin-top:12px"><li>iPhone: desligue a chave de silencioso na lateral.</li><li>Aperte o botão de volume logo depois de tocar em “Testar o som”, para subir o volume de mídia.</li><li>Desconecte fone ou caixa Bluetooth que não esteja por perto.</li>'+(NATIVE?'':'<li>Se continuar mudo dentro do app do Claude, abra o link no Safari ou no Chrome.</li>')+'</ol></section>';}
+function sndPanel(){return '<section class="panel"><h2>Sem som?</h2><p class="sub" id="snd-state">'+esc(sndState())+'</p><button class="btn block" style="margin:14px 0 10px" data-act="snd-test">Testar o som</button><button class="btn block line" data-act="snd-reset">Reiniciar o som</button><p class="muted small" style="margin:6px 0 10px">Se o som parou depois de uma chamada, de o app ficar em segundo plano ou de trocar de fone, reiniciar o som resolve sem fechar o app.</p><button class="btn block line" data-act="snd-html">Testar com áudio simples</button><div class="between" style="margin-top:16px"><span>Outra saída de som</span><button class="chip" data-act="snd-alt" aria-pressed="'+!!S.altOut+'">'+(S.altOut?'Ligada':'Desligada')+'</button></div><p class="muted small" style="margin-top:6px">Manda o som pelo canal de mídia do aparelho, o mesmo de vídeos e chamadas. Ajuda quando o iPhone está no silencioso.</p><h3 style="margin-top:18px">Diagnóstico</h3><div class="small" id="snd-diag" style="margin-top:4px">'+sndDiag()+'</div><button class="btn block line" style="margin-top:10px" data-act="snd-copy">Copiar diagnóstico</button><ol class="muted small" style="padding-left:1.2em;line-height:1.6;margin-top:12px"><li>iPhone: desligue a chave de silencioso na lateral.</li><li>Aperte o botão de volume logo depois de tocar em “Testar o som”, para subir o volume de mídia.</li><li>Desconecte fone ou caixa Bluetooth que não esteja por perto.</li>'+(NATIVE?'':'<li>Se continuar mudo dentro do app do Claude, abra o link no Safari ou no Chrome.</li>')+'</ol></section>';}
 
 /* ---------- instalação e atualização (só quando hospedado como PWA, com manifest) ---------- */
 const FRAMED=(()=>{try{return window.top!==window.self;}catch(e){return true;}})();
@@ -1815,8 +1861,24 @@ if(PWA.host){
 
 /* ---------- render + nav ---------- */
 const TABS=[['hoje','Hoje','<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.8 2.8L16 9.5"/>'],['meu','Meu treino','<path d="M4 6h8M16 6h4M4 12h2M10 12h10M4 18h10M18 18h2"/><circle cx="14" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="18" r="2"/>'],['treinar','Treinar','<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/>'],['ferramentas','Ferramentas','<path d="M9 3h6l4 18H5L9 3zM12 17l4-11M7.2 13h9.6"/>'],['acordes','Acordes','<path d="M5 4v16M12 4v16M19 4v16M5 4h14M5 10h14M5 16h14"/><circle cx="12" cy="7" r="1.7" fill="currentColor"/>'],['evolucao','Evolução','<path d="M5 20V11M12 20V4M19 20v-6M2 20h20"/>']];
+/* ---------- novidades de cada versão, mostradas uma vez ---------- */
+const NEWS=[
+ ['1.10.0',['Exportar e importar o progresso (Perfil, Seus dados): a cópia de segurança que faltava.','Letra maior e tema claro ou escuro (Perfil, Aparência).','Editar o título e os acordes das músicas.']],
+ ['1.9.0',['Lembrete diário no app instalado (Perfil).','Treinar, Tempo: o app mede se você adianta ou atrasa.','Cifras com rolagem automática e músicas que você já consegue tocar.','Diário e calendário do ano em Evolução.']],
+ ['1.8.0',['Revisão rápida em Hoje: perguntas curtas na hora certa de rever.','“Como foi?” depois de cada bloco ajusta o treino de amanhã.','“Só 5 minutos hoje” para dias corridos.']],
+ ['1.7.0',['Metas do roteiro comprovadas pelos seus registros.','Dicas de dedos que ficam e dedos que mudam nas trocas.','Folga na sequência, conquistas e resumo da sessão.']]
+];
+const verCmp=(a,b)=>{const x=String(a).split('.').map(Number),y=String(b).split('.').map(Number);for(let i=0;i<3;i++){if((x[i]||0)!==(y[i]||0))return (x[i]||0)-(y[i]||0);}return 0;};
+function newsPanel(){
+  if(!VER||!S.seenVer||S.seenVer===VER)return '';
+  const items=[];NEWS.forEach(([v,list])=>{if(verCmp(v,S.seenVer)>0&&verCmp(v,VER)<=0)items.push(...list);});
+  if(!items.length)return '';
+  return '<section class="panel"><div class="between"><h3>Novidades da versão '+esc(VER)+'</h3><button class="link" style="padding:0;min-height:0" data-act="news-seen">Fechar</button></div><ul class="steps muted small">'+items.slice(0,6).map(t=>'<li>'+esc(t)+'</li>').join('')+'</ul></section>';
+}
+
 function render(){
-  $('#view').innerHTML=V[view]();
+  try{$('#view').innerHTML=V[view]();}
+  catch(e){logErr('tela '+view+': '+(e&&e.message||e));$('#view').innerHTML='<section class="panel"><h2>Algo deu errado nesta tela</h2><p class="sub">'+esc(String(e&&e.message||e))+'</p><p class="sub small" style="margin-top:8px">Seu progresso está salvo. Volte para Hoje ou recarregue o app; se continuar, copie o diagnóstico em Evolução, Perfil e me mande.</p><div class="acts"><button class="btn sm" data-act="nav" data-v="hoje">Ir para Hoje</button><button class="btn sm line" data-act="pwa-reload">Recarregar</button></div></section>';}
   $('#tabs').innerHTML=TABS.map(t=>'<button data-act="nav" data-v="'+t[0]+'"'+(view===t[0]?' aria-current="page"':'')+'><svg viewBox="0 0 24 24" aria-hidden="true">'+t[2]+'</svg>'+t[1]+'</button>').join('');
   mPaint();awakeSync();svSync();checkBadges();
 }
@@ -1827,7 +1889,7 @@ const ACT={
   sub:el=>{const g=el.dataset.g;sub[g]=el.dataset.v;if(g==='treinar'){grStop(true);if(MIC&&MIC.mode==='count')micStop();if(TM.timer){clearInterval(TM.timer);TM.timer=null;TM.phase='idle';}}if(g==='ferramentas'&&sub[g]!=='afinador')micStop();if(g==='ouvido')E.q=null;if(g==='treinar'&&(T.phase==='count'||T.phase==='run'))T.phase='idle';render();},
   'ob-level':el=>{ob.level=+el.dataset.v;render();},
   'ob-goal':el=>{ob.goal=+el.dataset.v;render();},
-  'ob-go':()=>{S.level=ob.level;S.startLevel=ob.level;S.goal=ob.goal;S.levelSince=today();S.onboarded=true;save();audio();render();},
+  'ob-go':()=>{S.level=ob.level;S.startLevel=ob.level;S.goal=ob.goal;S.levelSince=today();S.onboarded=true;S.seenVer=VER;save();audio();render();},
   'open-roteiro':()=>{sub.evolucao='roteiro';go('evolucao');},
   'open-perfil':()=>{sub.evolucao='perfil';if(view!=='evolucao')go('evolucao');else{render();window.scrollTo(0,0);}},
   'road-build':el=>{const W=ROAD[+el.dataset.l-1][+el.dataset.w];if(!W)return;if(CS){if(!CS.done)csSettle();CS=null;}CHI=null;
@@ -1899,6 +1961,20 @@ const ACT={
       if(++n>=9){clearInterval(iv);DIAG.sig=mx;DIAG.clock=AC.currentTime-t0;sndPaint();}},100);},
   'snd-html':()=>{htmlTest();},
   'snd-reset':()=>{audioReset();ACT['snd-test']();},
+  'snd-copy':()=>{const txt='Violão Diário, diagnóstico\n'+diagRows().map(x=>x[0]+': '+x[1]).join('\n');const p=navigator.clipboard&&navigator.clipboard.writeText(txt);if(p&&p.then)p.then(()=>toast('Diagnóstico copiado. Cole numa mensagem.'),()=>toast('Não consegui copiar.'));else toast('Não consegui copiar.');},
+  export:()=>{exportData();},
+  'exp-copy':()=>{const p=navigator.clipboard&&navigator.clipboard.writeText(IMP.text);if(p&&p.then)p.then(()=>toast('Copiado.'),()=>toast('Não consegui copiar.'));},
+  'exp-close':()=>{IMP.text='';render();},
+  'imp-paste':()=>{importParse(($('#imp-text')||{value:''}).value);},
+  'imp-cancel':()=>{IMP.data=null;render();},
+  'imp-go':()=>{if(!IMP.data)return;try{localStorage.setItem(KEY+'-anterior',JSON.stringify(S));}catch(e){}adopt(IMP.data);IMP.data=null;B=null;CE=null;CS=null;CHI=null;RV.on=false;M.bpm=S.bpm||70;M.beats=S.beats||4;save();applyLook();render();window.scrollTo(0,0);toast('Progresso importado.');},
+  'imp-undo':()=>{const raw=localStorage.getItem(KEY+'-anterior');if(!raw)return;try{adopt(JSON.parse(raw));localStorage.removeItem(KEY+'-anterior');B=null;CE=null;CS=null;save();applyLook();render();toast('Importação desfeita.');}catch(e){toast('Não consegui desfazer.');}},
+  font:el=>{S.font=+el.dataset.v||0;save();applyLook();render();},
+  theme:el=>{S.theme=el.dataset.v||'';save();applyLook();render();},
+  'news-seen':()=>{S.seenVer=VER;save();render();},
+  'song-edit-title':el=>{SV.editId=el.dataset.id;render();},
+  'song-edit-cancel':()=>{SV.editId=null;render();},
+  'song-save':el=>{const s=S.songs.find(x=>x.id===el.dataset.id);if(!s)return;const t=($('[data-song-title="'+s.id+'"]')||{value:s.title}).value.trim(),c=($('[data-song-chords="'+s.id+'"]')||{value:s.chords}).value.trim();if(t)s.title=t.slice(0,80);s.chords=c.slice(0,120);SV.editId=null;save();render();toast('Música atualizada.');},
   'snd-alt':()=>{S.altOut=!S.altOut;save();if(audio())route();render();},
   'm-toggle':()=>{M.on?mStop():mStart();},
   'm-bpm':el=>mSet(M.bpm+(+el.dataset.d)),
@@ -1959,6 +2035,7 @@ document.addEventListener('change',e=>{const t=e.target;
   else if(t.id==='p-name'){S.name=t.value.trim().slice(0,30);save();}
   else if(t.id==='d-note'){day(today()).note=t.value.trim().slice(0,140);save();}
   else if(t.dataset&&t.dataset.songCifra){const s=S.songs.find(x=>x.id===t.dataset.songCifra);if(s){s.cifra=t.value.slice(0,6000);save();}}
+  else if(t.id==='imp-file'){const f=t.files&&t.files[0];if(f&&f.text)f.text().then(importParse,()=>toast('Não consegui ler o arquivo.'));t.value='';}
   else if(t.dataset&&t.dataset.song){const s=S.songs.find(x=>x.id===t.dataset.song);if(s){s.status=t.value;save();checkProofs();}}});
 function onShow(){
   if(AC&&AC.state==='closed')audioReset();

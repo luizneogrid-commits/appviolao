@@ -12,7 +12,8 @@
     "apk": "npm run sync && node scripts/android-build.mjs debug",
     "apk:release": "npm run sync && node scripts/android-build.mjs release",
     "aab": "npm run sync && node scripts/android-build.mjs bundle",
-    "chave": "node scripts/criar-chave.mjs"
+    "chave": "node scripts/criar-chave.mjs",
+    "test": "node scripts/check-syntax.mjs index.html && node scripts/check-data.mjs index.html"
   },
   "dependencies": {
     "@capacitor-community/keep-awake": "^8.0.1",
