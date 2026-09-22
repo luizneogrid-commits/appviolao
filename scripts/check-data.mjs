@@ -41,7 +41,7 @@ D.CHORDS.forEach(c => {
 // batidas: células conhecidas, 6 ou 8 por compasso
 D.PATTERNS.forEach(p => {
   if (![6, 8].includes(p.cells.length)) err(`batida ${p.id}: ${p.cells.length} células (esperado 6 ou 8)`);
-  p.cells.forEach(c => { if (!['', '↓', '↑', 'x', 'B', 'P', 'b', 'I', 'M', 'A'].includes(c)) err(`batida ${p.id}: célula desconhecida "${c}"`); });
+  p.cells.forEach(c => { if (!['', '↓', '↑', 'x', 'B', 'P', 'b', 'I', 'M', 'A', 'C'].includes(c)) err(`batida ${p.id}: célula desconhecida "${c}"`); });
   if (!(p.bpm >= 40 && p.bpm <= 160)) err(`batida ${p.id}: bpm ${p.bpm}`);
 });
 // níveis: acordes, pares, progressões, batida e 4 habilidades
@@ -65,7 +65,7 @@ D.ROAD.forEach((weeks, li) => {
     if (!W.progs || !W.progs.length) err(`${tag}: sem progressões`);
     (W.progs || []).forEach(p => { if (p.length < 2 || p.length > 8) err(`${tag}: progressão com ${p.length} acordes`); p.forEach(c => { if (!CH.has(c)) err(`${tag}: acorde desconhecido ${c} nas progressões`); }); });
     if (`Semana ${wi + 1}: ${W.t}`.length > 40) err(`${tag}: nome do treino passa de 40 caracteres`);
-    if (W.scale && (!D.SCALES.some(s => s.id === W.scale.sc) || !(W.scale.pc >= 0 && W.scale.pc < 12))) err(`${tag}: escala inválida ${JSON.stringify(W.scale)}`);
+    if (W.scale && (!D.SCALES.some(s => s.id === W.scale.sc) || !(W.scale.pc >= 0 && W.scale.pc < 12) || (W.scale.pos != null && !(W.scale.pos >= 0 && W.scale.pos <= 9)))) err(`${tag}: escala inválida ${JSON.stringify(W.scale)}`);
   });
 });
 // provas automáticas: semanas existentes, batidas e acordes válidos
