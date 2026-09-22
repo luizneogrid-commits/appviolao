@@ -31,6 +31,14 @@
                 <data android:scheme="app.violaodiario" />
             </intent-filter>
 
+            <!-- Texto compartilhado por outro app (uma cifra, pelo menu Compartilhar) vira uma música nova:
+                 MainActivity transforma o envio em app.violaodiario://musica?texto=... -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+
             <!-- Links do site (treinos compartilhados, atalhos ?ir=) abrem no app: o Android confere
                  https://luizneogrid-commits.github.io/.well-known/assetlinks.json (pasta .well-known do repositório) -->
             <intent-filter android:autoVerify="true">

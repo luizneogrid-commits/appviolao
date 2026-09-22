@@ -16,6 +16,7 @@
     { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
     { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
+  "share_target": { "action": "./", "method": "GET", "params": { "title": "titulo", "text": "texto", "url": "link" } },
   "shortcuts": [
     { "name": "Afinador", "short_name": "Afinador", "description": "Afinar o violão", "url": "./?ir=afinador", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
     { "name": "Metrônomo", "short_name": "Metrônomo", "description": "Abrir o metrônomo", "url": "./?ir=metronomo", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
