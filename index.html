@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Violão Diário</title>
-<meta name="app-version" content="1.6.1">
+<meta name="app-version" content="1.7.0">
 <meta name="description" content="Treino diário de violão: plano por nível, metrônomo, afinador, batidas para tocar junto, acordes e notas.">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#F2EEF0" media="(prefers-color-scheme: light)">
@@ -259,6 +259,17 @@ select{min-height:46px;border-radius:12px;border:1.5px solid var(--line);backgro
 .skill i{flex:none;width:24px;height:24px;border-radius:7px;border:2px solid var(--line);display:grid;place-items:center;font-style:normal;font-weight:800;font-size:.85rem;color:transparent;margin-top:1px}
 .skill[aria-pressed="true"] i{background:var(--ok);border-color:var(--ok);color:var(--surface)}
 .skill[aria-pressed="true"] span{color:var(--muted)}
+.skill.proven i{background:var(--ok);border-color:var(--ok);color:var(--surface)}
+.skill small{display:block;font-weight:600;font-size:.8rem;margin-top:3px}
+.skill small.tag{display:inline-block;font-size:.72rem;font-weight:700}
+.toast{position:fixed;left:50%;top:calc(var(--sat) + 12px);transform:translateX(-50%) translateY(-8px);background:var(--ink);color:var(--bg);border-radius:14px;padding:10px 16px;font-weight:650;font-size:.92rem;z-index:8;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;max-width:90%;text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.badges{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.badge{border:1.5px solid var(--line);border-radius:14px;padding:10px 12px;opacity:.55}
+.badge.got{opacity:1;border-color:var(--brass);background:var(--brass-soft)}
+.badge b{display:block;font-size:.95rem}
+.badge span{display:block;font-size:.8rem;color:var(--muted);margin-top:2px}
+.badge small{display:block;font-size:.75rem;color:var(--muted);margin-top:4px;font-weight:700}
 
 /* songs */
 .inp{width:100%;min-height:48px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface-2);padding:0 14px}
@@ -413,6 +424,7 @@ span.chip{display:inline-flex;align-items:center;gap:4px}
 <div class="app" style="padding-bottom:0" id="upd-wrap" hidden><div class="snd" role="status"><p>Nova versão do Violão Diário disponível.</p><button class="btn sm" data-act="pwa-reload">Atualizar agora</button></div></div>
 <main class="app" id="view"></main>
 <div class="pill" id="pill"><span id="pill-t"></span><button data-act="m-toggle">Parar</button></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 <div class="tabs"><nav id="tabs" aria-label="Seções"></nav></div>
 
 <script>
@@ -437,7 +449,7 @@ const buzz=ms=>{if(NATIVE){if(ms<30)native('Haptics','impact',{style:'LIGHT'});e
 
 /* ---------- state ---------- */
 const KEY='violao-diario-v1';
-const DEF={v:1,onboarded:false,name:'',level:1,levelSince:'',goal:15,cntMode:'tap',skills:{},days:{},changes:{},chords:{},songs:[],custom:[],ctLog:{},ear:{ok:0,total:0},maxBpm:0,bpm:70,beats:4,altOut:false,installDismissed:false};
+const DEF={v:1,onboarded:false,name:'',level:1,levelSince:'',goal:15,cntMode:'tap',skills:{},days:{},changes:{},chords:{},songs:[],custom:[],ctLog:{},stats:{tuned:0,play:{},prog4:false},proven:{},badges:{},rest:0,startLevel:0,lastWeekSeen:'',ear:{ok:0,total:0},maxBpm:0,bpm:70,beats:4,altOut:false,installDismissed:false};
 let S,hadLocal=false;
 function adopt(o){
   S=Object.assign(JSON.parse(JSON.stringify(DEF)),o&&typeof o==='object'?o:{});
@@ -446,6 +458,9 @@ function adopt(o){
   S.custom=Array.isArray(S.custom)?S.custom.filter(t=>t&&typeof t==='object'&&Array.isArray(t.chords)&&Array.isArray(t.pats)):[];
   if(!S.ctLog||typeof S.ctLog!=='object'||Array.isArray(S.ctLog))S.ctLog={};
   S.name=typeof S.name==='string'?S.name.slice(0,30):'';S.levelSince=typeof S.levelSince==='string'?S.levelSince:'';S.cntMode=S.cntMode==='mic'?'mic':'tap';
+  if(!S.stats||typeof S.stats!=='object')S.stats={};S.stats.tuned=+S.stats.tuned||0;if(!S.stats.play||typeof S.stats.play!=='object')S.stats.play={};S.stats.prog4=!!S.stats.prog4;
+  ['proven','badges'].forEach(k=>{if(!S[k]||typeof S[k]!=='object'||Array.isArray(S[k]))S[k]={};});
+  S.rest=S.rest?1:0;S.startLevel=Math.round(+S.startLevel)||0;S.lastWeekSeen=typeof S.lastWeekSeen==='string'?S.lastWeekSeen:'';
   S.level=Math.max(1,Math.min(6,Math.round(+S.level)||1)); // 6 = quantidade de níveis em LEVELS (definido mais abaixo)
   if(!S.ear||typeof S.ear!=='object')S.ear={ok:0,total:0};
 }
@@ -459,8 +474,15 @@ const day=k=>S.days[k]||(S.days[k]={min:0,done:{}});
 const practiced=k=>!!(S.days[k]&&S.days[k].min>0);
 const goalMet=k=>!!(S.days[k]&&(S.days[k].full||S.days[k].min>=S.goal));
 function addMinutes(n){day(today()).min+=n;save();}
-function streak(){let n=0,d=new Date();if(!practiced(dkey(d)))d=addDays(d,-1);while(practiced(dkey(d))){n++;d=addDays(d,-1);}return n;}
-function bestStreak(){const ks=Object.keys(S.days).filter(practiced).sort();let best=0,cur=0,prev=null;for(const k of ks){cur=(prev&&dkey(addDays(parseKey(prev),1))===k)?cur+1:1;best=Math.max(best,cur);prev=k;}return best;}
+const wkKey=d=>{const x=new Date(d);x.setDate(x.getDate()-(x.getDay()+6)%7);return dkey(x);}; // segunda-feira da semana
+// Sequência: dias seguidos com prática. Com a folga ligada (S.rest), um dia sem tocar por semana não quebra a sequência.
+function streak(){let n=0,d=new Date(),used={};if(!practiced(dkey(d)))d=addDays(d,-1);
+  for(;;){if(practiced(dkey(d)))n++;else{const w=wkKey(d);if(!S.rest||used[w])break;used[w]=true;}d=addDays(d,-1);}
+  return n;}
+function bestStreak(){const ks=Object.keys(S.days).filter(practiced).sort();if(!ks.length)return 0;let best=0,cur=0,used={},d=parseKey(ks[0]);const end=new Date();
+  while(d<=end){if(practiced(dkey(d))){cur++;best=Math.max(best,cur);}else{const w=wkKey(d);if(S.rest&&!used[w])used[w]=true;else{cur=0;used={};}}d=addDays(d,1);}
+  return best;}
+function weekStats(back){const mon=parseKey(wkKey(addDays(new Date(),-7*back)));let min=0,days=0;for(let i=0;i<7;i++){const v=(S.days[dkey(addDays(mon,i))]||{}).min||0;if(v>0){min+=v;days++;}}return {min,days};}
 
 /* ---------- content ---------- */
 const CHORDS=[
@@ -570,10 +592,56 @@ const ROAD=[
   {t:'Ligados e pestanas menores',tech:['Ligados entre as casas 5 e 7 em cada corda: martele para subir, puxe para descer. Só a mão esquerda faz a segunda nota soar.','Monte o Cm e o Gm: o desenho do Am e do Em com pestana na casa 3. Toque corda por corda.'],pairs:[['Cm','Gm'],['Bm','F#m'],['F','Bb']],pat:'abafada',bpm:80,progs:[['Cm','Gm','Bb','F'],['Am','G','F','E']]}]
 ];
 const ROAD_TOTAL=ROAD.reduce((a,l)=>a+l.length,0);
-const skillsDone=n=>LEVELS[n-1].skills.filter((_,j)=>S.skills[n+'.'+j]).length;
-const weekOf=n=>{const i=LEVELS[n-1].skills.findIndex((_,j)=>!S.skills[n+'.'+j]);return i<0?ROAD[n-1].length-1:i;}; // primeira meta não cumprida
+// Metas que o app consegue comprovar pelos próprios registros (nível.semana). As outras ficam por autoavaliação.
+const PROOF={'1.0':{t:'tuned',n:6},'1.2':{t:'play',pat:'baixo',bpm:60},'1.3':{t:'changes',pair:['Em','Am'],n:15},
+ '2.1':{t:'changes',pair:['G','C'],n:20},'2.2':{t:'play',pat:'baixocima',bpm:40},'2.3':{t:'prog4'},
+ '3.0':{t:'changes',n:30},'3.1':{t:'play',pat:'pop',bpm:80},'3.3':{t:'songs',n:2},
+ '4.2':{t:'changes',pair:['C','F'],n:20},'5.2':{t:'play',pat:'pima',bpm:80,sec:120}};
+function proofOK(k){const p=PROOF[k];if(!p)return false;const st=S.stats;
+  if(p.t==='tuned')return (st.tuned||0)>=p.n;
+  if(p.t==='changes')return p.pair?bestOf(pairKey(p.pair[0],p.pair[1]))>=p.n:Object.keys(S.changes).some(x=>bestOf(x)>=p.n);
+  if(p.t==='play'){const q=(st.play||{})[p.pat];return !!q&&(q[p.sec||60]||0)>=p.bpm;}
+  if(p.t==='prog4')return !!st.prog4;
+  if(p.t==='songs')return S.songs.filter(s=>s.status==='devagar'||s.status==='dominada').length>=p.n;
+  return false;}
+function proofText(p){if(p.t==='tuned')return 'afinar as seis cordas pelo afinador';if(p.t==='changes')return 'registrar '+p.n+' trocas por minuto'+(p.pair?' com '+p.pair[0]+' e '+p.pair[1]:' com qualquer par')+' em Treinar, Trocas';if(p.t==='play')return 'tocar junto com a batida “'+PAT[p.pat].name+'” a '+p.bpm+' BPM por '+((p.sec||60)===60?'1 minuto':'2 minutos');if(p.t==='prog4')return 'tocar junto uma progressão de 4 acordes por 1 minuto';if(p.t==='songs')return 'ter '+p.n+' músicas em “Toco devagar” ou “Dominada”';return '';}
+const skillDone=k=>!!S.skills[k]||proofOK(k);
+const skillsDone=n=>LEVELS[n-1].skills.filter((_,j)=>skillDone(n+'.'+j)).length;
+const weekOf=n=>{const i=LEVELS[n-1].skills.findIndex((_,j)=>!skillDone(n+'.'+j));return i<0?ROAD[n-1].length-1:i;}; // primeira meta não cumprida
 const levelDone=n=>skillsDone(n)===LEVELS[n-1].skills.length;
 const roadDone=()=>(S.level-1)*4+skillsDone(S.level); // semanas vencidas: níveis abaixo contam inteiros
+function metaBtn(k,label){const p=PROOF[k];
+  if(proofOK(k))return '<div class="skill proven"><i>✓</i><span>'+label+' <small class="tag done">comprovada pelos seus registros</small></span></div>';
+  return '<button class="skill" data-act="skill" data-k="'+k+'" aria-pressed="'+!!S.skills[k]+'"><i>✓</i><span>'+label+(p?'<small class="muted">Comprova sozinha ao '+esc(proofText(p))+'.</small>':'')+'</span></button>';}
+function checkProofs(){const n=S.level,got=[];ROAD[n-1].forEach((_,j)=>{const k=n+'.'+j;if(!S.proven[k]&&proofOK(k)){S.proven[k]=today();got.push(LEVELS[n-1].skills[j]);}});if(got.length){save();got.forEach(s=>toast('Meta comprovada: '+s));}}
+function recordPlay(cfg,sec){ // tocar junto: melhor BPM sustentado por 1 e por 2 minutos em cada batida, e progressão de 4 acordes
+  if(!cfg||sec<60)return;const p=S.stats.play[cfg.pid]||(S.stats.play[cfg.pid]={});let ch=false;
+  [60,120].forEach(th=>{if(sec>=th&&(p[th]||0)<cfg.bpm){p[th]=cfg.bpm;ch=true;}});
+  if(cfg.prog&&cfg.prog.length>=4&&!S.stats.prog4){S.stats.prog4=true;ch=true;}
+  if(ch){save();checkProofs();}}
+/* ---------- avisos curtos no alto da tela ---------- */
+const toastQ=[];
+function toast(m){toastQ.push(m);if(toastQ.length===1)toastNext();}
+function toastNext(){const t=$('#toast'),m=toastQ[0];if(!t||m==null)return;t.textContent=m;t.classList.add('show');setTimeout(()=>{t.classList.remove('show');setTimeout(()=>{toastQ.shift();toastNext();},250);},3000);}
+/* ---------- conquistas ---------- */
+const totalMin=()=>Object.keys(S.days).reduce((a,k)=>a+(S.days[k].min||0),0);
+const BADGES=[
+ ['primeiro','Primeiro treino','Você começou. Esse é o passo mais difícil.',()=>Object.keys(S.days).some(practiced)],
+ ['semana','Uma semana seguida','Sete dias sem falhar.',()=>bestStreak()>=7],
+ ['mes','Um mês seguido','Trinta dias sem falhar.',()=>bestStreak()>=30],
+ ['min100','100 minutos','Uma hora e quarenta de violão.',()=>totalMin()>=100],
+ ['min500','500 minutos','Mais de oito horas de prática.',()=>totalMin()>=500],
+ ['min1000','1000 minutos','Quase dezessete horas. Isso já é um músico.',()=>totalMin()>=1000],
+ ['afinado','Afinado','Afinou as seis cordas pelo microfone.',()=>(S.stats.tuned||0)>=6],
+ ['trocas30','30 trocas por minuto','Já dá para acompanhar a maioria das músicas.',()=>Object.keys(S.changes).some(x=>bestOf(x)>=30)],
+ ['trocas60','60 trocas por minuto','Fluência nas trocas.',()=>Object.keys(S.changes).some(x=>bestOf(x)>=60)],
+ ['pestana','Primeira pestana','F ou Bm dominado.',()=>S.chords.F==='dominado'||S.chords.Bm==='dominado'||S.skills['4.0']||S.skills['4.1']],
+ ['ouvido','Ouvido afiado','Vinte respostas no treino de ouvido, com 80% de acerto.',()=>S.ear.total>=20&&S.ear.ok/S.ear.total>=.8],
+ ['meutreino','Treino próprio','Dez vezes em treinos montados por você.',()=>Object.values(S.ctLog).reduce((a,l)=>a+Object.values(l).reduce((b,e)=>b+(e.n||0),0),0)>=10],
+ ['nivel','Subiu de nível','Cumpriu as quatro metas de um nível e passou ao seguinte.',()=>S.level>(S.startLevel||1)],
+ ['roteiro','Roteiro completo','As 24 semanas vencidas.',()=>roadDone()>=ROAD_TOTAL]
+];
+function checkBadges(){const got=[];BADGES.forEach(b=>{try{if(!S.badges[b[0]]&&b[3]()){S.badges[b[0]]=today();got.push(b[1]);}}catch(e){}});if(got.length){save();got.forEach(n=>toast('Conquista: '+n));}}
 function roadEstimate(level,goal,done){ // semanas que faltam, ajustadas pelo tempo diário
   const left=ROAD_TOTAL-(done==null?(level-1)*4:done),f={10:1.3,15:1,20:.85,30:.7}[goal]||1,w=Math.max(1,Math.round(left*f));
   return w>=9?'cerca de '+w+' semanas, uns '+Math.round(w/4.3)+' meses':'cerca de '+w+(w===1?' semana':' semanas');
@@ -588,7 +656,8 @@ function planFor(k){
   const rhy={id:'rhy',title:'Ritmo',text:P.arp?'Monte um acorde do seu nível e toque o “'+P.name+'” bem devagar. Depois ouça o exemplo e toque junto.':'Toque a batida “'+P.name+'” primeiro com as cordas abafadas, contando em voz alta. Depois ouça o exemplo e toque junto.',rhythm:P,bpm:W.bpm};
   out.push({id:'warm',title:'Aquecimento',text:pick(WARM)});
   if(five){out.push(tech,rhy);}else{out.push(seed%2?rhy:tech);}
-  out.push({id:'chg',title:'Trocas de acorde',text:'Troque entre '+pair[0]+' e '+pair[1]+'. Devagar primeiro: o que conta é o acorde novo soar limpo. Depois faça 1 minuto contando as trocas.',pair});
+  const tip=anchorTip(pair[0],pair[1]);
+  out.push({id:'chg',title:'Trocas de acorde',text:'Troque entre '+pair[0]+' e '+pair[1]+'. Devagar primeiro: o que conta é o acorde novo soar limpo.'+(tip?' '+tip:'')+' Depois faça 1 minuto contando as trocas.',pair});
   const open=S.songs.filter(s=>s.status!=='dominada');
   if(open.length){const s=pick(open,1);out.push({id:'rep',title:'Repertório',text:'Toque “'+s.title+'”. Pare nos trechos difíceis e repita só eles, devagar, antes de seguir.',song:s});}
   else{const pr=pick(W.progs,2);out.push({id:'rep',title:'Repertório',text:'Toque a progressão '+pr.join(', ')+' em loop, quatro tempos em cada acorde. Suas músicas entram aqui quando você cadastrar em Evolução.',prog:pr});}
@@ -737,7 +806,7 @@ function mSched(){
     M.next+=60/M.bpm;M.beat=(b+1)%M.beats;
     if(M.beat===0){M.bar++;if(M.ramp.on&&M.bar%M.ramp.bars===0&&M.bpm<M.ramp.target){mSet(Math.min(M.ramp.target,M.bpm+M.ramp.step),true);}}
   }
-  if(AC.currentTime-M.since>=60&&M.bpm>S.maxBpm){S.maxBpm=M.bpm;save();}
+  if(AC.currentTime-M.since>=60&&M.bpm>S.maxBpm){S.maxBpm=M.bpm;save();checkProofs();}
 }
 function mFlash(b){if(!M.on)return;document.querySelectorAll('.dots i').forEach((el,i)=>el.classList.toggle('on',i===b));}
 function mSet(v,keep){M.bpm=Math.max(30,Math.min(240,Math.round(v)));if(AC)M.since=AC.currentTime;S.bpm=M.bpm;if(!keep)save();mPaint();}
@@ -753,12 +822,12 @@ const BAT={pid:'baixo',bpm:60,prog:null,click:true,touched:false};
 const GR={on:false,cfg:BAT,onBar:null,run:0,next:0,step:0,timer:null};
 function grStart(cfg,onBar){
   const ac=audio();if(!ac)return;if(M.on)mStop();
-  GR.cfg=cfg||BAT;GR.onBar=onBar||null;GR.run++;
+  GR.cfg=cfg||BAT;GR.onBar=onBar||null;GR.run++;GR.t0=Date.now();
   GR.on=true;GR.step=-PAT[GR.cfg.pid].cells.length;GR.next=ac.currentTime+.12;GR.timer=setInterval(grSched,25);render();
 }
 function grStop(quiet){
   if(!GR.on)return;const mine=CS&&GR.cfg===CS.cfg;if(mine)csAccrue(Date.now()); // parou um treino montado: grava o tempo tocado
-  GR.on=false;clearInterval(GR.timer);if(AC)dampAll(AC.currentTime+.05);if(mine)csFlush();if(!quiet)render();
+  GR.on=false;clearInterval(GR.timer);if(AC)dampAll(AC.currentTime+.05);if(mine)csFlush();recordPlay(GR.cfg,(Date.now()-GR.t0)/1000);if(!quiet)render();
 }
 function grSched(){
   if(!GR.on||!AC)return;
@@ -788,7 +857,7 @@ const CT_MAX=8,CT_MINS=[5,10,15,20,30];
 let CE=null,CS=null,CHI=null,ceDelArmed=false,ctMsg='';
 const ctName=t=>t.name||t.chords.join(' ');
 const chordBox=c=>'<strong>'+esc(c)+'</strong>'+chordSVG(c);
-function ctClean(t){return {id:t.id,name:String(t.name||'').slice(0,40),chords:t.chords.filter(c=>CH[c]).slice(0,CT_MAX),pats:t.pats.filter(p=>PAT[p]),bpm:Math.max(40,Math.min(160,Math.round(+t.bpm)||70)),min:CT_MINS.includes(+t.min)?+t.min:10};}
+function ctClean(t){return {id:t.id,name:String(t.name||'').slice(0,40),chords:t.chords.filter(c=>CH[c]).slice(0,CT_MAX),pats:t.pats.filter(p=>PAT[p]),bpm:Math.max(40,Math.min(160,Math.round(+t.bpm)||70)),min:CT_MINS.includes(+t.min)?+t.min:10,ramp:!!t.ramp};}
 function ceNew(){CE={id:null,name:'',chords:[],pats:[],bpm:LEVELS[S.level-1].bpm,min:10};ceDelArmed=false;}
 function ceSave(){
   const t=ctClean(Object.assign({},CE,{id:CE.id||'t'+Date.now().toString(36),name:CE.name.trim()}));
@@ -798,13 +867,16 @@ function ceSave(){
 function csStart(t){
   if(!t)return;t=ctClean(t);if(!t.chords.length||!t.pats.length)return;
   if(CS&&!CS.done)csSettle(); // outro treino estava pausado: o tempo já tocado fica registrado
-  CS={t,pi:0,seg:0,ci:0,total:t.min*60,left:t.min*60,last:0,played:0,pending:0,credited:0,counted:false,done:null,cfg:{pid:t.pats[0],bpm:t.bpm,prog:t.chords,click:true,guitar:true}};
+  CS={t,pi:0,seg:0,ci:0,total:t.min*60,left:t.min*60,last:0,played:0,pending:0,credited:0,counted:false,lapSeen:false,done:null,cfg:{pid:t.pats[0],bpm:t.bpm,prog:t.chords,click:true,guitar:true}};
   CHI=null;if(view!=='meu')go('meu');
   csPlay();window.scrollTo(0,0);
 }
 const csOn=()=>!!(CS&&GR.on&&GR.cfg===CS.cfg);
 function csPlay(){if(!CS||CS.done)return;CS.last=Date.now();grStart(CS.cfg,csBar);}
-function csBar(ci){CS.ci=ci;const p=CS.cfg.prog,a=$('#cs-now'),b=$('#cs-next');if(a)a.innerHTML=chordBox(p[ci]);if(b)b.innerHTML=chordBox(p[(ci+1)%p.length]);}
+function csBar(ci){CS.ci=ci;const p=CS.cfg.prog,a=$('#cs-now'),b=$('#cs-next');if(a)a.innerHTML=chordBox(p[ci]);if(b)b.innerHTML=chordBox(p[(ci+1)%p.length]);
+  if(ci===0){ // volta completa pela sequência: com "subir aos poucos", o andamento sobe 4 BPM, até 160
+    if(CS.lapSeen&&CS.t.ramp&&CS.cfg.bpm<160){CS.cfg.bpm=Math.min(160,CS.cfg.bpm+4);const n=$('#cs-bpm');if(n)n.textContent=CS.cfg.bpm;const r=$('#cs-ramp');if(r)r.textContent='Subindo aos poucos: agora a '+CS.cfg.bpm+' BPM.';}
+    CS.lapSeen=true;}}
 function csNextPat(){
   const n=CS.t.pats.length;if(n<2)return;CS.pi=(CS.pi+1)%n;CS.cfg.pid=CS.t.pats[CS.pi];CS.ci=0;
   if(csOn()){grStop(true);csPlay();}else render(); // recomeça com um compasso de contagem na batida nova
@@ -874,7 +946,7 @@ function ctBuilder(){
   if(uniq.length)h+='<div class="cmini">'+uniq.map(c=>'<button class="chord" data-act="chord-play" data-c="'+esc(c)+'" aria-label="Ouvir '+esc(c)+'">'+chordBox(c)+'</button>').join('')+'</div><p class="muted small" style="margin-top:6px">Toque num diagrama para ouvir o acorde.</p><button class="link" data-act="th-open" data-c="'+esc(uniq[0])+'">Entenda como esses acordes são formados</button>';
   h+='</section>';
   h+='<section class="panel ct"><h2>2. Batidas</h2><p class="sub small">Escolha uma ou mais. O tempo do treino é dividido entre elas, na ordem em que você escolher.</p><div class="chips" style="margin-top:12px">'+PATTERNS.map(p=>{const k=e.pats.indexOf(p.id);return '<button class="chip" data-act="ce-pat" data-v="'+p.id+'" aria-pressed="'+(k>=0)+'">'+(k>=0?(k+1)+'. ':'')+esc(p.name)+'</button>';}).join('')+'</div>'+e.pats.map(id=>'<div class="patprev"><b>'+esc(PAT[id].name)+'</b>'+rhythmHTML(PAT[id])+'</div>').join('')+'</section>';
-  h+='<section class="panel ct"><h2>3. Andamento e duração</h2><div class="bpmrow"><button data-act="ce-bpm" data-d="-4" aria-label="Mais devagar">−</button><div style="text-align:center"><span class="num">'+e.bpm+'</span> <span class="muted small">BPM</span><div class="muted small">'+tempoName(e.bpm)+'</div></div><button data-act="ce-bpm" data-d="4" aria-label="Mais rápido">+</button></div><div class="row" style="margin-top:16px">'+CT_MINS.map(m=>'<button class="chip" data-act="ce-min" data-v="'+m+'" aria-pressed="'+(e.min===m)+'">'+m+' min</button>').join('')+'</div><input class="inp" id="ce-name" maxlength="40" placeholder="Nome do treino (opcional)" aria-label="Nome do treino" value="'+esc(e.name)+'" style="margin-top:16px"></section>';
+  h+='<section class="panel ct"><h2>3. Andamento e duração</h2><div class="bpmrow"><button data-act="ce-bpm" data-d="-4" aria-label="Mais devagar">−</button><div style="text-align:center"><span class="num">'+e.bpm+'</span> <span class="muted small">BPM</span><div class="muted small">'+tempoName(e.bpm)+'</div></div><button data-act="ce-bpm" data-d="4" aria-label="Mais rápido">+</button></div><div class="row" style="margin-top:16px">'+CT_MINS.map(m=>'<button class="chip" data-act="ce-min" data-v="'+m+'" aria-pressed="'+(e.min===m)+'">'+m+' min</button>').join('')+'</div><div class="between" style="margin-top:16px"><span>Subir aos poucos</span><button class="chip" data-act="ce-ramp" aria-pressed="'+!!e.ramp+'">'+(e.ramp?'Ligado':'Desligado')+'</button></div><p class="muted small" style="margin-top:6px">A cada volta completa pela sequência, o andamento sobe 4 BPM, até 160. É o jeito clássico de ganhar velocidade sem perder limpeza.</p><input class="inp" id="ce-name" maxlength="40" placeholder="Nome do treino (opcional)" aria-label="Nome do treino" value="'+esc(e.name)+'" style="margin-top:16px"></section>';
   h+='<div class="stack" style="margin-top:14px"><button class="btn block" data-act="ce-start"'+(ok?'':' disabled')+'>Começar treino</button><button class="btn block line" data-act="ce-save"'+(ok?'':' disabled')+'>Salvar treino</button>'+(ok?'':'<p class="muted small" style="text-align:center">Escolha pelo menos um acorde e uma batida.</p>')+(S.custom.length?'<button class="btn block line" data-act="ce-cancel">Voltar sem salvar</button>':'')+(e.id?'<button class="btn block danger" data-act="ce-remove">'+(ceDelArmed?'Toque de novo para apagar':'Apagar este treino')+'</button>':'')+'</div>';
   return h;
 }
@@ -884,7 +956,7 @@ function ctRun(){
   h+='<h3>'+(n>1?'Batida '+(s.pi+1)+' de '+n+': ':'')+esc(P.name)+'</h3><p class="sub small">'+esc(P.tip)+'</p><div style="margin-top:12px">'+rhythmHTML(P,'gr-grid')+'</div>';
   h+='<div class="progrow" id="gr-prog">'+p.map((c,k)=>'<span'+(on&&k===ci?' class="now"':'')+'>'+esc(c)+'</span>').join('')+'</div>';
   h+='<div class="pair cs-pair"><div class="chord"><span class="muted small">Agora</span><div id="cs-now">'+chordBox(p[ci])+'</div></div><div class="chord"><span class="muted small">Depois</span><div id="cs-next">'+chordBox(p[(ci+1)%p.length])+'</div></div></div>';
-  h+='<div class="bpmrow"><button data-act="cs-bpm" data-d="-4" aria-label="Mais devagar">−</button><div style="text-align:center"><span class="num" id="cs-bpm">'+G.bpm+'</span> <span class="muted small">BPM</span></div><button data-act="cs-bpm" data-d="4" aria-label="Mais rápido">+</button></div>';
+  h+='<div class="bpmrow"><button data-act="cs-bpm" data-d="-4" aria-label="Mais devagar">−</button><div style="text-align:center"><span class="num" id="cs-bpm">'+G.bpm+'</span> <span class="muted small">BPM</span></div><button data-act="cs-bpm" data-d="4" aria-label="Mais rápido">+</button></div>'+(s.t.ramp?'<p class="muted small" id="cs-ramp" style="text-align:center;margin-top:6px">Subindo aos poucos: começa a '+s.t.bpm+' BPM e sobe 4 a cada volta.</p>':'');
   h+='<p class="sub small" id="gr-status" style="margin:14px 0 10px;min-height:1.4em" aria-live="polite">'+(on?(GR.step<0?'Contagem':'Tocando '+esc(p[ci])+'.'):'Pausado. O tempo só corre enquanto o treino toca.')+'</p>';
   h+='<div class="stack"><button class="btn block" data-act="cs-toggle">'+(on?'Pausar':'Continuar')+'</button>'+(n>1?'<button class="btn block line" data-act="cs-nextpat">Próxima batida</button>':'')+'</div>';
   h+='<div class="between" style="margin-top:18px"><span>Violão do app</span><button class="chip" data-act="cs-guitar" aria-pressed="'+(G.guitar!==false)+'">'+(G.guitar!==false?'Ligado':'Desligado')+'</button></div><div class="between" style="margin-top:10px"><span>Clique do metrônomo</span><button class="chip" data-act="cs-click" aria-pressed="'+G.click+'">'+(G.click?'Ligado':'Desligado')+'</button></div><p class="muted small" style="margin-top:8px">Quando já souber a batida, desligue o violão do app e toque só com o clique.</p>';
@@ -977,7 +1049,8 @@ function micTick(){
   let bi=0,bc=1e9;STR.forEach((s,i)=>{const ft=440*Math.pow(2,(s.m-69)/12),ce=1200*Math.log2(med/ft);if(Math.abs(ce)<Math.abs(bc)){bc=ce;bi=i;}});
   const s=STR[bi];note.textContent=s.l;$('#t-str').textContent=s.n+'ª corda, '+s.pt;
   $('#t-needle').style.left=(50+Math.max(-50,Math.min(50,bc)))+'%';
-  $('#t-msg').textContent=Math.abs(bc)<=5?'Afinada.':bc<0?'Está grave. Aperte a tarraxa.':'Está aguda. Afrouxe a tarraxa.';
+  const inTune=Math.abs(bc)<=5;$('#t-msg').textContent=inTune?'Afinada.':bc<0?'Está grave. Aperte a tarraxa.':'Está aguda. Afrouxe a tarraxa.';
+  if(inTune){const now=Date.now();if(!MIC.lastTuned||now-MIC.lastTuned>2000){MIC.lastTuned=now;S.stats.tuned=(S.stats.tuned||0)+1;save();checkProofs();}} // registro para a meta "afino sem ajuda"
   document.querySelectorAll('.heads button').forEach((b,i)=>b.classList.toggle('hit',i===bi));
 }
 
@@ -1001,7 +1074,7 @@ function blockDone(id,credit){
 }
 function changesDone(){
   const k=pairKey(T.a,T.b);T.prevBest=bestOf(k);(S.changes[k]=S.changes[k]||[]).push({d:today(),n:T.count});
-  if(S.changes[k].length>60)S.changes[k].shift();addMinutes(1);T.phase='done';
+  if(S.changes[k].length>60)S.changes[k].shift();addMinutes(1);T.phase='done';checkProofs();
   T.viaMic=!!(MIC&&MIC.mode==='count');if(T.viaMic)micStop();
   strum(chordMidis('C'));buzz(120);render();
 }
@@ -1061,6 +1134,24 @@ function dayBars(days,vals,goal){ // minutos por dia; goal > 0 desenha a linha d
   if(goal){const gy=4+H-goal/mx*H;c+='<line class="goal" x1="0" x2="336" y1="'+gy+'" y2="'+gy+'"/>';}
   return c+'</svg>';
 }
+/* ---------- dedos-âncora: o que fica e o que muda entre dois acordes ---------- */
+function anchorTip(a,b){
+  const A=CH[a],B=CH[b];if(!A||!B||a===b)return '';
+  const shift=k=>A.f.every((f,i)=>f<=0||(B.f[i+k]===f&&B.d[i+k]===A.d[i]))&&B.f.every((f,i)=>f<=0||(A.f[i-k]===f&&A.d[i-k]===B.d[i]));
+  if(shift(1))return 'O '+b+' é o desenho do '+a+' uma corda para baixo (mais aguda): mova a mão inteira, sem desmontar os dedos.';
+  if(shift(-1))return 'O '+b+' é o desenho do '+a+' uma corda para cima (mais grave): mova a mão inteira, sem desmontar os dedos.';
+  const bs=barreShape(b);if(bs&&bs.shape===a)return 'O '+b+' é o desenho do '+a+' '+bs.fret+(bs.fret===1?' casa':' casas')+' acima: deite o dedo 1 na casa '+bs.fret+' e repita o desenho com os outros dedos.';
+  const pos=c=>{const p={};c.f.forEach((f,i)=>{if(f>0)(p[c.d[i]]=p[c.d[i]]||[]).push([i,f]);});return p;};
+  const pa=pos(A),pb=pos(B),where=x=>x.length>1?'a pestana na casa '+x[0][1]:'a '+(6-x[0][0])+'ª corda, casa '+x[0][1];
+  const stay=[],move=[],out=[],inn=[];
+  for(let d=1;d<=4;d++){const x=pa[d],y=pb[d];if(x&&y){const same=x.length===y.length&&x.every(([i,f])=>y.some(([j,g])=>i===j&&f===g));(same?stay:move).push(d);}else if(x)out.push(d);else if(y)inn.push(d);}
+  const ds=arr=>arr.length===1?'o dedo '+arr[0]:'os dedos '+listPt(arr.map(String));
+  const changes=move.map(d=>'o dedo '+d+' vai d'+where(pa[d]).replace(/^a /,'a ')+' para '+where(pb[d])).concat(out.map(d=>'o dedo '+d+' sai'),inn.map(d=>'o dedo '+d+' entra n'+where(pb[d]).replace(/^a /,'a ')));
+  if(stay.length)return ds(stay).replace(/^o/,'O')+(stay.length===1?' fica':' ficam')+' no lugar'+(changes.length?'; '+changes.join('; ')+'.':'.');
+  const low=B.f.map((f,i)=>f>0?[i,B.d[i]]:null).filter(Boolean)[0];
+  return 'Nenhum dedo fica no lugar: mova os dedos juntos, começando pelo dedo '+(low?low[1]:1)+', que vai para a corda mais grave.';
+}
+
 /* ---------- teoria: como cada acorde é formado ---------- */
 // Tudo sai do nome do acorde (tônica, m, 7, maj7) e do desenho: que nota cada corda dá e que função ela tem.
 const LET='CDEFGAB',LPC=[0,2,4,5,7,9,11],LPT={C:'Dó',D:'Ré',E:'Mi',F:'Fá',G:'Sol',A:'Lá',B:'Si'},OPENL=['E','A','D','G','B','E'];
@@ -1288,7 +1379,7 @@ function roadNow(){ // painel curto na tela Hoje: em que semana a pessoa está e
   const n=S.level,L=LEVELS[n-1],w=weekOf(n),W=ROAD[n-1][w],k=n+'.'+w,done=levelDone(n);
   let h='<section class="panel road-now"><div class="between"><h3>Roteiro: nível '+n+', semana '+(w+1)+' de '+ROAD[n-1].length+'</h3><button class="link" style="padding:0;min-height:0" data-act="open-roteiro">Ver roteiro</button></div>';
   if(done)h+='<p class="sub">Nível '+n+' concluído: as quatro metas estão cumpridas.</p>'+(n<LEVELS.length?'<button class="btn sm" style="margin-top:12px" data-act="set-level" data-l="'+(n+1)+'">Subir para o nível '+(n+1)+'</button>':'<p class="sub small">Você chegou ao fim do roteiro. Siga com Meu treino e com as suas músicas.</p>');
-  else h+='<p class="sub">'+esc(W.t)+'</p><button class="skill" data-act="skill" data-k="'+k+'" aria-pressed="false"><i>✓</i><span>Meta da semana: '+esc(L.skills[w])+'</span></button><p class="muted small">Marque quando conseguir. O treino de Hoje passa para a semana seguinte.</p>';
+  else h+='<p class="sub">'+esc(W.t)+'</p>'+metaBtn(k,'Meta da semana: '+esc(L.skills[w]))+'<p class="muted small">Marque quando conseguir. O treino de Hoje passa para a semana seguinte.</p>';
   return h+'</section>';
 }
 function roadView(){
@@ -1304,9 +1395,9 @@ function roadLevel(n){
   const tag=cur?'<span class="tag">nível atual</span>':past?'<span class="tag done">concluído</span>':'<span class="muted small">a seguir</span>';
   let h='<details class="road-lvl'+(cur?' cur':'')+'"'+(cur?' open':'')+'><summary><span class="rl-head"><h2>'+n+'. '+esc(L.name)+'</h2>'+tag+'</span><span class="sub small rl-desc">'+esc(L.desc)+' Acordes: '+L.chords.join(', ')+'.</span></summary><div class="road-weeks">';
   ROAD[n-1].forEach((W,j)=>{
-    const k=n+'.'+j,ok=past||!!S.skills[k],now=cur&&!all&&j===w,P=PAT[W.pat],chords=[...new Set([].concat(...W.progs,...W.pairs))];
+    const k=n+'.'+j,ok=past||skillDone(k),now=cur&&!all&&j===w,P=PAT[W.pat],chords=[...new Set([].concat(...W.progs,...W.pairs))];
     h+='<div class="road-wk'+(ok?' ok':'')+(now?' now':'')+'"><div class="road-hd"><span class="wk">'+(ok?'✓':j+1)+'</span><div><b>Semana '+(j+1)+': '+esc(W.t)+'</b>'+(now?' <span class="tag">você está aqui</span>':'')+'</div></div>';
-    h+='<button class="skill" data-act="skill" data-k="'+k+'" aria-pressed="'+!!S.skills[k]+'"><i>✓</i><span>Meta: '+esc(L.skills[j])+'</span></button>';
+    h+=metaBtn(k,'Meta: '+esc(L.skills[j]));
     h+='<ul class="road-list"><li><b>Técnica:</b> '+W.tech.map(esc).join(' ')+'</li><li><b>Trocas:</b> '+W.pairs.map(p=>p.join(' e ')).join('; ')+'.</li><li><b>Batida:</b> '+esc(P.name)+', a '+W.bpm+' BPM.</li><li><b>Repertório:</b> '+W.progs.map(p=>p.join(' ')).join(' / ')+'.</li></ul>';
     h+='<div class="chips road-ch">'+chords.map(c=>'<button class="chip" data-act="th-open" data-c="'+esc(c)+'" aria-label="Como se forma o '+esc(c)+'">'+esc(c)+'</button>').join('')+'</div><p class="muted small" style="margin-top:6px">Toque num acorde para ver como ele é formado.</p>';
     h+='<div class="acts"><button class="btn sm quiet" data-act="road-build" data-l="'+n+'" data-w="'+j+'">Montar este treino</button><button class="link" data-act="open-batida" data-p="'+W.pat+'" data-bpm="'+W.bpm+'">Ouvir a batida</button><button class="link" data-act="open-trocas" data-a="'+esc(W.pairs[0][0])+'" data-b="'+esc(W.pairs[0][1])+'">Contar trocas</button></div></div>';
@@ -1319,6 +1410,7 @@ function roadLevel(n){
 function perfilView(){
   let h='<section class="panel"><h2>Seu nível</h2><p class="sub small">O roteiro e o treino de Hoje seguem o nível escolhido. Mudar de nível não apaga nada: as metas de cada nível ficam guardadas.</p><div class="choices">'+LEVELS.map((L,i)=>{const n=i+1;return '<button class="choice" data-act="set-level" data-l="'+n+'" aria-pressed="'+(S.level===n)+'"><b>'+n+'. '+esc(L.name)+'</b><span>'+OB[i][0]+'. '+OB[i][1]+'</span></button>';}).join('')+'</div></section>';
   h+='<section class="panel"><h2>Meta diária</h2><p class="sub small">Quanto tempo o treino de Hoje deve ter.</p><div class="row" style="margin-top:12px">'+[10,15,20,30].map(g=>'<button class="chip" data-act="goal" data-v="'+g+'" aria-pressed="'+(S.goal===g)+'">'+g+' min</button>').join('')+'</div></section>';
+  h+='<section class="panel"><h2>Folga na sequência</h2><p class="sub small">Com a folga, um dia sem tocar por semana não quebra a sequência de dias. Descansar faz parte de aprender.</p><div class="chips" style="margin-top:12px"><button class="chip" data-act="rest" data-v="0" aria-pressed="'+(S.rest?'false':'true')+'">Sem folga</button><button class="chip" data-act="rest" data-v="1" aria-pressed="'+(S.rest?'true':'false')+'">1 dia por semana</button></div></section>';
   h+='<section class="panel"><h2>Seu nome</h2><p class="sub small">Opcional. Aparece no cumprimento da tela Hoje.</p><input class="inp" id="p-name" maxlength="30" placeholder="Como quer ser chamado?" aria-label="Seu nome" value="'+esc(S.name)+'" style="margin-top:12px"></section>';
   h+=installPanel()+sndPanel();
   h+='<section class="panel"><h2>Seus dados</h2><p class="sub">'+(NATIVE?'Seu progresso fica salvo neste aparelho, dentro do app.':'Seu progresso fica salvo neste aparelho, neste navegador. Cada pessoa que abrir o link tem o próprio progresso, separado do seu.')+'</p><button class="btn block danger" style="margin-top:14px" data-act="reset">'+(resetArmed?'Toque de novo para apagar tudo':'Apagar meu progresso')+'</button></section>';
@@ -1340,6 +1432,8 @@ V.hoje=function(){
   const hello=S.name?(hr<12?'Bom dia':hr<18?'Boa tarde':'Boa noite')+', '+esc(S.name)+'. ':'';
   let h='<header class="top"><div><h1>Hoje</h1><p class="sub">'+hello+esc(hello?dateStr.charAt(0).toUpperCase()+dateStr.slice(1):dateStr)+'</p></div><div class="streak" aria-label="'+st+' dias seguidos"><span class="num">'+st+'</span><span class="lbl">'+(st===1?'dia<br>seguido':'dias<br>seguidos')+'</span></div></header>';
   h+=installBanner();
+  if(new Date().getDay()===1&&S.lastWeekSeen!==wkKey(new Date())&&weekStats(1).min>0){const a=weekStats(1),b=weekStats(2); // segunda-feira: resumo da semana passada
+    h+='<section class="panel"><div class="between"><h3>Sua semana passada</h3><button class="link" style="padding:0;min-height:0" data-act="week-seen">Fechar</button></div><p class="sub">'+a.min+' min em '+a.days+(a.days===1?' dia':' dias')+(b.min?' ('+(a.min>=b.min?'+':'')+(a.min-b.min)+' min em relação à anterior)':'')+'. '+(a.days>=5?'Ritmo ótimo: cinco dias ou mais.':a.days>=3?'Bom ritmo. Tente cinco dias esta semana.':'Semana curta. Dez minutos por dia já mantêm a sequência.')+'</p></section>';}
   h+='<section class="neck">'+neckSVG()+'</section>';
   h+='<section class="panel"><div class="between"><h2>Treino de '+S.goal+' minutos</h2><span class="muted small">'+d.min+' min hoje</span></div><p class="sub small">Nível '+S.level+', '+esc(L.name)+'</p><ol class="blocks" style="margin-top:10px">';
   plan.forEach(b=>{
@@ -1362,7 +1456,11 @@ V.hoje=function(){
   h+=roadNow();
   if(S.custom.length)h+='<section class="panel ct"><div class="between"><h2>Seus treinos</h2><button class="link" style="padding:0;min-height:0" data-act="open-meu">Ver todos</button></div>'+S.custom.slice(-3).reverse().map(t=>{t=ctClean(t);
     return '<div class="between" style="margin-top:12px;align-items:center"><div><b>'+esc(ctName(t))+'</b><div class="muted small">'+t.min+' min, '+t.bpm+' BPM</div></div><button class="btn sm" data-act="cs-start" data-id="'+esc(t.id)+'">Começar</button></div>';}).join('')+'</section>';
-  h+='<section class="panel">'+(all?'<h3>Treino de hoje concluído.</h3><p class="sub">Volte amanhã para manter a sequência. Se quiser tocar mais, registre abaixo.</p>':'<h3>Tocou fora do treino?</h3><p class="sub">Prática livre também conta para a sequência.</p>')+'<div class="acts" style="margin-top:12px"><button class="btn sm line" data-act="free-add" data-v="5">Somar 5 min</button> <button class="btn sm line" data-act="free-add" data-v="15">Somar 15 min</button></div>'+(S.custom.length?'':'<button class="link" style="margin-top:4px" data-act="open-meu">Montar um treino com os seus acordes e batidas</button>')+'</section>';
+  if(all){ // resumo da sessão: o que aconteceu hoje e o que vem amanhã
+    const provenToday=Object.keys(S.proven).filter(x=>S.proven[x]===k).map(x=>{const p=x.split('.');return LEVELS[p[0]-1].skills[p[1]];}),recs=Object.keys(S.changes).filter(x=>{const a=S.changes[x];return a.length&&a[a.length-1].d===k&&a[a.length-1].n===bestOf(x)&&a[a.length-1].n>0;}),badgesToday=BADGES.filter(b=>S.badges[b[0]]===k).map(b=>b[1]),w=weekOf(S.level),W=ROAD[S.level-1][w];
+    h+='<section class="panel"><h3>Treino de hoje concluído.</h3><div style="margin-top:6px"><div class="kv"><span>Minutos hoje</span><b>'+d.min+'</b></div><div class="kv"><span>Blocos</span><b>'+plan.length+' de '+plan.length+'</b></div>'+(recs.length?'<div class="kv"><span>Recorde de trocas</span><b>'+esc(recs.map(x=>x.replace('|',' e ')+': '+bestOf(x)).join('; '))+'</b></div>':'')+(provenToday.length?'<div class="kv"><span>Meta comprovada</span><b>'+esc(provenToday.join('; '))+'</b></div>':'')+(badgesToday.length?'<div class="kv"><span>Conquista</span><b>'+esc(badgesToday.join('; '))+'</b></div>':'')+'</div><p class="sub small" style="margin-top:10px">Amanhã: '+(levelDone(S.level)?(S.level<LEVELS.length?'subir para o nível '+(S.level+1):'continuar com Meu treino e suas músicas'):'semana '+(w+1)+', '+esc(W.t))+'. Volte para manter a sequência.</p>';
+  }else h+='<section class="panel"><h3>Tocou fora do treino?</h3><p class="sub">Prática livre também conta para a sequência.</p>';
+  h+='<div class="acts" style="margin-top:12px"><button class="btn sm line" data-act="free-add" data-v="5">Somar 5 min</button> <button class="btn sm line" data-act="free-add" data-v="15">Somar 15 min</button></div>'+(S.custom.length?'':'<button class="link" style="margin-top:4px" data-act="open-meu">Montar um treino com os seus acordes e batidas</button>')+'</section>';
   return h;
 };
 
@@ -1378,6 +1476,7 @@ V.treinar=function(){
       const opts=s=>CHORDS.map(c=>'<option'+(c.n===s?' selected':'')+'>'+esc(c.n)+'</option>').join('');
       const mic=S.cntMode==='mic';
       h+='<section class="panel"><h2>Quantas trocas em 1 minuto?</h2><p class="sub">Escolha dois acordes. Toque no desenho para ouvir como cada um soa.</p><div class="row" style="margin:16px 0"><select id="t-a" aria-label="Primeiro acorde">'+opts(T.a)+'</select><span class="muted">e</span><select id="t-b" aria-label="Segundo acorde">'+opts(T.b)+'</select></div><div class="pair">'+[T.a,T.b].map(c=>'<button class="chord play" data-act="chord-play" data-c="'+esc(c)+'" aria-label="Ouvir '+esc(c)+'"><strong>'+esc(c)+'</strong>'+chordSVG(c)+'</button>').join('')+'</div>';
+      const tip=anchorTip(T.a,T.b);if(tip)h+='<p class="sub small" style="margin-top:10px"><b>Dedos:</b> '+esc(tip)+'</p>';
       h+='<p class="grp">Como contar</p><div class="chips"><button class="chip" data-act="t-mode" data-v="tap" aria-pressed="'+!mic+'">Tocando na tela</button><button class="chip" data-act="t-mode" data-v="mic" aria-pressed="'+mic+'">Pelo microfone</button></div><p class="sub small" style="margin-top:8px">'+(mic?'O app ouve o violão e conta cada vez que o som muda de um acorde para o outro. Funciona melhor em lugar silencioso, tocando o acorde inteiro. Se ele errar, corrija na hora com os botões −1 e +1.':'Toque no botão grande a cada troca em que o acorde novo soar limpo.')+'</p>';
       h+='<p class="sub small" style="margin:12px 0 16px">'+(best?'Seu recorde neste par: '+best+' trocas.':'Você ainda não mediu este par.')+'</p><button class="btn block" data-act="t-start"'+(T.a===T.b?' disabled':'')+'>Começar contagem</button></section>';
       const ks=Object.keys(S.changes).filter(x=>S.changes[x].length);
@@ -1457,6 +1556,9 @@ V.evolucao=function(){
     const vals=days.map(d=>(S.days[dkey(d)]||{}).min||0);
     h+='<section class="panel chart" style="margin-top:14px"><div class="between"><h2>Últimos 14 dias</h2><span class="muted small">linha: meta de '+S.goal+' min</span></div><div style="margin-top:14px">'+dayBars(days,vals,S.goal)+'</div></section>';
     const dom=CHORDS.filter(x=>S.chords[x.n]==='dominado').length,pk=Object.keys(S.changes).filter(x=>S.changes[x].length).sort((a,b)=>bestOf(b)-bestOf(a))[0];
+    const wa=weekStats(0),wb=weekStats(1);
+    h+='<section class="panel"><h2>Esta semana</h2><div style="margin-top:6px"><div class="kv"><span>Minutos</span><b>'+wa.min+(wb.min?' <small class="muted">(semana passada: '+wb.min+')</small>':'')+'</b></div><div class="kv"><span>Dias praticados</span><b>'+wa.days+' de 7'+(wb.min?' <small class="muted">(passada: '+wb.days+')</small>':'')+'</b></div></div></section>';
+    h+='<section class="panel"><h2>Conquistas</h2><p class="sub small">'+Object.keys(S.badges).length+' de '+BADGES.length+'</p><div class="badges">'+BADGES.map(b=>{const got=S.badges[b[0]];return '<div class="badge'+(got?' got':'')+'"><b>'+esc(b[1])+'</b><span>'+esc(b[2])+'</span>'+(got?'<small>'+esc(dayTxt(got))+'</small>':'')+'</div>';}).join('')+'</div></section>';
     h+='<section class="panel"><h2>Marcas</h2><div style="margin-top:6px"><div class="kv"><span>Acordes dominados</span><b>'+dom+' de '+CHORDS.length+'</b></div><div class="kv"><span>Melhor troca em 1 minuto</span><b>'+(pk?bestOf(pk)+' ('+esc(pk.replace('|',' e '))+')':'ainda sem medição')+'</b></div><div class="kv"><span>Metrônomo mais rápido por 1 minuto</span><b>'+(S.maxBpm?S.maxBpm+' BPM':'ainda sem registro')+'</b></div><div class="kv"><span>Acertos no treino de ouvido</span><b>'+(S.ear.total?Math.round(S.ear.ok/S.ear.total*100)+'% de '+S.ear.total:'ainda sem respostas')+'</b></div></div></section>';
   }else if(sub.evolucao==='roteiro'){
     h+=roadView();
@@ -1519,7 +1621,7 @@ const TABS=[['hoje','Hoje','<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.8 
 function render(){
   $('#view').innerHTML=V[view]();
   $('#tabs').innerHTML=TABS.map(t=>'<button data-act="nav" data-v="'+t[0]+'"'+(view===t[0]?' aria-current="page"':'')+'><svg viewBox="0 0 24 24" aria-hidden="true">'+t[2]+'</svg>'+t[1]+'</button>').join('');
-  mPaint();awakeSync();
+  mPaint();awakeSync();checkBadges();
 }
 function go(v){grStop(true);if(!(v==='ferramentas'&&sub.ferramentas==='afinador')||(MIC&&MIC.mode==='count'))micStop();if(T.phase==='count'||T.phase==='run')T.phase='idle';resetArmed=false;ceDelArmed=false;view=v;render();window.scrollTo(0,0);}
 
@@ -1528,7 +1630,7 @@ const ACT={
   sub:el=>{const g=el.dataset.g;sub[g]=el.dataset.v;if(g==='treinar'){grStop(true);if(MIC&&MIC.mode==='count')micStop();}if(g==='ferramentas'&&sub[g]!=='afinador')micStop();if(g==='ouvido')E.q=null;if(g==='treinar'&&(T.phase==='count'||T.phase==='run'))T.phase='idle';render();},
   'ob-level':el=>{ob.level=+el.dataset.v;render();},
   'ob-goal':el=>{ob.goal=+el.dataset.v;render();},
-  'ob-go':()=>{S.level=ob.level;S.goal=ob.goal;S.levelSince=today();S.onboarded=true;save();audio();render();},
+  'ob-go':()=>{S.level=ob.level;S.startLevel=ob.level;S.goal=ob.goal;S.levelSince=today();S.onboarded=true;save();audio();render();},
   'open-roteiro':()=>{sub.evolucao='roteiro';go('evolucao');},
   'open-perfil':()=>{sub.evolucao='perfil';if(view!=='evolucao')go('evolucao');else{render();window.scrollTo(0,0);}},
   'road-build':el=>{const W=ROAD[+el.dataset.l-1][+el.dataset.w];if(!W)return;if(CS){if(!CS.done)csSettle();CS=null;}CHI=null;
@@ -1556,6 +1658,9 @@ const ACT={
   'ce-pat':el=>{const v=el.dataset.v,k=CE.pats.indexOf(v);if(k>=0)CE.pats.splice(k,1);else CE.pats.push(v);render();},
   'ce-bpm':el=>{CE.bpm=Math.max(40,Math.min(160,CE.bpm+(+el.dataset.d)));render();},
   'ce-min':el=>{CE.min=+el.dataset.v;render();},
+  'ce-ramp':()=>{CE.ramp=!CE.ramp;render();},
+  rest:el=>{S.rest=+el.dataset.v?1:0;save();render();},
+  'week-seen':()=>{S.lastWeekSeen=wkKey(new Date());save();render();},
   'ce-save':()=>{if(!CE.chords.length||!CE.pats.length)return;ceSave();ctMsg='Treino salvo.';render();window.scrollTo(0,0);},
   'ce-start':()=>{if(!CE.chords.length||!CE.pats.length)return;csStart(ceSave());},
   'ce-remove':()=>{if(!ceDelArmed){ceDelArmed=true;render();return;}S.custom=S.custom.filter(x=>x.id!==CE.id);delete S.ctLog[CE.id];save();CE=null;ceDelArmed=false;render();window.scrollTo(0,0);},
@@ -1634,7 +1739,7 @@ document.addEventListener('input',e=>{const id=e.target.id;
 document.addEventListener('change',e=>{const t=e.target;
   if(t.id==='t-a'){T.a=t.value;render();}else if(t.id==='t-b'){T.b=t.value;render();}
   else if(t.id==='p-name'){S.name=t.value.trim().slice(0,30);save();}
-  else if(t.dataset&&t.dataset.song){const s=S.songs.find(x=>x.id===t.dataset.song);if(s){s.status=t.value;save();}}});
+  else if(t.dataset&&t.dataset.song){const s=S.songs.find(x=>x.id===t.dataset.song);if(s){s.status=t.value;save();checkProofs();}}});
 function onShow(){
   if(AC&&AC.state==='closed')audioReset();
   else if(AC&&AC.state!=='running'){try{AC.resume().catch(()=>{});}catch(e){}}
