@@ -119,5 +119,6 @@ No navegador, nada disso muda: o site continua igual.
 - O progresso fica salvo no aparelho de cada pessoa. O app Android, o site instalado e o link do Claude guardam progressos separados.
 - No iPhone, o site instalado e o Safari também guardam dados separados. Peça para a pessoa instalar primeiro e começar a usar depois.
 - Som e microfone funcionam melhor no app ou no site instalado do que dentro de outros aplicativos.
+- No iPhone, o microfone (afinador e contagem de trocas) exige iOS 13.4 ou mais novo. Se ele ligar mas não chegar som, o app mostra o nível do microfone e o botão "Religar o microfone"; feche outros apps que usem o microfone antes.
 - A instalação do site exige `https://`. Em `http://` ou abrindo o arquivo direto do disco, o app funciona, mas sem instalação e sem uso offline.
 - Os ícones dos apps saem de `scripts/make-icons.mjs`. Se mudar o desenho ou as cores, rode `npm run icons`.

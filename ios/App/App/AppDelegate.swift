@@ -8,9 +8,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Metrônomo, acordes e batidas tocam mesmo com a chave de silencioso ligada,
-        // e misturam com outro app de música aberto (para tocar junto com uma gravação).
-        try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [.mixWithOthers])
+        // Metrônomo, acordes e batidas tocam mesmo com a chave de silencioso ligada, e misturam com outro app
+        // de música aberto. A categoria precisa permitir gravar (afinador e contagem de trocas pelo microfone);
+        // .playback sozinho deixa o microfone mudo. .defaultToSpeaker mantém o som no alto-falante.
+        try? AVAudioSession.sharedInstance().setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetoothA2DP, .mixWithOthers])
         return true
     }
 

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Violão Diário</title>
-<meta name="app-version" content="1.6.0">
+<meta name="app-version" content="1.6.1">
 <meta name="description" content="Treino diário de violão: plano por nível, metrônomo, afinador, batidas para tocar junto, acordes e notas.">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#F2EEF0" media="(prefers-color-scheme: light)">
@@ -644,8 +644,11 @@ function makeWav(sec,freq){
 const dataURI=b=>{let s='';for(let i=0;i<b.length;i++)s+=String.fromCharCode(b[i]);return 'data:audio/wav;base64,'+btoa(s);};
 const blobURL=b=>URL.createObjectURL(new Blob([b],{type:'audio/wav'}));
 function unlockMedia(){
-  try{if(navigator.audioSession){navigator.audioSession.type='playback';DIAG.sil='modo mídia pedido ao sistema';}}catch(e){}
+  // iOS 17+: "playback" faz o som tocar com a chave de silencioso ligada, mas não tem entrada de áudio.
+  // Com o microfone ligado (afinador, contagem de trocas) a sessão precisa ser "play-and-record".
+  try{if(navigator.audioSession){const want=MIC?'play-and-record':'playback';if(navigator.audioSession.type!==want)navigator.audioSession.type=want;DIAG.sil=MIC?'modo gravação pedido ao sistema':'modo mídia pedido ao sistema';}}catch(e){}
   if(!IOS)return;
+  if(MIC){if(SIL&&!SIL.paused)SIL.pause();return;} // gravando: o áudio auxiliar em loop fica parado
   try{
     if(!SIL){const b=makeWav(.5,0);let triedBlob=false;SIL=new Audio();SIL.loop=true;SIL.setAttribute('playsinline','');
       SIL.onplaying=()=>{DIAG.sil='áudio auxiliar tocando';};
@@ -901,14 +904,20 @@ async function micStart(mode){ // mode: 'tune' (afinador) ou 'count' (contar tro
   try{
     if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia)throw new Error('sem suporte');
     const ac=audio();if(!ac)throw new Error('sem áudio');
+    try{if(navigator.audioSession)navigator.audioSession.type='play-and-record';}catch(e){} // iOS: sessão com entrada de áudio, antes de pedir o microfone
+    if(SIL&&!SIL.paused)SIL.pause();
     const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+    try{const r=ac.resume();if(r&&r.catch)r.catch(()=>{});}catch(e){} // o iOS pode pausar o motor de som ao ligar o microfone
     const src=ac.createMediaStreamSource(stream),an=ac.createAnalyser();
     if(mode==='count'){an.fftSize=16384;an.smoothingTimeConstant=.5;}else an.fftSize=4096; // contar precisa separar notas graves vizinhas
     src.connect(an);
-    MIC={mode,stream,src,an,buf:new Float32Array(4096),fd:new Float32Array(an.frequencyBinCount),hist:[],timer:setInterval(mode==='count'?countTick:micTick,mode==='count'?80:95)};
-  }catch(e){micErr=true;MIC=null;}
+    MIC={mode,stream,src,an,buf:new Float32Array(4096),fd:new Float32Array(an.frequencyBinCount),hist:[],zero:0,timer:setInterval(mode==='count'?countTick:micTick,mode==='count'?80:95)};
+  }catch(e){micErr=true;MIC=null;try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch(e2){}}
   render();
 }
+// Religar: descarta o motor de som e cria outro dentro do toque, junto com o microfone. No iPhone, um motor criado antes
+// do microfone às vezes recebe silêncio dele; criar os dois juntos resolve.
+function micAgain(mode){micStop();audioReset();if(mode==='count')countReset();micStart(mode);}
 
 /* ---------- contar trocas pelo som: qual dos dois acordes está soando? ---------- */
 // Espectro do microfone → energia de cada uma das 12 notas (cromagrama) → decisão pelas notas que só um dos dois
@@ -934,7 +943,7 @@ function countTick(){
   const binHz=AC.sampleRate/an.fftSize,i0=Math.max(1,Math.floor(70/binHz)),i1=Math.min(fd.length-1,Math.ceil(1800/binHz)),ch=new Array(12).fill(0);let peak=-200;
   for(let i=i0;i<=i1;i++){const db=fd[i];if(db>peak)peak=db;if(db<-80)continue;const f=i*binHz,w=f<250?1:f<500?.7:f<1000?.4:.2; // harmônicos agudos pesam menos
     ch[((Math.round(12*Math.log2(f/440))+69)%12+12)%12]+=Math.pow(10,db/20)*w;}
-  CNT.quiet=peak<-62;CNT.lvl=Math.max(0,Math.min(1,(peak+70)/50));
+  CNT.quiet=peak<-62;CNT.lvl=Math.max(0,Math.min(1,(peak+70)/50));MIC.zero=peak===-Infinity?MIC.zero+1:0;
   const lv=$('#ac-lvl');if(lv)lv.style.width=Math.round(CNT.lvl*100)+'%';
   if(T.phase!=='run'||Date.now()<CNT.hold)return;
   let win=null;
@@ -942,9 +951,9 @@ function countTick(){
   if(win===CNT.cand)CNT.n++;else{CNT.cand=win;CNT.n=1;}
   if(win&&CNT.n>=3&&win!==CNT.cur){const now=Date.now();if(CNT.cur&&now-CNT.last>350){T.count++;buzz(12);const n=$('#t-n');if(n)n.textContent=T.count;}CNT.cur=win;CNT.last=now;}
   const a=$('#ac-a'),b=$('#ac-b');if(a&&b){a.classList.toggle('hit',CNT.cur==='a');b.classList.toggle('hit',CNT.cur==='b');}
-  const m=$('#ac-msg');if(m)m.textContent=CNT.quiet?'Não estou ouvindo o violão. Toque mais perto do celular.':CNT.cur?'Ouvi '+(CNT.cur==='a'?T.a:T.b)+'. Agora troque para '+(CNT.cur==='a'?T.b:T.a)+'.':'Ouvindo. Toque o '+T.a+' inteiro.';
+  const m=$('#ac-msg');if(m)m.textContent=CNT.quiet?(MIC.zero>30?'O microfone está ligado, mas não chega som. Toque em “Religar o microfone”.':'Não estou ouvindo o violão. Toque mais perto do celular.'):CNT.cur?'Ouvi '+(CNT.cur==='a'?T.a:T.b)+'. Agora troque para '+(CNT.cur==='a'?T.b:T.a)+'.':'Ouvindo. Toque o '+T.a+' inteiro.';
 }
-function micStop(){if(!MIC)return;clearInterval(MIC.timer);try{MIC.stream.getTracks().forEach(t=>t.stop());MIC.src.disconnect();}catch(e){}MIC=null;}
+function micStop(){if(!MIC)return;clearInterval(MIC.timer);try{MIC.stream.getTracks().forEach(t=>t.stop());MIC.src.disconnect();}catch(e){}MIC=null;try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch(e){}}
 function detectPitch(buf,sr){
   const n=buf.length;let rms=0;for(let i=0;i<n;i++)rms+=buf[i]*buf[i];if(Math.sqrt(rms/n)<.008)return 0;
   const minLag=Math.floor(sr/1000),maxLag=Math.min(Math.floor(sr/60),(n>>1)-2),w=n-maxLag-2,c=new Float32Array(maxLag+2);
@@ -959,8 +968,10 @@ function detectPitch(buf,sr){
 }
 function micTick(){
   if(!MIC||!AC)return;MIC.an.getFloatTimeDomainData(MIC.buf);
+  let rms=0;for(let i=0;i<MIC.buf.length;i++)rms+=MIC.buf[i]*MIC.buf[i];rms=Math.sqrt(rms/MIC.buf.length);
+  MIC.zero=rms===0?MIC.zero+1:0;const lv=$('#mic-lvl');if(lv)lv.style.width=Math.round(Math.min(1,rms*8)*100)+'%'; // nível: mostra se o som chega
   const f=detectPitch(MIC.buf,AC.sampleRate),note=$('#t-note');if(!note)return;
-  if(!f){if(MIC.hist.length)MIC.hist.shift();if(!MIC.hist.length){$('#t-msg').textContent='Toque uma corda solta perto do celular.';}return;}
+  if(!f){if(MIC.hist.length)MIC.hist.shift();if(!MIC.hist.length){$('#t-msg').textContent=MIC.zero>30?'O microfone está ligado, mas não chega som. Toque em “Religar o microfone”. No iPhone, feche outros apps que usem o microfone.':'Toque uma corda solta perto do celular.';}return;}
   MIC.hist.push(f);if(MIC.hist.length>5)MIC.hist.shift();
   const med=MIC.hist.slice().sort((x,y)=>x-y)[Math.floor(MIC.hist.length/2)];
   let bi=0,bc=1e9;STR.forEach((s,i)=>{const ft=440*Math.pow(2,(s.m-69)/12),ce=1200*Math.log2(med/ft);if(Math.abs(ce)<Math.abs(bc)){bc=ce;bi=i;}});
@@ -1376,7 +1387,7 @@ V.treinar=function(){
     }else if(T.phase==='run'){
       h+='<div class="between" style="margin-bottom:8px"><b>'+esc(T.a)+' e '+esc(T.b)+'</b><span class="num" style="font-size:1.6rem" id="t-left">1:00</span></div><div class="bar"><i id="t-bar"></i></div>';
       if(S.cntMode==='mic'&&MIC){
-        h+='<section class="panel" style="text-align:center"><div class="big num" id="t-n">'+T.count+'</div><p><b>contagem de trocas</b></p><div class="pair acpair" style="margin:14px auto 0"><div class="chord" id="ac-a"><strong>'+esc(T.a)+'</strong>'+chordSVG(T.a)+'</div><div class="chord" id="ac-b"><strong>'+esc(T.b)+'</strong>'+chordSVG(T.b)+'</div></div><div class="lvl"><i id="ac-lvl"></i></div><p class="sub small" id="ac-msg" aria-live="polite">Ouvindo. Toque o '+esc(T.a)+' inteiro.</p><div class="acts" style="justify-content:center"><button class="btn sm line" data-act="t-adj" data-d="-1" aria-label="Tirar uma troca">−1</button><button class="btn sm line" data-act="t-adj" data-d="1" aria-label="Somar uma troca">+1</button></div><button class="link" data-act="t-reset">Cancelar esta contagem</button></section>';
+        h+='<section class="panel" style="text-align:center"><div class="big num" id="t-n">'+T.count+'</div><p><b>contagem de trocas</b></p><div class="pair acpair" style="margin:14px auto 0"><div class="chord" id="ac-a"><strong>'+esc(T.a)+'</strong>'+chordSVG(T.a)+'</div><div class="chord" id="ac-b"><strong>'+esc(T.b)+'</strong>'+chordSVG(T.b)+'</div></div><div class="lvl"><i id="ac-lvl"></i></div><p class="sub small" id="ac-msg" aria-live="polite">Ouvindo. Toque o '+esc(T.a)+' inteiro.</p><div class="acts" style="justify-content:center"><button class="btn sm line" data-act="t-adj" data-d="-1" aria-label="Tirar uma troca">−1</button><button class="btn sm line" data-act="t-adj" data-d="1" aria-label="Somar uma troca">+1</button></div><div class="acts" style="justify-content:center"><button class="link" data-act="t-mic">Religar o microfone</button><button class="link" data-act="t-reset">Cancelar esta contagem</button></div></section>';
       }else{
         h+='<button class="tap" data-tap="1" aria-label="Contar uma troca"><span class="num" id="t-n">'+T.count+'</span><span>Toque aqui a cada troca</span></button>';
         if(S.cntMode==='mic')h+='<p class="sub small" style="margin-top:10px">'+(micErr?'Sem acesso ao microfone: conte tocando na tela. Libere o microfone para o app nos ajustes do celular.':'O microfone desligou.')+'</p>'+(micErr?'':'<button class="link" data-act="t-mic">Ligar o microfone de novo</button>');
@@ -1414,7 +1425,7 @@ V.ferramentas=function(){
   }else{
     h+='<section class="panel"><h2>Tons de referência</h2><p class="sub">Toque em uma corda para ouvir a nota certa e ajuste a tarraxa até os dois sons ficarem iguais.</p><div class="heads" style="margin-top:14px">'+STR.map((s,i)=>'<button data-act="tone" data-i="'+i+'" aria-label="'+s.n+'ª corda, '+s.pt+'"><b>'+s.l+'</b><span>'+s.n+'ª '+s.pt+'</span></button>').join('')+'</div></section>';
     h+='<section class="panel"><h2>Afinar pelo microfone</h2>';
-    if(MIC)h+='<div class="tnote num" id="t-note">–</div><p style="text-align:center" class="muted" id="t-str">&nbsp;</p><div class="meter"><div class="needle" id="t-needle"></div></div><div class="between small muted"><span>grave</span><span>aguda</span></div><p style="text-align:center;margin:12px 0 16px;font-weight:650" id="t-msg">Toque uma corda solta perto do celular.</p><button class="btn block line" data-act="mic">Desligar microfone</button>';
+    if(MIC)h+='<div class="tnote num" id="t-note">–</div><p style="text-align:center" class="muted" id="t-str">&nbsp;</p><div class="meter"><div class="needle" id="t-needle"></div></div><div class="between small muted"><span>grave</span><span>aguda</span></div><div class="lvl"><i id="mic-lvl"></i></div><p class="muted small" style="text-align:center">nível do microfone</p><p style="text-align:center;margin:12px 0 16px;font-weight:650" id="t-msg">Toque uma corda solta perto do celular.</p><button class="btn block line" data-act="mic">Desligar microfone</button><button class="btn block line" style="margin-top:10px" data-act="mic-again">Religar o microfone</button>';
     else h+='<p class="sub">O app ouve a corda e mostra se está grave ou aguda.</p>'+(micErr?'<p style="margin-top:12px;color:var(--warn);font-weight:650">'+(NATIVE?'O app está sem acesso ao microfone. Libere o microfone para o Violão Diário nos ajustes do celular, ou afine pelos tons de referência acima.':'O microfone não está disponível aqui. Permita o acesso quando o navegador pedir, ou afine pelos tons de referência acima.')+'</p>':'')+'<button class="btn block" style="margin-top:14px" data-act="mic">Ligar microfone</button>';
     h+='</section>'+sndPanel();
   }
@@ -1589,7 +1600,8 @@ const ACT={
   't-reset':()=>{if(MIC&&MIC.mode==='count')micStop();T.phase='idle';render();},
   't-mode':el=>{S.cntMode=el.dataset.v==='mic'?'mic':'tap';save();render();},
   't-adj':el=>{T.count=Math.max(0,T.count+(+el.dataset.d));const n=$('#t-n');if(n)n.textContent=T.count;},
-  't-mic':()=>{countReset();micStart('count');},
+  't-mic':()=>{micAgain('count');},
+  'mic-again':()=>{micAgain('tune');},
   'ear-play':()=>{if(!E.q)earNew();strum(E.q.midis,.03);},
   'ear-ans':el=>{if(E.ans||!E.q)return;E.ans=el.dataset.v;const ok=E.ans===E.q.ans;E.total++;S.ear.total++;if(ok){E.ok++;S.ear.ok++;}save();render();},
   'ear-next':()=>{earNew();strum(E.q.midis,.03);render();},
