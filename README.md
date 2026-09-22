@@ -14,6 +14,7 @@ O mesmo `index.html` vira três coisas:
 |---|---|
 | `index.html` | O app inteiro. É o arquivo que muda a cada atualização. |
 | `manifest.webmanifest`, `sw.js`, `icons/`, `fonts/` | Instalação, atalhos do ícone e uso sem internet do site (PWA); a fonte Archivo vai junto. |
+| `sons/` | Notas gravadas de violão (nylon, aço, guitarra limpa), CC BY 3.0; veja `sons/CREDITOS.md`. |
 | `android/` | Projeto do app Android (ícones, tela de abertura, permissão do microfone). |
 | `ios/` | Projeto do app iPhone (Xcode). |
 | `capacitor.config.json`, `package.json` | Configuração do Capacitor, a ponte entre o `index.html` e os apps nativos. |
@@ -125,7 +126,7 @@ No navegador, nada disso muda: o site continua igual.
 
 ## Bom saber
 
-- O som das notas e dos acordes é sintetizado no aparelho (corda simulada por Karplus-Strong, Lá de referência em 440 Hz, temperamento igual), não gravado. Em Evolução, Perfil, "Violão do app" escolhe o timbre: nylon (padrão), aço ou elétrico limpo; cada um muda a excitação da corda, a posição da palheta, o brilho, a sustentação e a "caixa" (filtros de ressonância). Os parâmetros ficam em `GUITARS`, no começo do script do `index.html`.
+- O som das notas e dos acordes vem de notas gravadas de violão (pasta `sons/`: nylon, aço e guitarra limpa, uma nota a cada 3 semitons, do soundfont FluidR3_GM de Frank Wen via midi-js-soundfonts, licença CC BY 3.0, com crédito em "Sobre e ajuda"). No site, só o tipo escolhido é baixado, na primeira vez que o som é usado; no app vão embutidas. Enquanto carregam, ou sem os arquivos, toca a corda sintetizada (Karplus-Strong). Lá de referência em 440 Hz, temperamento igual. Em Evolução, Perfil, "Violão do app" escolhe o timbre; os parâmetros da corda sintetizada, da "caixa" e da sala ficam em `GUITARS`, no começo do script do `index.html`. `node scripts/baixar-sons.mjs --forcar` baixa os arquivos de novo.
 - Perfis: em Evolução, Perfil, "Perfis neste aparelho" cria um progresso separado para outra pessoa no mesmo celular. O principal é o de sempre; os outros ficam em chaves próprias (`violao-diario-v1-p-...`). O lembrete diário é do aparelho: vale o último perfil que o configurou.
 - Compartilhar um treino: em Meu treino, "Compartilhar" manda um link do site com o treino embutido (`#treino=...`). Quem abre recebe o treino; no app, cole o link em "Receber um treino por link ou código".
 - Links que abrem no app (Android App Links): o manifesto declara os endereços `https://luizneogrid-commits.github.io/appviolao/...` e o site publica `.well-known/assetlinks.json` com a impressão digital SHA-256 do certificado do app. Com isso, um link de treino ou um atalho `?ir=afinador` abre direto no app instalado. Depois de publicar na Play Store, o Google passa a assinar o app com a chave dele: pegue a impressão digital em Play Console, Configuração do app, Integridade do app, "Certificado da chave de assinatura do app", e acrescente à lista `sha256_cert_fingerprints` (mantendo a atual, que é a da chave de upload e serve para o APK do GitHub).

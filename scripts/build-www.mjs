@@ -14,7 +14,7 @@ for (const f of ['fonts/archivo-latin-wdth-normal.woff2', 'fonts/archivo-latin-e
 
 rmSync(out, { recursive: true, force: true });
 mkdirSync(out, { recursive: true });
-for (const f of ['manifest.webmanifest', 'icons', 'fonts']) cpSync(join(root, f), join(out, f), { recursive: true });
+for (const f of ['manifest.webmanifest', 'icons', 'fonts', 'sons']) cpSync(join(root, f), join(out, f), { recursive: true }); // sons/: notas gravadas de violão, embutidas no app
 
 const html = readFileSync(join(root, 'index.html'), 'utf8');
 if (/fonts\.googleapis\.com/.test(html)) console.warn('Aviso: o index.html ainda pede fonte ao Google Fonts; o app depende de internet para a letra.');

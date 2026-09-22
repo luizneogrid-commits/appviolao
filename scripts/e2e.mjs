@@ -49,6 +49,12 @@ try {
     t.click('[data-act="nav"][data-v="evolucao"]');t.click('[data-act="sub"][data-g="evolucao"][data-v="perfil"]');const counts={};
     for(const k of ['nylon','aco','eletrico']){t.click('[data-act="guitar"][data-v="'+k+'"]');n=0;t.click('[data-act="chord-play"][data-c="G"]');counts[k]=n;}
     P.createBufferSource=os;t.click('[data-act="guitar"][data-v="nylon"]');if(!(counts.nylon===6&&counts.aco===12&&counts.eletrico===6&&t.S().guitar==='nylon'))throw new Error(JSON.stringify(counts));return true;`);
+  await test('notas gravadas: os arquivos existem, decodificam e o app as usa', `const t=__t;const ab=await fetch('sons/nylon/52.mp3').then(r=>{if(!r.ok)throw new Error('http '+r.status);return r.arrayBuffer();});
+    const buf=await new Promise((res,rej)=>{const p=new OfflineAudioContext(1,1,44100).decodeAudioData(ab,res,rej);if(p&&p.then)p.then(res,rej);});if(!(buf.duration>.5))throw new Error('duração '+buf.duration);
+    t.click('[data-act="nav"][data-v="evolucao"]');t.click('[data-act="sub"][data-g="evolucao"][data-v="perfil"]');t.click('[data-act="guitar"][data-v="nylon"]');
+    let txt='';for(let i=0;i<40;i++){txt=document.querySelector('#smp-state').textContent;if(/prontas/.test(txt))break;await t.wait(250);}if(!/prontas/.test(txt))throw new Error('estado: '+txt);
+    const P=(window.AudioContext||window.webkitAudioContext).prototype,ob=P.createBiquadFilter;let filt=0;P.createBiquadFilter=function(){filt++;return ob.call(this);};t.click('[data-act="play-notes"][data-m="40,45,50,55,59,64"]');P.createBiquadFilter=ob;
+    return 'duração '+buf.duration.toFixed(2)+' s, notas suaves com filtro: '+filt;`);
   await test('exportar e importar o progresso', `const t=__t;let blob=null;const oc=URL.createObjectURL;URL.createObjectURL=b=>{blob=b;return 'blob:x';};const ok=HTMLAnchorElement.prototype.click;HTMLAnchorElement.prototype.click=function(){if(!this.download)ok.call(this);};t.click('[data-act="export"]');URL.createObjectURL=oc;HTMLAnchorElement.prototype.click=ok;const txt=await blob.text();const before=t.S().level;t.click('[data-act="set-level"][data-l="3"]');document.querySelector('details.tcard summary').click();document.querySelector('#imp-text').value=txt;t.click('[data-act="imp-paste"]');t.click('[data-act="imp-go"]');await t.wait(100);return JSON.parse(txt).app==='violao-diario'&&t.S().level===before;`);
   // criar um perfil recarrega a página: o clique é agendado e o teste seguinte espera a página voltar
   const reloaded = browser.cdp.wait('Page.loadEventFired');

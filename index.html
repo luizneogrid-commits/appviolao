@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Violão Diário</title>
-<meta name="app-version" content="1.19.0">
+<meta name="app-version" content="1.20.0">
 <meta name="description" content="Treino diário de violão: plano por nível, metrônomo, afinador, batidas para tocar junto, acordes e notas.">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#F2EEF0" media="(prefers-color-scheme: light)">
@@ -496,10 +496,10 @@ const KEY=KEY_BASE+(PROF.current?'-p-'+PROF.current:'');
 // simples; maior = mais brilho); dark: mistura com uma média de três pontos (mais escuro); decay: ganho por volta da
 // corda; body: filtros da caixa [tipo, Hz, Q, dB]; detune: duas cordas levemente dessintonizadas (aço).
 const GUITARS={
-  nylon:{name:'Nylon',desc:'Cordas de nylon e caixa acústica: o violão clássico, o da roda de samba e o da bossa.',exc:.72,pick:.2,w:.5,dark:.55,decay:.9955,body:[['peaking',95,4,6],['peaking',215,5,4],['highshelf',3200,0,-7]],gain:.8,detune:0},
-  aco:{name:'Aço (folk)',desc:'Cordas de aço, mais brilho e sustentação, com o chiado das cordas dobradas: o violão folk.',exc:.35,pick:.13,w:.5,dark:0,decay:.9982,body:[['peaking',100,4,4],['peaking',235,5,3],['highshelf',3500,0,2]],gain:.7,detune:.0018},
-  eletrico:{name:'Elétrico limpo',desc:'Guitarra com som limpo, sem caixa: palheta perto do cavalete e sustentação longa.',exc:.2,pick:.08,w:.7,dark:0,decay:.9992,body:[['lowpass',4200,.7,0],['peaking',2400,1.2,2]],gain:.85,detune:0}
-};
+  nylon:{name:'Nylon',desc:'Cordas de nylon e caixa acústica: o violão clássico, o da roda de samba e o da bossa.',exc:.72,pick:.2,w:.5,dark:.55,decay:.9955,body:[['peaking',95,4,6],['peaking',215,5,4],['highshelf',3200,0,-7]],gain:.8,detune:0,room:.14,sgain:1},
+  aco:{name:'Aço (folk)',desc:'Cordas de aço, mais brilho e sustentação: o violão folk.',exc:.35,pick:.13,w:.5,dark:0,decay:.9982,body:[['peaking',100,4,4],['peaking',235,5,3],['highshelf',3500,0,2]],gain:.7,detune:.0018,room:.12,sgain:.9},
+  eletrico:{name:'Elétrico limpo',desc:'Guitarra com som limpo: palheta perto do cavalete e sustentação longa.',exc:.2,pick:.08,w:.7,dark:0,decay:.9992,body:[['lowpass',4200,.7,0],['peaking',2400,1.2,2]],gain:.85,detune:0,room:.1,sgain:.9}
+}; // room: quanto de sala (reverberação curta) nas vozes de violão; sgain: volume das amostras gravadas
 const DEF={v:1,onboarded:false,name:'',level:1,levelSince:'',goal:15,cntMode:'tap',skills:{},days:{},changes:{},chords:{},songs:[],custom:[],ctLog:{},stats:{tuned:0,play:{},prog4:false},proven:{},badges:{},rest:0,startLevel:0,lastWeekSeen:'',rev:{},adj:null,quick:'',remind:'',bpmLog:{},font:0,theme:'',seenVer:'',msub:1,macc:'first',mgap:0,mvib:false,tuning:'padrao',tuneMode:'cordas',lastExport:'',backupAsk:'',recs:[],hojeMore:false,guitar:'nylon',lefty:false,easyOn:{},ear:{ok:0,total:0},maxBpm:0,bpm:70,beats:4,altOut:false,installDismissed:false};
 let S,hadLocal=false;
 function adopt(o){
@@ -825,14 +825,14 @@ function planFor(k){
 }
 
 /* ---------- audio ---------- */
-let AC=null,OUT=null,COMP=null,METER=null,MSD=null,ALT=null,GUIT=null,BODY=[],acT=0,acWall=0,resumeWall=0;const KS={},DIAG={sil:'',alt:'',html:'',sig:null,clock:null};
+let AC=null,OUT=null,COMP=null,METER=null,MSD=null,ALT=null,GUIT=null,GSMP=null,BODY=[],acT=0,acWall=0,resumeWall=0;const KS={},ROOM={},DIAG={sil:'',alt:'',html:'',sig:null,clock:null};
 /* No celular o motor de som pode morrer sem aviso: o sistema fecha o AudioContext (app em segundo plano, chamada,
    fone Bluetooth) ou o deixa "rodando" com o relógio parado. Antes, só reiniciar o app resolvia. Agora o motor é
    descartado e criado de novo no toque seguinte. */
 function audioReset(){
   if(!AC)return;const old=AC;AC=null;acT=acWall=resumeWall=0;primed=false;
   if(M.on)mStop();if(GR.on)grStop(true);if(MIC){micStop();render();}
-  for(const k in KS)delete KS[k];NOISE=null;for(const k in VOICE)delete VOICE[k];GUIT=null;BODY=[]; // os sons guardados eram do motor antigo
+  for(const k in KS)delete KS[k];NOISE=null;for(const k in VOICE)delete VOICE[k];GUIT=null;GSMP=null;BODY=[];ROOM.in=null; // os sons guardados eram do motor antigo (as amostras decodificadas servem em qualquer motor)
   if(ALT){try{ALT.pause();ALT.srcObject=null;}catch(e){}}MSD=null;DIAG.sig=null;DIAG.clock=null;
   try{if(old.state!=='closed'){const r=old.close();if(r&&r.catch)r.catch(()=>{});}}catch(e){}
 }
@@ -918,12 +918,31 @@ function sndPaint(){
 }
 ['touchend','pointerup','click','keydown'].forEach(ev=>document.addEventListener(ev,unlock,{capture:true,passive:true}));
 const guitar=()=>GUITARS[S.guitar]||GUITARS.nylon;
-function guitarChain(){ // só as vozes de violão passam pela "caixa"; metrônomo e cliques vão direto
+function guitarChain(){ // as vozes de violão passam pela "caixa" (só a corda sintetizada) e por uma sala curta; metrônomo e cliques vão direto
   if(!AC||!OUT)return;const G=guitar();
-  if(GUIT){try{GUIT.disconnect();}catch(e){}BODY.forEach(n=>{try{n.disconnect();}catch(e){}});}
+  [GUIT,GSMP,ROOM.in,ROOM.dry,ROOM.wet,ROOM.conv].concat(BODY).forEach(n=>{if(n)try{n.disconnect();}catch(e){}});
+  if(!ROOM.ir||ROOM.ir.sampleRate!==AC.sampleRate){const sr=AC.sampleRate,len=Math.floor(sr*.6),ir=AC.createBuffer(2,len,sr);for(let c=0;c<2;c++){const d=ir.getChannelData(c);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,3);}ROOM.ir=ir;} // impulso da sala: ruído que morre em 0,6 s
+  ROOM.in=AC.createGain();ROOM.dry=AC.createGain();ROOM.wet=AC.createGain();ROOM.wet.gain.value=G.room;ROOM.conv=AC.createConvolver();ROOM.conv.buffer=ROOM.ir;
+  ROOM.in.connect(ROOM.dry);ROOM.dry.connect(OUT);ROOM.in.connect(ROOM.conv);ROOM.conv.connect(ROOM.wet);ROOM.wet.connect(OUT);
+  GSMP=AC.createGain();GSMP.gain.value=G.sgain;GSMP.connect(ROOM.in); // amostras gravadas: já trazem a caixa, vão direto para a sala
   GUIT=AC.createGain();GUIT.gain.value=G.gain;BODY=G.body.map(([type,f,q,db])=>{const n=AC.createBiquadFilter();n.type=type;n.frequency.value=f;n.Q.value=q;n.gain.value=db;return n;});
-  let node=GUIT;BODY.forEach(n=>{node.connect(n);node=n;});node.connect(OUT);
+  let node=GUIT;BODY.forEach(n=>{node.connect(n);node=n;});node.connect(ROOM.in);
 }
+/* ---------- amostras gravadas: uma nota a cada 3 semitons por tipo de violão (sons/<tipo>/<nota>.mp3) ---------- */
+// Do soundfont FluidR3_GM (Frank Wen), servido nota a nota pelo projeto midi-js-soundfonts, CC BY 3.0. Carregam na
+// primeira vez que o som é usado (no site, só o tipo escolhido; no app vão embutidas). Até lá, toca a corda sintetizada.
+const SAMPLE_NOTES=[40,43,46,49,52,55,58,61,64,67,70,73,76],SMP={};
+function loadSamples(type){
+  type=GUITARS[type]?type:'nylon';const st=SMP[type]||(SMP[type]={state:'idle',buf:{},tries:0});
+  if(st.state==='loading'||st.state==='ready'||(st.state==='failed'&&st.tries>=3)||!window.fetch)return;
+  st.state='loading';st.tries++;sndPaintSamples();
+  const dec=ab=>new Promise((res,rej)=>{try{const C=window.OfflineAudioContext||window.webkitOfflineAudioContext;if(!C)throw new Error('sem decodificador');const p=new C(1,1,44100).decodeAudioData(ab,res,rej);if(p&&p.then)p.then(res,rej);}catch(e){rej(e);}});
+  Promise.all(SAMPLE_NOTES.map(m=>fetch('sons/'+type+'/'+m+'.mp3').then(r=>{if(!r.ok)throw new Error('http '+r.status);return r.arrayBuffer();}).then(dec).then(b=>{const d=b.getChannelData(0);let pk=0;for(let i=0;i<d.length;i++){const v=Math.abs(d[i]);if(v>pk)pk=v;}st.buf[m]={b,g:.9/(pk||1)};})))
+    .then(()=>{st.state='ready';sndPaintSamples();},()=>{st.state='failed';sndPaintSamples();});
+}
+function sampleFor(midi){const st=SMP[S.guitar];if(!st||st.state!=='ready')return null;let best=SAMPLE_NOTES[0];SAMPLE_NOTES.forEach(m=>{if(Math.abs(m-midi)<Math.abs(best-midi))best=m;});return Object.assign({base:best},st.buf[best]);}
+function sampleStateTxt(){const st=SMP[S.guitar];const s=st?st.state:'idle';return s==='ready'?'Notas gravadas de violão prontas.':s==='loading'?'Carregando as notas gravadas…':s==='failed'?'Sem as notas gravadas por enquanto (sem internet?): tocando a corda sintetizada. O app tenta de novo sozinho.':'As notas gravadas carregam na primeira vez que o som é usado.';}
+function sndPaintSamples(){const e=$('#smp-state');if(e)e.textContent=sampleStateTxt();}
 // Corda simulada (Karplus-Strong) com os parâmetros do violão escolhido: excitação abafada conforme a corda (as graves,
 // encapadas, mais escuras), pente da posição da palheta, e um laço com filtro passa-baixa cujo peso muda o brilho.
 function ksBuffer(midi){
@@ -939,28 +958,39 @@ function ksBuffer(midi){
   for(let i=0;i<len;i++){let g=.9/(peak||1);if(i>len-fade)g*=(len-i)/fade;d[i]*=g;}
   return KS[key]={buf:b,rate:f/(sr/(N+extra))};
 }
-function ksVoice(k,g,t){ // uma corda; no aço, duas levemente dessintonizadas, como as cordas dobradas de um doze cordas discreto
-  const det=guitar().detune,s=AC.createBufferSource();s.buffer=k.buf;s.playbackRate.value=k.rate*(det?1-det/2:1);s.connect(g);s.start(t);
+function voice(midi,g,t,gain){ // uma nota: a amostra gravada quando existe (nota suave sai mais escura); senão a corda sintetizada (no aço, duas levemente dessintonizadas)
+  const smp=sampleFor(midi);
+  if(smp){const s=AC.createBufferSource();s.buffer=smp.b;s.playbackRate.value=Math.pow(2,(midi-smp.base)/12);let node=s;
+    if(gain<.32){const f=AC.createBiquadFilter();f.type='lowpass';f.frequency.value=1600+gain*7000;f.Q.value=.5;s.connect(f);node=f;}
+    g.gain.value=gain*smp.g;node.connect(g);g.connect(GSMP||OUT);s.start(t);return {s};}
+  if(SMP[S.guitar]==null||SMP[S.guitar].state==='idle')loadSamples(S.guitar); // primeira nota sem amostras: começa a baixar
+  const k=ksBuffer(midi),det=guitar().detune,s=AC.createBufferSource();g.gain.value=gain*(det?.6:1);g.connect(GUIT||OUT);
+  s.buffer=k.buf;s.playbackRate.value=k.rate*(det?1-det/2:1);s.connect(g);s.start(t);
   if(!det)return {s};const s2=AC.createBufferSource();s2.buffer=k.buf;s2.playbackRate.value=k.rate*(1+det/2);s2.connect(g);s2.start(t+.004);return {s,s2};
 }
 function pluck(midi,when,gain){
   const ac=audio();if(!ac)return;
-  try{const k=ksBuffer(midi),g=ac.createGain();g.gain.value=(gain==null?.5:gain)*(guitar().detune?.6:1);g.connect(GUIT||OUT);ksVoice(k,g,ac.currentTime+(when||0));}catch(e){}
+  try{voice(midi,ac.createGain(),ac.currentTime+(when||0),gain==null?.5:gain);}catch(e){}
 }
 const VOICE={};let NOISE=null;
 function pluckAt(midi,t,gain,si){
   const ac=audio();if(!ac)return;
-  try{const k=ksBuffer(midi),g=ac.createGain();g.gain.value=gain*(guitar().detune?.6:1);g.connect(GUIT||OUT);const v=ksVoice(k,g,t);
+  try{const g=ac.createGain(),v=voice(midi,g,t,gain);
     if(si!=null){choke(si,t,.006);VOICE[si]=Object.assign({g},v);}}catch(e){}
 }
 function choke(si,t,tc){const v=VOICE[si];if(!v)return;delete VOICE[si];try{v.g.gain.setTargetAtTime(0,t,tc);v.s.stop(t+tc*12);if(v.s2)v.s2.stop(t+tc*12);}catch(e){}}
 function dampAll(t){for(let i=0;i<6;i++)choke(i,t,.012);}
+function noiseBuf(){if(!NOISE){const n=Math.floor(AC.sampleRate*.09);NOISE=AC.createBuffer(1,n,AC.sampleRate);const d=NOISE.getChannelData(0);for(let i=0;i<n;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/n,3);}return NOISE;}
 function slapAt(t){
   const ac=audio();if(!ac)return;
-  try{if(!NOISE){const n=Math.floor(ac.sampleRate*.09);NOISE=ac.createBuffer(1,n,ac.sampleRate);const d=NOISE.getChannelData(0);for(let i=0;i<n;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/n,3);}
-    dampAll(t);const s=ac.createBufferSource(),f=ac.createBiquadFilter(),g=ac.createGain();s.buffer=NOISE;f.type='bandpass';f.frequency.value=1700;f.Q.value=.7;g.gain.value=.9;s.connect(f);f.connect(g);g.connect(GUIT||OUT);s.start(t);}catch(e){}
+  try{dampAll(t);const s=ac.createBufferSource(),f=ac.createBiquadFilter(),g=ac.createGain();s.buffer=noiseBuf();f.type='bandpass';f.frequency.value=1700;f.Q.value=.7;g.gain.value=.9;s.connect(f);f.connect(g);g.connect(GSMP||OUT);s.start(t);}catch(e){}
 }
-const strum=(ms,gap)=>ms.forEach((m,i)=>pluck(m,i*(gap==null?.035:gap),.34));
+function pickAt(t,vol){ // o chiado curto da palheta passando pelas cordas
+  const ac=audio();if(!ac)return;
+  try{const s=ac.createBufferSource(),f=ac.createBiquadFilter(),g=ac.createGain();s.buffer=noiseBuf();f.type='bandpass';f.frequency.value=3600;f.Q.value=1.2;g.gain.value=vol;s.connect(f);f.connect(g);g.connect(GSMP||OUT);s.start(t);s.stop(t+.03);}catch(e){}
+}
+const hum=(v,p)=>v*(1-p+Math.random()*2*p); // variação humana de volume ou de tempo
+const strum=(ms,gap)=>{const g=gap==null?.035:gap;ms.forEach((m,i)=>pluck(m,i*g+(gap==null?Math.random()*.004:0),hum(.34,.1)));};
 function tick(t,accent,vol){vol=vol==null?1:vol; // accent: 2 primeiro tempo, 1 tempo forte, 0 tempo comum, 3 subdivisão (mais grave e mais baixa)
   try{const o=AC.createOscillator(),g=AC.createGain();o.type='triangle';o.frequency.value=accent===2?1568:accent===1?1175:accent===3?784:988;
     g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime((accent?.8:.5)*vol,t+.002);g.gain.exponentialRampToValueAtTime(.0001,t+.06);
@@ -1017,8 +1047,8 @@ function grStep(step,t){
   const played=[];c.f.forEach((f,si)=>{if(f>=0)played.push(si);});const m=si=>OPEN[si]+c.f[si];
   if(G.click&&i%2===0)tick(t,i===0?2:0,.35);
   if(G.guitar!==false){
-    if(cell==='↓'){played.forEach((si,k)=>pluckAt(m(si),t+k*.016,i===0?.36:.3,si));if(P.stac)dampAll(t+dur*.8);}
-    else if(cell==='↑'){played.slice(-4).reverse().forEach((si,k)=>pluckAt(m(si),t+k*.012,.22,si));}
+    if(cell==='↓'){pickAt(t,.05);played.forEach((si,k)=>pluckAt(m(si),t+k*hum(.016,.2),hum(i===0?.36:.3,.15),si));if(P.stac)dampAll(t+dur*.8);} // cada corda com volume e tempo um pouco diferentes, como uma mão de verdade
+    else if(cell==='↑'){pickAt(t,.03);played.slice(-4).reverse().forEach((si,k)=>pluckAt(m(si),t+k*hum(.012,.2),hum(.22,.15),si));}
     else if(cell==='x')slapAt(t);
     else if(cell==='B'||cell==='P'||cell==='b'){const si=played[((cell==='B'&&i>0)||cell==='b')&&played.length>1?1:0];pluckAt(m(si),t,.55,si);} // b: baixo alternado, a corda grave seguinte
     else if(cell==='I'||cell==='M'||cell==='A'){const si={I:3,M:4,A:5}[cell];if(c.f[si]>=0)pluckAt(m(si),t,.42,si);}
@@ -1774,7 +1804,7 @@ function perfilView(){
   h+='<section class="panel"><h2>Lembrete diário</h2>'+(NATIVE?'<p class="sub small">Uma notificação no horário escolhido, todo dia. Quem pratica sempre na mesma hora falta menos.</p><div class="chips" style="margin-top:12px"><button class="chip" data-act="remind" data-v="" aria-pressed="'+!S.remind+'">Desligado</button>'+REMIND_TIMES.map(t=>'<button class="chip" data-act="remind" data-v="'+t+'" aria-pressed="'+(S.remind===t)+'">'+t+'</button>').join('')+'</div>':'<p class="sub small">Os lembretes ficam disponíveis no app instalado pela loja ou pelo APK. No site, escolha um horário fixo e crie um lembrete no relógio do celular: quem pratica sempre na mesma hora falta menos.</p>')+'</section>';
   h+=installPanel()+aboutPanel()+sndPanel();
   h+='<section class="panel"><h2>Aparência</h2><p class="grp">Mão</p><div class="chips">'+[[0,'Destro'],[1,'Canhoto']].map(o=>'<button class="chip" data-act="lefty" data-v="'+o[0]+'" aria-pressed="'+(!!S.lefty===!!o[0])+'">'+o[1]+'</button>').join('')+'</div><p class="muted small" style="margin-top:6px">Canhoto espelha os desenhos de acordes e o braço: a 6ª corda fica à direita.</p><p class="grp">Tamanho da letra</p><div class="chips">'+[[0,'Normal'],[1,'Maior'],[2,'Bem maior']].map(o=>'<button class="chip" data-act="font" data-v="'+o[0]+'" aria-pressed="'+(S.font===o[0])+'">'+o[1]+'</button>').join('')+'</div><p class="grp">Tema</p><div class="chips">'+[['','Automático'],['light','Claro'],['dark','Escuro']].map(o=>'<button class="chip" data-act="theme" data-v="'+o[0]+'" aria-pressed="'+(S.theme===o[0])+'">'+o[1]+'</button>').join('')+'</div></section>';
-  h+='<section class="panel"><h2>Violão do app</h2><p class="sub small">O timbre das notas e dos acordes em todo o app. Compare com o seu violão e escolha o mais parecido.</p><div class="chips" style="margin-top:12px">'+Object.keys(GUITARS).map(k=>'<button class="chip" data-act="guitar" data-v="'+k+'" aria-pressed="'+(S.guitar===k)+'">'+GUITARS[k].name+'</button>').join('')+'</div><p class="muted small" style="margin-top:8px">'+esc(guitar().desc)+' Lá de referência: 440 Hz.</p><div class="acts"><button class="btn sm quiet" data-act="chord-play" data-c="G">Ouvir um G</button><button class="btn sm quiet" data-act="play-notes" data-m="40,45,50,55,59,64" data-g=".3">Cordas soltas</button></div></section>';
+  h+='<section class="panel"><h2>Violão do app</h2><p class="sub small">O timbre das notas e dos acordes em todo o app. Compare com o seu violão e escolha o mais parecido.</p><div class="chips" style="margin-top:12px">'+Object.keys(GUITARS).map(k=>'<button class="chip" data-act="guitar" data-v="'+k+'" aria-pressed="'+(S.guitar===k)+'">'+GUITARS[k].name+'</button>').join('')+'</div><p class="muted small" style="margin-top:8px">'+esc(guitar().desc)+' Lá de referência: 440 Hz.</p><p class="muted small" id="smp-state" style="margin-top:6px">'+esc(sampleStateTxt())+'</p><div class="acts"><button class="btn sm quiet" data-act="chord-play" data-c="G">Ouvir um G</button><button class="btn sm quiet" data-act="play-notes" data-m="40,45,50,55,59,64" data-g=".3">Cordas soltas</button></div></section>';
   h+='<section class="panel"><h2>Perfis neste aparelho</h2><p class="sub small">Duas pessoas no mesmo celular, cada uma com o próprio nível, treino e progresso. Trocar de perfil recarrega o app.</p><div class="chips" style="margin-top:12px"><button class="chip" data-act="prof-use" data-id="" aria-pressed="'+!PROF.current+'">Principal</button>'+PROF.list.map(p=>'<button class="chip" data-act="prof-use" data-id="'+esc(p.id)+'" aria-pressed="'+(PROF.current===p.id)+'">'+esc(p.name)+'</button>').join('')+'</div>';
   h+='<div class="row" style="margin-top:12px"><input class="inp" id="prof-name" maxlength="20" placeholder="Nome do novo perfil" aria-label="Nome do novo perfil"><button class="btn sm" data-act="prof-add">Criar</button></div>';
   if(PROF.current)h+='<button class="btn block danger" style="margin-top:12px" data-act="prof-del">'+(profDelArmed?'Toque de novo para apagar este perfil':'Apagar este perfil')+'</button>';
@@ -2254,6 +2284,7 @@ function aboutPanel(){ // Sobre e ajuda: como usar, privacidade, versão e onde 
     card('Sem som ou microfone?','<p>O som do app depende do celular liberar o áudio: toque em qualquer botão de som uma vez. O microfone pede permissão na primeira vez; se não chegar som, use “Religar o microfone”.</p><button class="link" data-act="open-som">Abrir o diagnóstico de som</button>')+
     card('Privacidade','<p>Nada sai do aparelho: não há conta, anúncios nem rastreamento. O microfone é analisado na hora, sem gravar; a única gravação é a que você mesmo faz em Hoje, e ela fica no celular.</p><a class="link" href="'+SITE_URL+'privacidade.html" target="_blank" rel="noopener">Política de privacidade</a>')+
     card('Encontrou um problema?','<p>Copie o diagnóstico e descreva o que aconteceu num chamado. Sem e-mail nem cadastro: o chamado é público, então não escreva dados pessoais.</p><div class="acts"><button class="btn sm line" data-act="snd-copy">Copiar diagnóstico</button><a class="link" href="https://github.com/luizneogrid-commits/appviolao/issues" target="_blank" rel="noopener">Abrir chamado no GitHub</a></div>')+
+    card('Créditos','<p>As notas gravadas de violão de nylon, de aço e de guitarra vêm do soundfont FluidR3_GM, de Frank Wen, servido nota a nota pelo projeto midi-js-soundfonts, de Benjamin Gleitzman, sob a licença Creative Commons BY 3.0.</p><p>A fonte de letra é a Archivo (Omnibus-Type, licença SIL Open Font). O resto do app, som sintetizado incluído, foi feito para o Violão Diário.</p><div class="acts"><a class="link" href="https://github.com/gleitz/midi-js-soundfonts" target="_blank" rel="noopener">midi-js-soundfonts</a><a class="link" href="https://creativecommons.org/licenses/by/3.0/us/" target="_blank" rel="noopener">CC BY 3.0</a></div>')+
     '</div></section>';
 }
 function installPanel(){
@@ -2291,6 +2322,7 @@ if(PWA.host){
 const TABS=[['hoje','Hoje','<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.8 2.8L16 9.5"/>'],['meu','Meu treino','<path d="M4 6h8M16 6h4M4 12h2M10 12h10M4 18h10M18 18h2"/><circle cx="14" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="18" r="2"/>'],['treinar','Treinar','<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/>'],['ferramentas','Ferramentas','<path d="M9 3h6l4 18H5L9 3zM12 17l4-11M7.2 13h9.6"/>'],['acordes','Acordes','<path d="M5 4v16M12 4v16M19 4v16M5 4h14M5 10h14M5 16h14"/><circle cx="12" cy="7" r="1.7" fill="currentColor"/>'],['evolucao','Evolução','<path d="M5 20V11M12 20V4M19 20v-6M2 20h20"/>']];
 /* ---------- novidades de cada versão, mostradas uma vez ---------- */
 const NEWS=[
+ ['1.20.0',['Som de violão de verdade: notas gravadas de nylon, aço e guitarra limpa, com batida mais humana e um pouco de sala. O som sintetizado fica de reserva.']],
  ['1.19.0',['Violão do app (Perfil): escolha o timbre, nylon, aço ou elétrico limpo, e compare com o seu violão.']],
  ['1.18.0',['Cifra: modo palco (só a cifra, letra grande) e a tela fica acesa enquanto rola.','Hoje mais curto: prática livre, diário e gravação ficam numa linha recolhida.','Perfil: “Sobre e ajuda”, com como usar, privacidade e onde reportar problema.','No Android, links do site (treinos compartilhados, atalhos) abrem direto no app.']],
  ['1.17.0',['Roteiro com três níveis novos: ritmos brasileiros; baixos, power chords e pestanas móveis; cor, tom e ouvido.','Power chords E5, A5, D5, G5 e C5 na biblioteca.','Aquecimento com o exercício cromático tocado junto, casa por casa.','Treinar, Tempo: bater a batida na tela, célula por célula.']],
@@ -2433,7 +2465,7 @@ const ACT={
   'ct-import':()=>{const t=parseTrain(($('#ct-code')||{value:''}).value);if(!t){toast('Não reconheci esse código ou link de treino.');return;}S.custom.push(t);save();ctMsg='Treino recebido: '+ctName(t)+'.';render();window.scrollTo(0,0);},
   print:()=>{try{window.print();}catch(e){}},
   lefty:el=>{S.lefty=el.dataset.v==='1';save();render();},
-  guitar:el=>{S.guitar=GUITARS[el.dataset.v]?el.dataset.v:'nylon';save();if(AC)guitarChain();render();},
+  guitar:el=>{S.guitar=GUITARS[el.dataset.v]?el.dataset.v:'nylon';save();if(AC)guitarChain();loadSamples(S.guitar);render();},
   'chk-open':el=>{CHK.c=el.dataset.c;chkReset();sub.acordes='acordes';if(view!=='acordes')go('acordes');else{render();window.scrollTo(0,0);}if(!(MIC&&MIC.mode==='check'))micStart('check');},
   'chk-close':()=>{if(MIC&&MIC.mode==='check')micStop();CHK.c=null;render();},
   'chk-mic':()=>{if(MIC&&MIC.mode==='check'){micStop();render();}else{if(MIC)micStop();chkReset();micStart('check');}},
@@ -2549,6 +2581,8 @@ function openDeepLink(url){ // atalhos (app.violaodiario://afinador, ?ir=afinado
 document.addEventListener('visibilitychange',()=>{if(document.hidden)onHide();else onShow();});
 
 render();updPaint();
+setTimeout(()=>{if(navigator.onLine!==false||NATIVE)loadSamples(S.guitar);},1200); // as notas gravadas do violão escolhido, antes do primeiro som
+window.addEventListener('online',()=>{const st=SMP[S.guitar];if(st&&st.state==='failed')st.tries=0;loadSamples(S.guitar);});
 {const ir=new URLSearchParams(location.search).get('ir');if(ir){openDeepLink('app://'+ir);try{history.replaceState(null,'',location.pathname);}catch(e){}}} // atalhos do site instalado (manifest.webmanifest)
 {const hs=location.hash;if(/#treino=/.test(hs)){try{history.replaceState(null,'',location.pathname);}catch(e){}if(parseTrain(hs))openDeepLink(hs);else toast('O link de treino veio incompleto.');}} // link de treino compartilhado, aberto no site
 
