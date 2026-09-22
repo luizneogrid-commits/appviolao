@@ -113,6 +113,7 @@ O `index.html` percebe que está dentro do app (Capacitor) e:
 - mantém a tela acesa enquanto o metrônomo, as batidas, o afinador, um bloco do treino ou a contagem de trocas estão rodando;
 - vibra pelo motor de vibração do aparelho, inclusive no iPhone;
 - no Android, o botão voltar leva para Hoje e, em Hoje, minimiza o app;
+- no celular fica em pé (retrato); no tablet (largura mínima de 600 dp) gira junto com o aparelho (`MainActivity.java`);
 - guarda o progresso também no armazenamento do aparelho, que o sistema não apaga sozinho;
 - pede o microfone pelo sistema na primeira vez que o afinador é ligado;
 - manda um lembrete diário no horário escolhido em Perfil (na barra de baixo) (notificação local; no Android 13 ou mais novo o sistema pede permissão na primeira vez);
