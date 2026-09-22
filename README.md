@@ -13,7 +13,7 @@ O mesmo `index.html` vira três coisas:
 | Arquivo | Para que serve |
 |---|---|
 | `index.html` | O app inteiro. É o arquivo que muda a cada atualização. |
-| `manifest.webmanifest`, `sw.js`, `icons/` | Instalação e uso sem internet do site (PWA). |
+| `manifest.webmanifest`, `sw.js`, `icons/`, `fonts/` | Instalação, atalhos do ícone e uso sem internet do site (PWA); a fonte Archivo vai junto. |
 | `android/` | Projeto do app Android (ícones, tela de abertura, permissão do microfone). |
 | `ios/` | Projeto do app iPhone (Xcode). |
 | `capacitor.config.json`, `package.json` | Configuração do Capacitor, a ponte entre o `index.html` e os apps nativos. |
@@ -108,7 +108,7 @@ Só troque o `sw.js` se ele mudar. Se mudar a lista de arquivos guardados, aumen
 O `index.html` percebe que está dentro do app (Capacitor) e:
 
 - esconde o aviso de instalação e a busca de atualização do site;
-- usa a fonte Archivo embutida no app, sem depender do Google Fonts, então abre rápido e sem internet;
+- traz a fonte Archivo dentro do pacote (`fonts/`, a mesma que o site usa), então abre rápido e sem internet;
 - mantém a tela acesa enquanto o metrônomo, as batidas, o afinador, um bloco do treino ou a contagem de trocas estão rodando;
 - vibra pelo motor de vibração do aparelho, inclusive no iPhone;
 - no Android, o botão voltar leva para Hoje e, em Hoje, minimiza o app;

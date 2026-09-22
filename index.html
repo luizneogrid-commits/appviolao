@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Violão Diário</title>
-<meta name="app-version" content="1.14.0">
+<meta name="app-version" content="1.15.0">
 <meta name="description" content="Treino diário de violão: plano por nível, metrônomo, afinador, batidas para tocar junto, acordes e notas.">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#F2EEF0" media="(prefers-color-scheme: light)">
@@ -16,8 +16,10 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap" rel="stylesheet">
 <style>
+/* Fonte Archivo embutida (pasta fonts/): o site e o app abrem iguais, com ou sem internet, sem pedir nada ao Google Fonts. */
+@font-face{font-family:"Archivo";font-style:normal;font-display:swap;font-weight:100 900;font-stretch:62% 125%;src:url(fonts/archivo-latin-wdth-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Archivo";font-style:normal;font-display:swap;font-weight:100 900;font-stretch:62% 125%;src:url(fonts/archivo-latin-ext-wdth-normal.woff2) format("woff2");unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
 :root{
   --bg:#F2EEF0; --surface:#FFFFFF; --surface-2:#F8F3F5; --ink:#24161D; --muted:#6E5C65; --line:#E0D6DB;
   --primary:#7A2E4D; --on-primary:#FFFFFF; --primary-soft:#F1E1E8;
@@ -475,7 +477,7 @@ const buzz=ms=>{if(NATIVE){if(ms<30)native('Haptics','impact',{style:'LIGHT'});e
 
 /* ---------- state ---------- */
 const KEY='violao-diario-v1';
-const DEF={v:1,onboarded:false,name:'',level:1,levelSince:'',goal:15,cntMode:'tap',skills:{},days:{},changes:{},chords:{},songs:[],custom:[],ctLog:{},stats:{tuned:0,play:{},prog4:false},proven:{},badges:{},rest:0,startLevel:0,lastWeekSeen:'',rev:{},adj:null,quick:'',remind:'',bpmLog:{},font:0,theme:'',seenVer:'',msub:1,macc:'first',mgap:0,lefty:false,easyOn:{},ear:{ok:0,total:0},maxBpm:0,bpm:70,beats:4,altOut:false,installDismissed:false};
+const DEF={v:1,onboarded:false,name:'',level:1,levelSince:'',goal:15,cntMode:'tap',skills:{},days:{},changes:{},chords:{},songs:[],custom:[],ctLog:{},stats:{tuned:0,play:{},prog4:false},proven:{},badges:{},rest:0,startLevel:0,lastWeekSeen:'',rev:{},adj:null,quick:'',remind:'',bpmLog:{},font:0,theme:'',seenVer:'',msub:1,macc:'first',mgap:0,mvib:false,tuning:'padrao',tuneMode:'cordas',lastExport:'',backupAsk:'',recs:[],lefty:false,easyOn:{},ear:{ok:0,total:0},maxBpm:0,bpm:70,beats:4,altOut:false,installDismissed:false};
 let S,hadLocal=false;
 function adopt(o){
   S=Object.assign(JSON.parse(JSON.stringify(DEF)),o&&typeof o==='object'?o:{});
@@ -492,7 +494,9 @@ function adopt(o){
   S.songs.forEach(s=>{if(typeof s.cifra!=='string')s.cifra='';s.tr=Math.max(-11,Math.min(11,Math.round(+s.tr)||0));s.capo=Math.max(0,Math.min(7,Math.round(+s.capo)||0));if(typeof s.pid!=='string')delete s.pid;s.bpm=s.bpm?Math.max(40,Math.min(160,Math.round(+s.bpm)||0)):0;s.per=s.per===2?2:1;}); // tom, capotraste e batida de tocar junto, por música
   if(!S.easyOn||typeof S.easyOn!=='object'||Array.isArray(S.easyOn))S.easyOn={};
   S.font=[0,1,2].includes(+S.font)?+S.font:0;S.theme=['light','dark'].includes(S.theme)?S.theme:'';
-  S.msub=[1,2,3].includes(+S.msub)?+S.msub:1;S.macc=['first','none','back'].includes(S.macc)?S.macc:'first';S.mgap=[0,2,4].includes(+S.mgap)?+S.mgap:0;S.lefty=!!S.lefty;
+  S.msub=[1,2,3].includes(+S.msub)?+S.msub:1;S.macc=['first','none','back'].includes(S.macc)?S.macc:'first';S.mgap=[0,2,4].includes(+S.mgap)?+S.mgap:0;S.mvib=!!S.mvib;S.lefty=!!S.lefty;
+  S.tuning=['padrao','meio','dropd'].includes(S.tuning)?S.tuning:'padrao';S.tuneMode=S.tuneMode==='crom'?'crom':'cordas';
+  S.lastExport=typeof S.lastExport==='string'?S.lastExport:'';S.backupAsk=typeof S.backupAsk==='string'?S.backupAsk:'';S.recs=Array.isArray(S.recs)?S.recs.filter(r=>r&&typeof r==='object'&&r.id&&r.d):[];
   if(typeof S.seenVer!=='string')S.seenVer='';if(!S.seenVer&&S.onboarded&&!(o&&'seenVer' in o))S.seenVer='1.6.1'; // quem já usava o app antes deste recurso vê as novidades desde então
   S.level=Math.max(1,Math.min(6,Math.round(+S.level)||1)); // 6 = quantidade de níveis em LEVELS (definido mais abaixo)
   if(!S.ear||typeof S.ear!=='object')S.ear={ok:0,total:0};
@@ -521,6 +525,7 @@ window.addEventListener('unhandledrejection',e=>{logErr('promessa: '+(e.reason&&
 /* ---------- exportar e importar o progresso ---------- */
 const IMP={data:null,summary:'',text:''};
 function exportData(){
+  S.lastExport=today();save(); // o aviso de cópia de segurança conta a partir daqui
   const payload=JSON.stringify({app:'violao-diario',version:VER,exported:new Date().toISOString(),data:S}),name='violao-diario-'+today()+'.json';
   let file=null;try{file=new File([payload],name,{type:'application/json'});}catch(e){}
   if(NATIVE&&file&&navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){navigator.share({files:[file],title:'Progresso do Violão Diário'}).catch(()=>{});return;} // no app, compartilhar é o jeito de salvar em arquivo
@@ -540,7 +545,7 @@ const today=()=>dkey();
 const day=k=>S.days[k]||(S.days[k]={min:0,done:{}});
 const practiced=k=>!!(S.days[k]&&S.days[k].min>0);
 const goalMet=k=>!!(S.days[k]&&(S.days[k].full||S.days[k].min>=S.goal));
-function addMinutes(n){day(today()).min+=n;save();}
+function addMinutes(n){day(today()).min+=n;save();afterPractice();}
 const wkKey=d=>{const x=new Date(d);x.setDate(x.getDate()-(x.getDay()+6)%7);return dkey(x);}; // segunda-feira da semana
 // Sequência: dias seguidos com prática. Com a folga ligada (S.rest), um dia sem tocar por semana não quebra a sequência.
 function streak(){let n=0,d=new Date(),used={};if(!practiced(dkey(d)))d=addDays(d,-1);
@@ -889,8 +894,9 @@ function tick(t,accent,vol){vol=vol==null?1:vol; // accent: 2 primeiro tempo, 1 
 }
 
 /* ---------- metronome ---------- */
-const M={bpm:S.bpm||70,beats:S.beats||4,sub:S.msub||1,acc:S.macc||'first',gap:S.mgap||0,on:false,next:0,beat:0,bar:0,since:0,timer:null,taps:[],ramp:{on:false,step:5,bars:4,target:120}};
-function mSync(){M.bpm=S.bpm||70;M.beats=S.beats||4;M.sub=S.msub||1;M.acc=S.macc||'first';M.gap=S.mgap||0;} // depois de importar um progresso
+const M={bpm:S.bpm||70,beats:S.beats||4,sub:S.msub||1,acc:S.macc||'first',gap:S.mgap||0,vib:!!S.mvib,on:false,next:0,beat:0,bar:0,since:0,timer:null,taps:[],ramp:{on:false,step:5,bars:4,target:120}};
+function mSync(){M.bpm=S.bpm||70;M.beats=S.beats||4;M.sub=S.msub||1;M.acc=S.macc||'first';M.gap=S.mgap||0;M.vib=!!S.mvib;} // depois de importar um progresso
+const vib=strong=>{if(NATIVE)native('Haptics','impact',{style:strong?'HEAVY':'MEDIUM'});else{try{navigator.vibrate&&navigator.vibrate(strong?45:22);}catch(e){}}}; // metrônomo por vibração
 const mAccent=b=>M.acc==='none'?0:M.acc==='back'?(b%2===1?1:0):b===0?2:(M.beats===6&&b===3?1:0); // acento no 1 (e no 4 do 6/8), nenhum, ou no 2 e 4
 function mStart(){const ac=audio();if(!ac)return;grStop(true);M.on=true;M.beat=0;M.bar=0;M.next=ac.currentTime+.08;M.since=ac.currentTime;M.timer=setInterval(mSched,25);mPaint();awakeSync();}
 function mStop(){M.on=false;clearInterval(M.timer);mPaint();awakeSync();document.querySelectorAll('.dots i').forEach(i=>i.classList.remove('on'));}
@@ -899,7 +905,7 @@ function mSched(){
   while(M.next<AC.currentTime+.12){
     const b=M.beat,t=M.next,mute=M.gap>0&&M.bar%M.gap===M.gap-1; // compasso mudo: o último de cada grupo fica em silêncio e a pessoa segue sozinha
     if(!mute){tick(t,mAccent(b));for(let k=1;k<M.sub;k++)tick(t+k*(60/M.bpm)/M.sub,3,.3);} // subdivisão: colcheias ou tercinas, mais baixas
-    setTimeout(()=>mFlash(b),Math.max(0,(t-AC.currentTime)*1000));
+    setTimeout(()=>{mFlash(b);if(M.on&&M.vib&&!mute)vib(mAccent(b)>0);},Math.max(0,(t-AC.currentTime)*1000));
     M.next+=60/M.bpm;M.beat=(b+1)%M.beats;
     if(M.beat===0){M.bar++;if(M.ramp.on&&M.bar%M.ramp.bars===0&&M.bpm<M.ramp.target){mSet(Math.min(M.ramp.target,M.bpm+M.ramp.step),true);}}
   }
@@ -1067,7 +1073,10 @@ function ctDone(){
 }
 
 /* ---------- tuner ---------- */
-const STR=[{n:6,l:'E',pt:'Mi',m:40},{n:5,l:'A',pt:'Lá',m:45},{n:4,l:'D',pt:'Ré',m:50},{n:3,l:'G',pt:'Sol',m:55},{n:2,l:'B',pt:'Si',m:59},{n:1,l:'E',pt:'Mi',m:64}];
+// Afinações: padrão, meio tom abaixo (comum em muita música brasileira, para cantar mais grave) e Drop D.
+const TUNINGS=[{id:'padrao',name:'Padrão (E A D G B E)',m:[40,45,50,55,59,64]},{id:'meio',name:'Meio tom abaixo (Eb)',m:[39,44,49,54,58,63],flat:true},{id:'dropd',name:'Drop D (D A D G B E)',m:[38,45,50,55,59,64]}];
+const FLAT_L={'D#':'Eb','G#':'Ab','C#':'Db','F#':'Gb','A#':'Bb'},FLAT_P={'Ré#':'Mib','Sol#':'Láb','Dó#':'Réb','Fá#':'Solb','Lá#':'Sib'};
+function strs(){const t=TUNINGS.find(x=>x.id===S.tuning)||TUNINGS[0];return t.m.map((m,i)=>{const pc=m%12;return {n:6-i,l:t.flat&&FLAT_L[NL[pc]]||NL[pc],pt:t.flat&&FLAT_P[NPT[pc]]||NPT[pc],m};});}
 let MIC=null,micErr=false;
 async function micStart(mode){ // mode: 'tune' (afinador) ou 'count' (contar trocas pelo som)
   micErr=false;mode=mode||'tune';
@@ -1187,11 +1196,13 @@ function micTick(){
   if(!f){if(MIC.hist.length)MIC.hist.shift();if(!MIC.hist.length){$('#t-msg').textContent=MIC.zero>30?'O microfone está ligado, mas não chega som. Toque em “Religar o microfone”. No iPhone, feche outros apps que usem o microfone.':'Toque uma corda solta perto do celular.';}return;}
   MIC.hist.push(f);if(MIC.hist.length>5)MIC.hist.shift();
   const med=MIC.hist.slice().sort((x,y)=>x-y)[Math.floor(MIC.hist.length/2)];
-  let bi=0,bc=1e9;STR.forEach((s,i)=>{const ft=440*Math.pow(2,(s.m-69)/12),ce=1200*Math.log2(med/ft);if(Math.abs(ce)<Math.abs(bc)){bc=ce;bi=i;}});
-  const s=STR[bi];note.textContent=s.l;$('#t-str').textContent=s.n+'ª corda, '+s.pt;
+  let bi=-1,bc=0,label,subt;
+  if(S.tuneMode==='crom'){const midi=Math.round(69+12*Math.log2(med/440)),ft=440*Math.pow(2,(midi-69)/12),pc=((midi%12)+12)%12;bc=1200*Math.log2(med/ft);label=NL[pc]+(Math.floor(midi/12)-1);subt=NPT[pc]+', '+Math.round(med)+' Hz';} // cromático: a nota mais próxima, em qualquer altura
+  else{const ST=strs();bc=1e9;ST.forEach((s,i)=>{const ft=440*Math.pow(2,(s.m-69)/12),ce=1200*Math.log2(med/ft);if(Math.abs(ce)<Math.abs(bc)){bc=ce;bi=i;}});const s=ST[bi];label=s.l;subt=s.n+'ª corda, '+s.pt;}
+  note.textContent=label;$('#t-str').textContent=subt;const ct=$('#t-cents');if(ct)ct.textContent=(bc>0?'+':'')+Math.round(bc)+' cents';
   $('#t-needle').style.left=(50+Math.max(-50,Math.min(50,bc)))+'%';
   const inTune=Math.abs(bc)<=5;$('#t-msg').textContent=inTune?'Afinada.':bc<0?'Está grave. Aperte a tarraxa.':'Está aguda. Afrouxe a tarraxa.';
-  if(inTune){const now=Date.now();if(!MIC.lastTuned||now-MIC.lastTuned>2000){MIC.lastTuned=now;S.stats.tuned=(S.stats.tuned||0)+1;save();checkProofs();}} // registro para a meta "afino sem ajuda"
+  if(inTune&&bi>=0){const now=Date.now();if(!MIC.lastTuned||now-MIC.lastTuned>2000){MIC.lastTuned=now;S.stats.tuned=(S.stats.tuned||0)+1;save();checkProofs();}} // registro para a meta "afino sem ajuda"
   document.querySelectorAll('.heads button').forEach((b,i)=>b.classList.toggle('hit',i===bi));
 }
 
@@ -1224,9 +1235,10 @@ setInterval(()=>{
   else if(T.phase==='run'){const left=(T.endAt-now)/1000,el=$('#t-left');if(el){el.textContent=mmss(left);$('#t-bar').style.width=Math.max(0,left/60*100)+'%';}if(left<=0)changesDone();}
   csTick(now);
 },200);
+function afterPractice(){if(NATIVE&&S.remind&&goalMet(today())&&remindDoneDay!==today()){remindDoneDay=today();scheduleReminder();}} // meta batida: o lembrete de hoje sai da fila
 function blockDone(id,credit){
-  const d=day(today());if(!d.done[id]){d.done[id]=true;d.min+=credit;}
-  B=null;if(planFor(today()).every(b=>d.done[b.id]))d.full=true;save();
+  const d=day(today());if(!d.done[id]){d.done[id]=credit;d.min+=credit;} // guarda os minutos creditados, para o "Desfazer"
+  if(B&&B.bpm&&M.on)mStop();B=null;if(planFor(today()).every(b=>d.done[b.id]))d.full=true;save();afterPractice();
   strum(chordMidis('G'));buzz(60);render();
   const nk=$('.neck');if(nk){nk.classList.add('ring');setTimeout(()=>nk.classList.remove('ring'),1300);}
 }
@@ -1665,13 +1677,20 @@ function perfilView(){
 
 /* ---------- lembrete diário: notificação local, só no app instalado ---------- */
 const REMIND_TIMES=['07:00','08:00','12:00','18:00','19:00','20:00','21:00'];
+// Um lembrete por dia, nos próximos 14 dias, cada um com hora marcada (não um só repetido): assim o de hoje some quando
+// a meta já foi batida, e o texto diz o treino da semana. A lista é refeita a cada abertura do app e a cada meta batida.
+const REMIND_N=14;let remindDoneDay='';
+function reminderBody(){const w=weekOf(S.level),W=ROAD[S.level-1][w];return 'Semana '+(w+1)+', '+W.t+'. '+S.goal+' min de violão hoje e a sequência continua.';}
 function scheduleReminder(){
   if(!NATIVE||!PLUG.LocalNotifications)return;
-  const after=()=>{if(!S.remind)return;const t=S.remind.split(':').map(Number);
-    const go=()=>native('LocalNotifications','schedule',{notifications:[{id:1,title:'Violão Diário',body:'Hora dos seus '+S.goal+' minutos de violão. O treino de hoje está pronto.',schedule:{on:{hour:t[0],minute:t[1]},allowWhileIdle:true},isExactNotification:false}]});
+  const ids=Array.from({length:REMIND_N},(_,i)=>({id:i+1}));
+  const after=()=>{if(!S.remind)return;const t=S.remind.split(':').map(Number),now=new Date(),list=[],body=reminderBody();
+    const first=new Date(now.getFullYear(),now.getMonth(),now.getDate(),t[0],t[1],0,0);if(first<=now||goalMet(today()))first.setDate(first.getDate()+1); // hoje já foi (ou já passou da hora): começa amanhã
+    for(let i=0;i<REMIND_N;i++){const at=new Date(first);at.setDate(first.getDate()+i);list.push({id:i+1,title:'Violão Diário',body,schedule:{at,allowWhileIdle:true},isExactNotification:false});}
+    const go=()=>native('LocalNotifications','schedule',{notifications:list});
     const p=native('LocalNotifications','requestPermissions');
     if(p&&p.then)p.then(r=>{if(r&&r.display==='granted')go();else{S.remind='';save();render();toast('Sem permissão para notificações. Libere nos ajustes do celular.');}},go);else go();};
-  Promise.resolve(native('LocalNotifications','cancel',{notifications:[{id:1}]})).then(after,after);
+  Promise.resolve(native('LocalNotifications','cancel',{notifications:ids})).then(after,after);
 }
 
 /* ---------- cifras: cifra com rolagem automática e sugestões de músicas ---------- */
@@ -1867,9 +1886,10 @@ V.hoje=function(){
     if(b.song&&b.song.cifra)h+='<p class="extra"><button class="link" style="padding:4px 0;min-height:0" data-act="song-open" data-id="'+esc(b.song.id)+'">Abrir a cifra com rolagem</button></p>';
     if(done&&/^(tech|rhy|chg)$/.test(b.id)){const v=(d.fb||{})[b.id]; // "Como foi?": ajusta o treino de amanhã
       h+=v?'<div class="acts fb"><span class="muted small">'+esc(fbLabel(b.id,v))+'</span></div>':'<div class="acts fb"><span class="muted small">Como foi?</span>'+[['easy','Fácil'],['ok','Ok'],['hard','Difícil']].map(o=>'<button class="chip" data-act="fb" data-id="'+b.id+'" data-v="'+o[0]+'">'+o[1]+'</button>').join('')+'</div>';}
+    if(done)h+='<div class="acts" style="margin-top:4px"><button class="link" style="padding:0;min-height:28px;font-size:.85rem" data-act="blk-undo" data-id="'+b.id+'">Desfazer</button></div>';
     if(!done){
       if(act)h+='<div class="timer num" id="blk-time" aria-live="off">'+mmss(B.left)+'</div><div class="acts"><button class="btn sm quiet" data-act="blk-pause">'+(B.running?'Pausar':'Continuar')+'</button><button class="btn sm" data-act="blk-done" data-id="'+b.id+'">Concluir bloco</button></div>';
-      else{h+='<div class="acts"><button class="btn sm" data-act="blk-start" data-id="'+b.id+'" data-min="'+b.min+'">Iniciar '+b.min+' min</button>';
+      else{h+='<div class="acts"><button class="btn sm" data-act="blk-start" data-id="'+b.id+'" data-min="'+b.min+'" data-bpm="'+(b.bpm||'')+'">Iniciar '+b.min+' min'+(b.bpm?' com metrônomo':'')+'</button>';
         if(b.rhythm)h+='<button class="link" data-act="open-batida" data-p="'+b.rhythm.id+'" data-bpm="'+b.bpm+'">Ouvir a batida e tocar junto</button>';
         if(b.bpm)h+='<button class="link" data-act="open-metro" data-bpm="'+b.bpm+'">Abrir metrônomo a '+b.bpm+' BPM</button>';
         if(b.pair)h+='<button class="link" data-act="open-trocas" data-a="'+esc(b.pair[0])+'" data-b="'+esc(b.pair[1])+'">Contar trocas por 1 minuto</button><button class="link" data-act="chk-open" data-c="'+esc(b.pair[0])+'">Conferir o '+esc(b.pair[0])+' pelo som</button>';
@@ -1889,8 +1909,52 @@ V.hoje=function(){
   }else h+='<section class="panel"><h3>Tocou fora do treino?</h3><p class="sub">Prática livre também conta para a sequência.</p>';
   h+='<div class="acts" style="margin-top:12px"><button class="btn sm line" data-act="free-add" data-v="5">Somar 5 min</button> <button class="btn sm line" data-act="free-add" data-v="15">Somar 15 min</button></div>'+(S.custom.length?'':'<button class="link" style="margin-top:4px" data-act="open-meu">Montar um treino com os seus acordes e batidas</button>')+'</section>';
   h+='<section class="panel"><h3>Diário</h3><p class="sub small">Uma linha sobre hoje: o que travou, o que fluiu. Fica guardada em Evolução.</p><input class="inp" id="d-note" maxlength="140" placeholder="Hoje…" aria-label="Diário de hoje" value="'+esc(d.note||'')+'" style="margin-top:10px"></section>';
+  h+=recPanel()+backupPanel();
   return h;
 };
+function backupPanel(){ // o progresso só existe no aparelho: a cada 30 dias, um lembrete de exportar
+  const ks=Object.keys(S.days).filter(practiced);if(ks.length<10)return '';
+  const last=[S.lastExport,S.backupAsk].filter(Boolean).sort().pop();if(last&&(Date.now()-Date.parse(last))/864e5<30)return '';
+  return '<section class="panel"><h3>Cópia de segurança</h3><p class="sub small">'+ks.length+' dias de prática registrados, e o progresso só existe neste aparelho. Exportar leva dez segundos'+(S.lastExport?'; a última cópia foi em '+esc(dayTxt(S.lastExport))+'.':'.')+'</p><div class="acts"><button class="btn sm" data-act="export">Exportar agora</button><button class="link" data-act="backup-later">Lembrar em 30 dias</button></div></section>';
+}
+
+/* ---------- gravação de 30 segundos: o áudio fica no aparelho (IndexedDB); só a lista (dia, duração) vai no progresso ---------- */
+const REC={on:false,mr:null,chunks:[],left:30,timer:null,t0:0,url:null};
+function recDB(){return new Promise((res,rej)=>{try{const r=indexedDB.open('violao-diario-rec',1);r.onupgradeneeded=()=>{r.result.createObjectStore('rec',{keyPath:'id'});};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);}catch(e){rej(e);}});}
+function recPut(o){return recDB().then(db=>new Promise((res,rej)=>{const t=db.transaction('rec','readwrite');t.objectStore('rec').put(o);t.oncomplete=res;t.onerror=()=>rej(t.error);}));}
+function recGet(id){return recDB().then(db=>new Promise((res,rej)=>{const r=db.transaction('rec').objectStore('rec').get(id);r.onsuccess=()=>res(r.result||null);r.onerror=()=>rej(r.error);}));}
+function recRemove(id){return recDB().then(db=>new Promise((res,rej)=>{const t=db.transaction('rec','readwrite');t.objectStore('rec').delete(id);t.oncomplete=res;t.onerror=()=>rej(t.error);}));}
+const recMime=()=>['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/aac'].find(m=>window.MediaRecorder&&MediaRecorder.isTypeSupported(m))||'';
+async function recStart(){
+  if(REC.on||!window.MediaRecorder||!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia)return;
+  if(MIC)micStop();
+  try{if(navigator.audioSession)navigator.audioSession.type='play-and-record';}catch(e){}
+  let stream=null;
+  try{stream=await navigator.mediaDevices.getUserMedia({audio:true});const mime=recMime(),mr=new MediaRecorder(stream,mime?{mimeType:mime}:undefined);
+    REC.on=true;REC.mr=mr;REC.chunks=[];REC.left=30;REC.t0=Date.now();
+    mr.ondataavailable=e=>{if(e.data&&e.data.size)REC.chunks.push(e.data);};
+    mr.onstop=()=>{const blob=new Blob(REC.chunks,{type:mr.mimeType||mime||'audio/webm'}),sec=Math.round((Date.now()-REC.t0)/1000),id=String(Date.now());
+      try{stream.getTracks().forEach(t=>t.stop());}catch(e){}try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch(e){}
+      REC.on=false;REC.mr=null;clearInterval(REC.timer);REC.timer=null;
+      if(sec<2||!blob.size){render();toast('Gravação muito curta.');return;}
+      recPut({id,blob}).then(()=>{S.recs.unshift({id,d:today(),t:+id,sec,type:blob.type});while(S.recs.length>60){const old=S.recs.pop();recRemove(old.id).catch(()=>{});}save();render();toast('Gravação guardada.');},()=>{render();toast('Não consegui guardar a gravação.');});};
+    mr.start(1000);REC.timer=setInterval(()=>{REC.left=Math.max(0,30-Math.round((Date.now()-REC.t0)/1000));const el=$('#rec-left');if(el)el.textContent=REC.left;if(REC.left<=0)recStop();},250);
+    render();
+  }catch(e){try{if(stream)stream.getTracks().forEach(t=>t.stop());}catch(e2){}try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch(e2){}REC.on=false;render();toast(NATIVE?'Sem acesso ao microfone. Libere nos ajustes do celular.':'Sem acesso ao microfone.');}
+}
+function recStop(){if(!REC.on||!REC.mr)return;try{REC.mr.stop();}catch(e){REC.on=false;clearInterval(REC.timer);REC.timer=null;render();}}
+function recPanel(){ // em Hoje
+  if(!window.MediaRecorder)return '';
+  const todays=S.recs.some(r=>r.d===today());
+  let h='<section class="panel"><h3>Gravação de hoje</h3><p class="sub small">Trinta segundos do que você tocou. Ouvir a gravação de hoje ao lado da de um mês atrás mostra a evolução melhor que qualquer número. Fica só neste aparelho.</p>';
+  if(REC.on)h+='<div class="big num" id="rec-left" style="margin-top:8px">'+REC.left+'</div><button class="btn block" data-act="rec-stop">Parar e guardar</button>';
+  else h+='<div class="acts" style="margin-top:12px"><button class="btn sm" data-act="rec-start">'+(todays?'Gravar de novo':'Gravar 30 segundos')+'</button>'+(S.recs.length?'<button class="link" data-act="open-recs">Ouvir gravações ('+S.recs.length+')</button>':'')+'</div>';
+  return h+'</section>';
+}
+function recList(){ // em Evolução, Números
+  if(!S.recs.length)return '';
+  return '<section class="panel"><h2>Suas gravações</h2><p class="sub small">Ouça a mais nova e uma antiga, uma atrás da outra. Ficam só neste aparelho e não entram na exportação.</p><audio id="rec-audio" controls style="width:100%;margin-top:10px"'+(REC.url?' src="'+REC.url+'"':'')+'></audio><ul class="hist" style="margin-top:8px">'+S.recs.map(r=>'<li><div><b>'+esc(dayTxt(r.d))+'</b><div class="muted small">'+r.sec+' s</div></div><div class="acts" style="margin-top:0"><button class="btn sm quiet" data-act="rec-play" data-id="'+esc(r.id)+'">Ouvir</button><button class="link" data-act="rec-del" data-id="'+esc(r.id)+'">Apagar</button></div></li>').join('')+'</ul></section>';
+}
 
 V.meu=function(){
   return '<header class="top"><div><h1>Meu treino</h1><p class="sub">Seus acordes, suas batidas, no seu ritmo.</p></div></header>'+ctView();
@@ -1972,12 +2036,14 @@ V.ferramentas=function(){
     h+='<section class="panel"><h3>Compasso</h3><div class="row" style="margin-top:10px">'+[[2,'2/4'],[3,'3/4'],[4,'4/4'],[6,'6/8']].map(b=>'<button class="chip" data-act="m-beats" data-v="'+b[0]+'" aria-pressed="'+(M.beats===b[0])+'">'+b[1]+'</button>').join('')+'</div>';
     h+='<p class="grp">Subdivisão</p><div class="chips">'+[[1,'Só o tempo'],[2,'Colcheias'],[3,'Tercinas']].map(o=>'<button class="chip" data-act="m-sub" data-v="'+o[0]+'" aria-pressed="'+(M.sub===o[0])+'">'+o[1]+'</button>').join('')+'</div>';
     h+='<p class="grp">Acento</p><div class="chips">'+[['first','No tempo 1'],['none','Nenhum'],['back','No 2 e no 4']].map(o=>'<button class="chip" data-act="m-acc" data-v="'+o[0]+'" aria-pressed="'+(M.acc===o[0])+'">'+o[1]+'</button>').join('')+'</div><p class="muted small" style="margin-top:8px">'+(M.sub>1?'Os cliques baixos marcam as subdivisões: use para batidas com “e” e para dedilhados.':'Colcheias dividem cada tempo em dois; tercinas, em três.')+(M.acc==='back'?' Acento no 2 e no 4 é o pulso do pop, do rock e do samba.':'')+'</p>';
-    h+='<p class="grp">Compasso mudo</p><div class="chips">'+[[0,'Desligado'],[2,'1 em cada 2'],[4,'1 em cada 4']].map(o=>'<button class="chip" data-act="m-gap" data-v="'+o[0]+'" aria-pressed="'+(M.gap===o[0])+'">'+o[1]+'</button>').join('')+'</div><p class="muted small" style="margin-top:8px">O metrônomo cala um compasso e você segue sozinho. Se o clique voltar junto com a sua batida, o pulso interno está firme; se voltar antes ou depois, é ele que precisa de treino.</p></section>';
+    h+='<p class="grp">Compasso mudo</p><div class="chips">'+[[0,'Desligado'],[2,'1 em cada 2'],[4,'1 em cada 4']].map(o=>'<button class="chip" data-act="m-gap" data-v="'+o[0]+'" aria-pressed="'+(M.gap===o[0])+'">'+o[1]+'</button>').join('')+'</div><p class="muted small" style="margin-top:8px">O metrônomo cala um compasso e você segue sozinho. Se o clique voltar junto com a sua batida, o pulso interno está firme; se voltar antes ou depois, é ele que precisa de treino.</p>';
+    h+='<div class="between" style="margin-top:14px"><span>Vibrar no tempo</span><button class="chip" data-act="m-vib" aria-pressed="'+M.vib+'">'+(M.vib?'Ligado':'Desligado')+'</button></div><p class="muted small" style="margin-top:6px">Sente o pulso no bolso ou na mão, sem som: para tocar com fone no violão ou sem incomodar ninguém.</p></section>';
     h+='<section class="panel"><div class="between"><h3>Subir aos poucos</h3><button class="chip" data-act="m-ramp" aria-pressed="'+M.ramp.on+'">'+(M.ramp.on?'Ligado':'Desligado')+'</button></div><p class="sub small">Comece devagar e deixe o metrônomo acelerar sozinho enquanto você toca.</p><div class="field" style="margin-top:12px">Somar <input type="number" id="r-step" inputmode="numeric" min="1" max="20" value="'+M.ramp.step+'" aria-label="BPM somados"> BPM a cada <input type="number" id="r-bars" inputmode="numeric" min="1" max="32" value="'+M.ramp.bars+'" aria-label="Compassos"> compassos, até <input type="number" id="r-target" inputmode="numeric" min="40" max="240" value="'+M.ramp.target+'" aria-label="BPM final"> BPM</div></section>';
   }else{
-    h+='<section class="panel"><h2>Tons de referência</h2><p class="sub">Toque em uma corda para ouvir a nota certa e ajuste a tarraxa até os dois sons ficarem iguais.</p><div class="heads" style="margin-top:14px">'+STR.map((s,i)=>'<button data-act="tone" data-i="'+i+'" aria-label="'+s.n+'ª corda, '+s.pt+'"><b>'+s.l+'</b><span>'+s.n+'ª '+s.pt+'</span></button>').join('')+'</div></section>';
+    h+='<section class="panel"><h2>Tons de referência</h2><p class="sub">Toque em uma corda para ouvir a nota certa e ajuste a tarraxa até os dois sons ficarem iguais.</p><div class="heads" style="margin-top:14px">'+strs().map((s,i)=>'<button data-act="tone" data-i="'+i+'" aria-label="'+s.n+'ª corda, '+s.pt+'"><b>'+s.l+'</b><span>'+s.n+'ª '+s.pt+'</span></button>').join('')+'</div>';
+    h+='<p class="grp">Afinação</p><div class="chips">'+TUNINGS.map(t=>'<button class="chip" data-act="tuning" data-v="'+t.id+'" aria-pressed="'+(S.tuning===t.id)+'">'+t.name+'</button>').join('')+'</div><p class="grp">Microfone</p><div class="chips">'+[['cordas','Por corda'],['crom','Cromático']].map(o=>'<button class="chip" data-act="tune-mode" data-v="'+o[0]+'" aria-pressed="'+(S.tuneMode===o[0])+'">'+o[1]+'</button>').join('')+'</div><p class="muted small" style="margin-top:8px">'+(S.tuneMode==='crom'?'Cromático mostra a nota mais próxima de qualquer som, com a oitava: serve para outras afinações e para afinar pela oitava ou pelo capotraste.':'Por corda compara com a corda mais próxima da afinação escolhida.')+'</p></section>';
     h+='<section class="panel"><h2>Afinar pelo microfone</h2>';
-    if(MIC)h+='<div class="tnote num" id="t-note">–</div><p style="text-align:center" class="muted" id="t-str">&nbsp;</p><div class="meter"><div class="needle" id="t-needle"></div></div><div class="between small muted"><span>grave</span><span>aguda</span></div><div class="lvl"><i id="mic-lvl"></i></div><p class="muted small" style="text-align:center">nível do microfone</p><p style="text-align:center;margin:12px 0 16px;font-weight:650" id="t-msg">Toque uma corda solta perto do celular.</p><button class="btn block line" data-act="mic">Desligar microfone</button><button class="btn block line" style="margin-top:10px" data-act="mic-again">Religar o microfone</button>';
+    if(MIC)h+='<div class="tnote num" id="t-note">–</div><p style="text-align:center" class="muted" id="t-str">&nbsp;</p><p style="text-align:center" class="muted small" id="t-cents">&nbsp;</p><div class="meter"><div class="needle" id="t-needle"></div></div><div class="between small muted"><span>grave</span><span>aguda</span></div><div class="lvl"><i id="mic-lvl"></i></div><p class="muted small" style="text-align:center">nível do microfone</p><p style="text-align:center;margin:12px 0 16px;font-weight:650" id="t-msg">Toque uma corda solta perto do celular.</p><button class="btn block line" data-act="mic">Desligar microfone</button><button class="btn block line" style="margin-top:10px" data-act="mic-again">Religar o microfone</button>';
     else h+='<p class="sub">O app ouve a corda e mostra se está grave ou aguda.</p>'+(micErr?'<p style="margin-top:12px;color:var(--warn);font-weight:650">'+(NATIVE?'O app está sem acesso ao microfone. Libere o microfone para o Violão Diário nos ajustes do celular, ou afine pelos tons de referência acima.':'O microfone não está disponível aqui. Permita o acesso quando o navegador pedir, ou afine pelos tons de referência acima.')+'</p>':'')+'<button class="btn block" style="margin-top:14px" data-act="mic">Ligar microfone</button>';
     h+='</section>'+sndPanel();
   }
@@ -2011,6 +2077,7 @@ V.evolucao=function(){
     h+='<section class="panel chart" style="margin-top:14px"><div class="between"><h2>Últimos 14 dias</h2><span class="muted small">linha: meta de '+S.goal+' min</span></div><div style="margin-top:14px">'+dayBars(days,vals,S.goal)+'</div></section>';
     const dom=CHORDS.filter(x=>S.chords[x.n]==='dominado').length,pk=Object.keys(S.changes).filter(x=>S.changes[x].length).sort((a,b)=>bestOf(b)-bestOf(a))[0];
     h+='<section class="panel chart" style="margin-top:14px"><div class="between"><h2>Últimos 12 meses</h2><span class="muted small">quanto mais escuro, mais perto da meta</span></div><div class="fbwrap">'+yearHeat()+'</div><p class="muted small">Arraste para o lado para ver o ano inteiro.</p></section>';
+    h+=recList();
     const bl=[];for(let i=13;i>=0;i--)bl.push(addDays(new Date(),-i));const bv=bl.map(x=>S.bpmLog[dkey(x)]||0);
     if(bv.some(v=>v))h+='<section class="panel chart" style="margin-top:14px"><div class="between"><h2>Metrônomo</h2><span class="muted small">melhor BPM por 1 minuto, em cada dia</span></div><div style="margin-top:14px">'+dayBars(bl,bv,0)+'</div></section>';
     const notes=Object.keys(S.days).filter(x=>S.days[x].note).sort().reverse().slice(0,10);
@@ -2085,6 +2152,7 @@ if(PWA.host){
 const TABS=[['hoje','Hoje','<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.8 2.8L16 9.5"/>'],['meu','Meu treino','<path d="M4 6h8M16 6h4M4 12h2M10 12h10M4 18h10M18 18h2"/><circle cx="14" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="18" r="2"/>'],['treinar','Treinar','<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/>'],['ferramentas','Ferramentas','<path d="M9 3h6l4 18H5L9 3zM12 17l4-11M7.2 13h9.6"/>'],['acordes','Acordes','<path d="M5 4v16M12 4v16M19 4v16M5 4h14M5 10h14M5 16h14"/><circle cx="12" cy="7" r="1.7" fill="currentColor"/>'],['evolucao','Evolução','<path d="M5 20V11M12 20V4M19 20v-6M2 20h20"/>']];
 /* ---------- novidades de cada versão, mostradas uma vez ---------- */
 const NEWS=[
+ ['1.15.0',['Lembrete que diz o treino da semana e some no dia em que a meta já foi batida; aviso de cópia de segurança a cada 30 dias.','Bloco de ritmo já começa com o metrônomo; “Desfazer” num bloco concluído sem querer.','Afinador: meio tom abaixo, Drop D e modo cromático com cents.','Gravação de 30 segundos em Hoje, para ouvir a evolução (fica só no aparelho).','Site instalado com atalhos e fonte embutida; metrônomo por vibração.']],
  ['1.14.0',['Batidas brasileiras: bossa nova, samba, xote e baião.','Metrônomo com compasso mudo, para treinar o pulso interno.','Escalas: tocar junto nota por nota, com a posição marcada no braço.','Revisão rápida: montar o acorde no diagrama.','Ouvido: cante a nota, com o microfone dizendo se chegou.']],
  ['1.13.0',['Cifra: toque num acorde para ver o desenho; mude o tom e o capotraste, com sugestão de casa.','Tocar junto com a cifra: o app toca os acordes da música com a batida escolhida e marca o acorde da vez.','“Treinar as trocas” monta um treino com os acordes da música.','Acordes com baixo (D/F#, C/G, G/B, Am/G, E/G#) e versões fáceis de F, Bm, F#m e Bb.']],
  ['1.12.0',['Conferir um acorde pelo som: o app diz que corda não soou (Acordes, e no treino de Hoje).','Modo canhoto (Perfil, Aparência): desenhos e braço espelhados.','Acordes suspensos (sus2, sus4, 7sus4) e add9, com a explicação em Teoria.','No Android, segure o ícone do app para abrir o afinador, o metrônomo ou as trocas.']],
@@ -2122,8 +2190,8 @@ const ACT={
   'road-build':el=>{const W=ROAD[+el.dataset.l-1][+el.dataset.w];if(!W)return;if(CS){if(!CS.done)csSettle();CS=null;}CHI=null;
     const prog=W.progs.reduce((a,b)=>b.length>a.length?b:a); // a progressão mais completa da semana
     CE={id:null,name:'Semana '+(+el.dataset.w+1)+': '+W.t,chords:prog.slice(),pats:[W.pat],bpm:W.bpm,min:CT_MINS.includes(S.goal)?S.goal:10};ceDelArmed=false;go('meu');},
-  'blk-start':el=>{audio();B={id:el.dataset.id,total:+el.dataset.min,left:+el.dataset.min*60,running:true,last:Date.now()};render();},
-  'blk-pause':()=>{if(!B)return;B.running=!B.running;B.last=Date.now();render();},
+  'blk-start':el=>{audio();const bpm=+el.dataset.bpm||0;B={id:el.dataset.id,total:+el.dataset.min,left:+el.dataset.min*60,running:true,last:Date.now(),bpm};if(bpm){mSet(bpm);if(!M.on)mStart();}render();}, // bloco de ritmo: o metrônomo já sai tocando no BPM do bloco
+  'blk-pause':()=>{if(!B)return;B.running=!B.running;B.last=Date.now();if(B.bpm){if(B.running){mSet(B.bpm);if(!M.on)mStart();}else if(M.on)mStop();}render();},
   'blk-done':el=>{if(!B)return;const used=Math.max(1,Math.round((B.total*60-B.left)/60));blockDone(el.dataset.id,Math.min(B.total,used));},
   fb:el=>{const d=day(today());d.fb=d.fb||{};d.fb[el.dataset.id]=el.dataset.v;applyFeedback(el.dataset.id,el.dataset.v);save();render();},
   quick:()=>{S.quick=today();B=null;save();render();},
@@ -2223,7 +2291,17 @@ const ACT={
   'm-tap':()=>{audio();const n=performance.now();M.taps=M.taps.filter(t=>n-t<2500);M.taps.push(n);if(M.taps.length>=2){const iv=(M.taps[M.taps.length-1]-M.taps[0])/(M.taps.length-1);mSet(60000/iv);}},
   'm-beats':el=>{M.beats=+el.dataset.v;S.beats=M.beats;M.beat=0;save();render();},
   'm-ramp':()=>{M.ramp.on=!M.ramp.on;M.bar=0;render();},
-  tone:el=>{pluck(STR[+el.dataset.i].m,0,.75);},
+  tone:el=>{pluck(strs()[+el.dataset.i].m,0,.75);},
+  tuning:el=>{S.tuning=el.dataset.v;save();render();},
+  'tune-mode':el=>{S.tuneMode=el.dataset.v==='crom'?'crom':'cordas';save();render();},
+  'm-vib':()=>{M.vib=!M.vib;S.mvib=M.vib;save();render();},
+  'blk-undo':el=>{const d=day(today()),id=el.dataset.id;if(!d.done[id])return;const credit=typeof d.done[id]==='number'?d.done[id]:0;delete d.done[id];d.min=Math.max(0,d.min-credit);d.full=false;if(d.fb)delete d.fb[id];save();render();toast('Bloco reaberto.');},
+  'backup-later':()=>{S.backupAsk=today();save();render();},
+  'rec-start':()=>{recStart();},
+  'rec-stop':()=>{recStop();},
+  'open-recs':()=>{sub.evolucao='numeros';go('evolucao');setTimeout(()=>{const e=$('#rec-audio');if(e)e.closest('section').scrollIntoView({block:'start'});},60);},
+  'rec-play':el=>{const id=el.dataset.id;recGet(id).then(o=>{if(!o||!o.blob){toast('Esta gravação não está neste aparelho.');S.recs=S.recs.filter(r=>r.id!==id);save();render();return;}if(REC.url)URL.revokeObjectURL(REC.url);REC.url=URL.createObjectURL(o.blob);const a=$('#rec-audio');if(a){a.src=REC.url;const p=a.play();if(p&&p.catch)p.catch(()=>{});}document.querySelectorAll('[data-act="rec-play"]').forEach(b=>b.classList.toggle('on',b.dataset.id===id));},()=>toast('Não consegui abrir a gravação.'));},
+  'rec-del':el=>{const id=el.dataset.id;S.recs=S.recs.filter(r=>r.id!==id);save();recRemove(id).catch(()=>{});render();},
   mic:()=>{if(MIC){micStop();render();}else micStart();},
   't-start':()=>{audio();if(T.a===T.b)return;T.phase='count';T.startAt=Date.now()+3000;T.viaMic=false;if(S.cntMode==='mic'){countReset();micStart('count');}render();},
   't-reset':()=>{if(MIC&&MIC.mode==='count')micStop();T.phase='idle';render();},
@@ -2309,6 +2387,7 @@ function openDeepLink(url){ // atalhos do Android (app.violaodiario://afinador) 
 document.addEventListener('visibilitychange',()=>{if(document.hidden)onHide();else onShow();});
 
 render();updPaint();
+{const ir=new URLSearchParams(location.search).get('ir');if(ir){openDeepLink('app://'+ir);try{history.replaceState(null,'',location.pathname);}catch(e){}}} // atalhos do site instalado (manifest.webmanifest)
 
 if(NATIVE){
   const on=(plugin,ev,fn)=>{try{PLUG[plugin]&&PLUG[plugin].addListener(ev,fn);}catch(e){}};

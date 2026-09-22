@@ -1,8 +1,8 @@
 /* Violão Diário: service worker.
    A página (index.html) é sempre buscada na rede primeiro, então quem abre o app com internet
    recebe a versão mais nova. Sem internet, abre a última versão guardada. */
-const CACHE = 'violao-diario-v1';
-const CORE = ['index.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
+const CACHE = 'violao-diario-v2';
+const CORE = ['index.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png', 'fonts/archivo-latin-wdth-normal.woff2', 'fonts/archivo-latin-ext-wdth-normal.woff2'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE)).then(() => self.skipWaiting()));

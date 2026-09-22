@@ -36,7 +36,7 @@ O QUE VEM DENTRO
 • Exportar e importar o progresso para trocar de celular.
 
 SEM CONTA, SEM ANÚNCIOS
-Não pede cadastro, não tem anúncios e não manda seus dados para lugar nenhum: tudo fica no seu aparelho. O microfone é usado só enquanto o afinador, a contagem de trocas ou o conferir pelo som estão ligados, e nada é gravado.
+Não pede cadastro, não tem anúncios e não manda seus dados para lugar nenhum: tudo fica no seu aparelho. O microfone é usado só enquanto o afinador, a contagem de trocas, o conferir pelo som ou o cantar a nota estão ligados, sem gravar nada. A única gravação é a de 30 segundos que você mesmo faz, quando quiser, e ela fica só no seu celular.
 
 Funciona sem internet.
 
@@ -56,7 +56,7 @@ URL: https://luizneogrid-commits.github.io/appviolao/privacidade.html
 - Coleta ou compartilha dados do usuário: não.
 - Os dados ficam criptografados em trânsito: não se aplica (nada é enviado).
 - O usuário pode pedir exclusão dos dados: não se aplica (o próprio app tem "Apagar meu progresso" e nada sai do aparelho).
-- Áudio: o microfone é processado na hora, no aparelho, e não é gravado nem enviado.
+- Áudio: o microfone é processado na hora, no aparelho, e não é enviado. A gravação de 30 segundos, feita só quando o usuário toca em "Gravar", fica no aparelho e não sai dele.
 
 ## Novidades (notas de versão, até 500 caracteres)
 
