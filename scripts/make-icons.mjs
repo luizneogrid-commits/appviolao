@@ -1,9 +1,10 @@
 // Gera os ícones e as telas de abertura dos apps Android e iOS a partir do desenho do ícone
 // (rosácea do violão com seis cordas), redesenhado em vetor com as medidas do icons/icon-512.png.
 // Uso: npm run icons   (só precisa rodar de novo se o desenho ou as cores mudarem)
+// O desenho (svg, art) e as cores (C) também servem ao scripts/store-assets.mjs, que os importa daqui.
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { deflateSync, crc32 } from 'node:zlib';
 import { Resvg } from '@resvg/resvg-js';
 
@@ -12,7 +13,7 @@ const RES = join(root, 'android', 'app', 'src', 'main', 'res');
 const XC = join(root, 'ios', 'App', 'App', 'Assets.xcassets');
 const preview = process.argv.includes('--preview') ? process.argv[process.argv.indexOf('--preview') + 1] : null;
 
-const C = { bg: '#7A2E4D', brass: '#C98A1B', dark: '#24161D', cream: '#F3E3C2', hole: '#1A0E14', gold: '#DFB766', steel: '#F4E6C6', shadow: '#1A0E14' };
+export const C = { bg: '#7A2E4D', brass: '#C98A1B', dark: '#24161D', cream: '#F3E3C2', hole: '#1A0E14', gold: '#DFB766', steel: '#F4E6C6', shadow: '#1A0E14' };
 // Medidas em unidades do ícone de 512 px, com a origem no centro da rosácea.
 const RINGS = [[185.5, C.brass], [172.5, C.dark], [163.5, C.cream], [155.5, C.dark], [148.5, C.brass], [135.5, C.hole]];
 const STRINGS = [[-76.7, 7, C.gold], [-46.1, 6, C.gold], [-15.5, 5, C.gold], [15.1, 4.4, C.steel], [45.7, 3.6, C.steel], [76.3, 3, C.steel]];
@@ -21,7 +22,7 @@ const DENSITIES = { mdpi: 1, hdpi: 1.5, xhdpi: 2, xxhdpi: 3, xxxhdpi: 4 };
 /* Desenho da rosácea e das cordas. k = tamanho de 1 unidade do ícone original na tela final.
    strings: 'full' (cordas atravessam tudo) ou um número = meio comprimento, com as pontas esmaecendo.
    mono: versão de uma cor só (ícone temático do Android 13+). */
-function art({ cx, cy, k, strings = 'full', mono = false }) {
+export function art({ cx, cy, k, strings = 'full', mono = false }) {
   const L = strings === 'full' ? 4000 : strings;
   const defs = [], body = [];
   if (strings !== 'full') {
@@ -43,7 +44,7 @@ function art({ cx, cy, k, strings = 'full', mono = false }) {
 }
 
 // w x h em unidades livres (dp, pt ou px); clip: 'round' (quadrado arredondado) ou 'circle'.
-function svg({ w, h, bg = null, clip = null, margin = 0, ...a }) {
+export function svg({ w, h, bg = null, clip = null, margin = 0, ...a }) {
   const { defs, g } = art(a);
   let clipDef = '', open = '', close = '';
   if (clip) {
@@ -54,11 +55,11 @@ function svg({ w, h, bg = null, clip = null, margin = 0, ...a }) {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><defs>${defs}${clipDef}</defs>${open}${bg ? `<rect width="${w}" height="${h}" fill="${bg}"/>` : ''}${g}${close}</svg>`;
 }
 
-function render(svgText, widthPx) {
-  return new Resvg(svgText, { fitTo: { mode: 'width', value: Math.round(widthPx) } }).render();
+export function render(svgText, widthPx, opts = {}) {
+  return new Resvg(svgText, { fitTo: { mode: 'width', value: Math.round(widthPx) }, ...opts }).render();
 }
 // PNG sem canal alfa (a App Store recusa o ícone de 1024 com transparência).
-function opaquePng(img) {
+export function opaquePng(img) {
   const { width, height, pixels } = img, row = width * 3 + 1, raw = Buffer.alloc(row * height);
   for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
     const i = (y * width + x) * 4, o = y * row + 1 + x * 3;
@@ -83,7 +84,9 @@ function out(file, svgText, widthPx, opaque = false) {
 }
 
 /* ---------- desenhos ---------- */
-const full = s => svg({ w: s, h: s, bg: C.bg, cx: s / 2, cy: s / 2, k: s / 512 });                                  // ícone original, sangrado
+export const full = s => svg({ w: s, h: s, bg: C.bg, cx: s / 2, cy: s / 2, k: s / 512 });                           // ícone original, sangrado
+if (import.meta.url === pathToFileURL(process.argv[1] || '').href) main();
+function main() {
 const legacy = clip => svg({ w: 48, h: 48, bg: C.bg, clip, margin: 2, cx: 24, cy: 24, k: 44 / 512 });                // Android 7: ícone com forma própria
 const foreground = mono => svg({ w: 108, h: 108, cx: 54, cy: 54, k: 0.145, mono });                                 // camada do ícone adaptável
 const statIcon = svg({ w: 24, h: 24, cx: 12, cy: 12, k: 0.052, mono: true });                                       // ícone branco da barra de status (notificações)
@@ -121,3 +124,4 @@ if (preview) {
   out(join(preview, 'splash-icon-576.png'), svg({ w: 288, h: 288, bg: C.bg, cx: 144, cy: 144, k: SPLASH_R / 185.5, strings: 290 }), 576);
 }
 console.log(`${written.length} imagens geradas.`);
+}

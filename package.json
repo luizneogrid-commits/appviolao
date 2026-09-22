@@ -13,6 +13,7 @@
     "apk:release": "npm run sync && node scripts/android-build.mjs release",
     "aab": "npm run sync && node scripts/android-build.mjs bundle",
     "chave": "node scripts/criar-chave.mjs",
+    "loja": "node scripts/store-assets.mjs",
     "test": "node scripts/check-syntax.mjs index.html && node scripts/check-data.mjs index.html"
   },
   "dependencies": {

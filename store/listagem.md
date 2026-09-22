@@ -1,0 +1,71 @@
+# Textos da ficha na Play Store (pt-BR)
+
+Copie e cole no Google Play Console, em "Presença na loja", "Ficha da loja principal". Os limites de caracteres são os da loja.
+
+## Nome do app (até 30 caracteres)
+
+Violão Diário: treino diário
+
+## Descrição breve (até 80 caracteres)
+
+Um treino curto por dia: metrônomo, afinador, acordes, batidas e teoria.
+
+## Descrição completa (até 4000 caracteres)
+
+Quinze minutos por dia rendem mais que duas horas no sábado. O Violão Diário monta um treino curto para o seu nível, todos os dias, e mostra sua evolução em números.
+
+COMO FUNCIONA
+Você diz onde está (nunca toquei, sei um ou dois acordes, quero vencer a pestana, quero dedilhar, quero escalas e solos) e quanto tempo tem por dia. O app monta um roteiro de 6 níveis com 4 semanas cada, e todo dia entrega um treino com aquecimento, técnica, ritmo, trocas de acorde e repertório. Cada bloco tem um cronômetro e explica por que existe.
+
+O QUE VEM DENTRO
+• Metrônomo com subir aos poucos, subdivisão em colcheias ou tercinas e acento no 2 e no 4.
+• Afinador pelo microfone e tons de referência.
+• Batidas e dedilhados para tocar junto, com contagem e som de violão: quatro para baixo, desce e sobe, pop, reggae, valsa, P-I-M-A, baixo alternado e mais.
+• Contador de trocas de acorde por minuto, tocando na tela ou pelo microfone.
+• Conferir um acorde pelo som: o app diz que corda não soou ou que dedo parece fora do lugar.
+• 32 acordes com diagramas, dedos e som, incluindo pestanas, sétimas, suspensos e add9.
+• Teoria que explica: por que cada corda é apertada onde é, o que é terça, quinta, sétima, escalas (maior, menor natural, harmônica, melódica e pentatônica), ciclo das quintas e quartas.
+• Treino de ouvido: maior ou menor, qual acorde, intervalos e progressões.
+• Exercício de tempo: o app mede se você adianta ou atrasa.
+• Meu treino: monte treinos com os seus acordes e batidas, salve e veja o histórico de cada um.
+• Músicas: cadastre as suas, com cifra e rolagem automática, e receba sugestões de músicas que você já consegue tocar.
+• Revisão rápida: perguntas curtas na hora certa de rever, com repetição espaçada.
+• Evolução: sequência de dias, minutos por dia, calendário do ano, diário, conquistas e metas comprovadas pelos seus registros.
+• Lembrete diário no horário que você escolher.
+• Letra maior, tema claro ou escuro e modo canhoto.
+• Exportar e importar o progresso para trocar de celular.
+
+SEM CONTA, SEM ANÚNCIOS
+Não pede cadastro, não tem anúncios e não manda seus dados para lugar nenhum: tudo fica no seu aparelho. O microfone é usado só enquanto o afinador, a contagem de trocas ou o conferir pelo som estão ligados, e nada é gravado.
+
+Funciona sem internet.
+
+## Categoria e classificação
+
+- Categoria: Educação (ou Música e áudio).
+- Classificação de conteúdo: questionário do Play Console; o app não tem conteúdo sensível, compras ou anúncios. Resultado esperado: Livre (L).
+- Público-alvo: 13 anos ou mais (evita as regras extras de apps para crianças).
+- Anúncios: não. Compras no app: não.
+
+## Política de privacidade (obrigatória, por causa do microfone)
+
+URL: https://luizneogrid-commits.github.io/appviolao/privacidade.html
+
+## Segurança dos dados (formulário do Play Console)
+
+- Coleta ou compartilha dados do usuário: não.
+- Os dados ficam criptografados em trânsito: não se aplica (nada é enviado).
+- O usuário pode pedir exclusão dos dados: não se aplica (o próprio app tem "Apagar meu progresso" e nada sai do aparelho).
+- Áudio: o microfone é processado na hora, no aparelho, e não é gravado nem enviado.
+
+## Novidades (notas de versão, até 500 caracteres)
+
+Use a lista "Novidades da versão" que aparece em Hoje a cada atualização (constante NEWS no index.html).
+
+## Imagens
+
+- Ícone: `store/icone-512.png` (512 x 512).
+- Imagem de destaque: `store/feature-graphic.png` (1024 x 500).
+- Capturas de tela do celular: `store/screenshots/*.png` (1080 x 1920). A loja exige pelo menos 2; use de 4 a 8.
+
+Para gerar de novo (depois de mudar o app): `npm run loja`. Veja `store/README.md`.

@@ -8,7 +8,7 @@ name: App Android
 on:
   push:
     branches: [main]
-    paths-ignore: ['**.md']
+    paths-ignore: ['**.md', 'store/**', 'ios/**']
   workflow_dispatch:
 
 permissions:

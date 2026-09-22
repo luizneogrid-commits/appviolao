@@ -17,7 +17,9 @@ O mesmo `index.html` vira três coisas:
 | `android/` | Projeto do app Android (ícones, tela de abertura, permissão do microfone). |
 | `ios/` | Projeto do app iPhone (Xcode). |
 | `capacitor.config.json`, `package.json` | Configuração do Capacitor, a ponte entre o `index.html` e os apps nativos. |
-| `scripts/` | Montagem do app (`build-www`), ícones (`make-icons`), compilação Android (`android-build`), chave de assinatura (`criar-chave`) e verificações (`check-syntax`, `check-data`, rodadas por `npm test` e pelo GitHub antes de compilar). |
+| `scripts/` | Montagem do app (`build-www`), ícones (`make-icons`), compilação Android (`android-build`), chave de assinatura (`criar-chave`), material da loja (`store-assets`) e verificações (`check-syntax`, `check-data`, rodadas por `npm test` e pelo GitHub antes de compilar). |
+| `store/` | Textos, ícone, imagem de destaque e capturas de tela para a Play Store (`npm run loja` refaz as imagens). |
+| `privacidade.html` | Política de privacidade, publicada junto com o site; as lojas pedem o link. |
 | `.github/workflows/android.yml` | Gera o APK na nuvem a cada envio para a branch `main`. |
 
 ## App Android
@@ -54,6 +56,7 @@ Depois da chave criada, cada compilação sai assinada e o Release também traz 
 1. Crie uma conta de desenvolvedor no Google Play Console (taxa única de US$ 25).
 2. Crie o app e envie o `violao-diario.aab` do Release. O Google ativa o "Play App Signing" e a chave do app passa a ser a sua chave de envio.
 3. O identificador do app é `app.violaodiario` (em `capacitor.config.json` e `android/app/build.gradle`). Ele não muda depois da primeira publicação: se quiser outro, troque antes.
+4. A ficha da loja (textos, ícone, imagem de destaque, capturas de tela, política de privacidade e formulário de segurança dos dados) está pronta em `store/`, com o passo a passo em `store/README.md`.
 
 ### Versão
 
@@ -78,7 +81,7 @@ npm install
 npm run ios
 ```
 
-No Xcode, escolha a equipe em "Signing & Capabilities" e rode no iPhone conectado, ou use Product, Archive para mandar ao TestFlight e à App Store. O app iPhone ainda não foi testado num aparelho.
+No Xcode, escolha a equipe em "Signing & Capabilities" e rode no iPhone conectado, ou use Product, Archive para mandar ao TestFlight e à App Store. O app iPhone ainda não foi testado num aparelho: a lista completa do que instalar, conferir e publicar está em `ios/README.md`.
 
 ## Site instalável (PWA)
 

@@ -25,7 +25,7 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>O afinador usa o microfone para ouvir a corda e mostrar se ela está grave ou aguda. Nada é gravado.</string>
+	<string>O afinador, a contagem de trocas e o conferir pelo som usam o microfone para ouvir o violão na hora. Nada é gravado nem enviado.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
