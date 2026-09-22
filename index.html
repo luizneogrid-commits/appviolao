@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Violão Diário</title>
-<meta name="app-version" content="1.3.0">
+<meta name="app-version" content="1.4.0">
 <meta name="description" content="Treino diário de violão: plano por nível, metrônomo, afinador, batidas para tocar junto, acordes e notas.">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#F2EEF0" media="(prefers-color-scheme: light)">
@@ -326,6 +326,35 @@ select{min-height:46px;border-radius:12px;border:1.5px solid var(--line);backgro
 .cs-pair .chord:first-child{background:var(--primary-soft)}
 .cs-pair .chord>span{display:block}
 
+/* roteiro */
+.road-now h3{font-size:.95rem}
+.tag.done{color:var(--ok);background:var(--ok-soft)}
+.road-lvl{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:16px 18px;margin-top:14px}
+.road-lvl.cur{border-color:var(--primary)}
+.road-lvl summary{cursor:pointer;list-style:none;display:block}
+.road-lvl summary::-webkit-details-marker{display:none}
+.rl-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.rl-head::after{content:"+";font-size:1.4rem;line-height:1;color:var(--primary);font-weight:700;margin-left:auto}
+.road-lvl[open] .rl-head::after{content:"−"}
+.rl-head .tag,.rl-head .muted{white-space:nowrap}
+.rl-desc{display:block;margin-top:4px}
+.road-weeks{margin-top:8px}
+.road-wk{border-top:1px solid var(--line);padding:14px 0}
+.road-wk.now{background:var(--primary-soft);margin:0 -18px;padding:14px 18px;border-radius:12px;border-top:0}
+.road-wk.now+.road-wk{border-top:0}
+.road-hd{display:flex;gap:10px;align-items:flex-start}
+.road-hd .wk{flex:none;width:28px;height:28px;border-radius:50%;border:1.5px solid var(--line);display:grid;place-items:center;font-weight:750;font-size:.85rem;color:var(--muted)}
+.road-wk.ok .wk{background:var(--ok);border-color:var(--ok);color:var(--surface)}
+.road-wk.now .wk{border-color:var(--primary);color:var(--primary)}
+.road-hd .tag{display:inline-block;margin-top:5px}
+.road-list{list-style:none;margin-top:6px;color:var(--muted);font-size:.9rem;line-height:1.45}
+.road-list li+li{margin-top:4px}
+.road-list b{color:var(--ink);font-weight:700}
+.road-ch{margin-top:10px}
+.road-ch .chip{min-height:34px;padding:0 10px;font-size:.85rem}
+.road-wk .acts{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center}
+.choices{display:grid;gap:8px;margin-top:12px}
+
 /* onboarding */
 .choice{display:block;width:100%;text-align:left;border:1.5px solid var(--line);background:var(--surface);border-radius:16px;padding:14px 16px;min-height:56px}
 .choice[aria-pressed="true"]{border-color:var(--primary);background:var(--primary-soft)}
@@ -370,7 +399,7 @@ const buzz=ms=>{if(NATIVE){if(ms<30)native('Haptics','impact',{style:'LIGHT'});e
 
 /* ---------- state ---------- */
 const KEY='violao-diario-v1';
-const DEF={v:1,onboarded:false,level:1,goal:15,skills:{},days:{},changes:{},chords:{},songs:[],custom:[],ctLog:{},ear:{ok:0,total:0},maxBpm:0,bpm:70,beats:4,altOut:false,installDismissed:false};
+const DEF={v:1,onboarded:false,name:'',level:1,levelSince:'',goal:15,skills:{},days:{},changes:{},chords:{},songs:[],custom:[],ctLog:{},ear:{ok:0,total:0},maxBpm:0,bpm:70,beats:4,altOut:false,installDismissed:false};
 let S,hadLocal=false;
 function adopt(o){
   S=Object.assign(JSON.parse(JSON.stringify(DEF)),o&&typeof o==='object'?o:{});
@@ -378,6 +407,8 @@ function adopt(o){
   if(!Array.isArray(S.songs))S.songs=[];
   S.custom=Array.isArray(S.custom)?S.custom.filter(t=>t&&typeof t==='object'&&Array.isArray(t.chords)&&Array.isArray(t.pats)):[];
   if(!S.ctLog||typeof S.ctLog!=='object'||Array.isArray(S.ctLog))S.ctLog={};
+  S.name=typeof S.name==='string'?S.name.slice(0,30):'';S.levelSince=typeof S.levelSince==='string'?S.levelSince:'';
+  S.level=Math.max(1,Math.min(6,Math.round(+S.level)||1)); // 6 = quantidade de níveis em LEVELS (definido mais abaixo)
   if(!S.ear||typeof S.ear!=='object')S.ear={ok:0,total:0};
 }
 adopt(null);
@@ -469,19 +500,60 @@ const LEVELS=[
 const WARM=['Alongue dedos e punhos. Depois toque cada corda solta, da 6ª à 1ª, ouvindo se está afinada.','Um dedo por casa nas casas 1 a 4, corda por corda, da 6ª até a 1ª. Devagar e sem tensão no ombro.','Alterne indicador e médio da mão direita na 1ª corda solta, no tempo do metrônomo.'];
 const SPLITS={10:[1,3,3,3],15:[2,4,4,5],20:[2,4,4,4,6],30:[3,6,6,6,9]};
 
+/* ---------- roteiro de aprendizagem ---------- */
+// Quem é a pessoa em cada nível (usado na primeira tela e no Perfil).
+const OB=[['Nunca toquei','Começo do zero: postura, afinação, Em e Am.'],['Sei um ou dois acordes','Hora de aprender C, G, D e companhia.'],['Toco acordes, mas troco devagar','Foco em trocas rápidas e batidas.'],['Quero vencer a pestana','F, Bm e outras pestanas.'],['Já faço pestana e quero dedilhar','Mão direita: P-I-M-A e arpejos.'],['Quero escalas e primeiros solos','Pentatônica, escala maior e ligados.']];
+// Cada nível tem 4 semanas. A meta da semana é a habilidade de mesmo número em LEVELS[n].skills.
+// O treino diário de Hoje usa a técnica, os pares, a batida e a progressão da semana atual.
+const ROAD=[
+ [{t:'Postura, afinação e o Em',tech:['Afine as seis cordas pelo afinador antes de tocar. Depois toque cada corda solta, da 6ª à 1ª, dizendo o nome da nota.','Monte o Em e toque corda por corda. Se alguma soar abafada, curve mais o dedo até o som limpar.'],pairs:[['Em','Am']],pat:'baixo',bpm:60,progs:[['Em','Am']]},
+  {t:'Am e a primeira troca',tech:['Monte e desmonte o Am dez vezes sem tocar, só a mão esquerda, até os dedos caírem juntos.','Toque Em por quatro tempos, troque para Am e toque mais quatro. Devagar: o que conta é o acorde novo soar limpo.'],pairs:[['Em','Am']],pat:'baixo',bpm:60,progs:[['Em','Am']]},
+  {t:'A mão direita no tempo',tech:['Com o metrônomo a 60 BPM, toque uma batida para baixo em cada clique sobre o Em, por um minuto, sem parar.','Toque a batida junto com o app, trocando de acorde a cada compasso. Braço solto, o movimento vem do cotovelo.'],pairs:[['Em','Am']],pat:'baixo',bpm:60,progs:[['Em','Am']]},
+  {t:'E, A e trocas mais rápidas',tech:['Monte o E e o A e toque corda por corda. O E é o Em com um dedo a mais; o A usa três dedos na mesma casa.','Um dedo por casa: dedos 1, 2, 3 e 4 nas casas 1 a 4 da 1ª corda, bem devagar, ouvindo cada nota.'],pairs:[['Em','Am'],['Em','E'],['Am','A']],pat:'baixo',bpm:60,progs:[['Em','Am'],['Em','A'],['Am','E']]}],
+ [{t:'C e G, corda por corda',tech:['Monte o C e toque corda por corda. Curve bem os dedos para não encostar na corda de baixo.','Monte o G e toque corda por corda. O dedo 3 na 1ª corda precisa apertar firme, perto do traste.'],pairs:[['G','C'],['C','Am']],pat:'baixo',bpm:66,progs:[['G','C'],['C','Am','G']]},
+  {t:'D e Dm: olhar antes de mover',tech:['Monte o D e o Dm e toque corda por corda. Só a 1ª corda muda entre eles: casa 2 no D, casa 1 no Dm.','Alterne G e D sem tocar: olhe para onde cada dedo vai antes de mover a mão.'],pairs:[['G','D'],['D','A'],['Am','Dm']],pat:'baixo',bpm:66,progs:[['G','D'],['D','A','G','A']]},
+  {t:'Baixo, baixo-cima',tech:['Toque a batida baixo, baixo-cima com as cordas abafadas, contando “1, 2, 2-e, 3, 4, 4-e” em voz alta.','Toque a batida sobre o G por um minuto sem parar, com o metrônomo a 66 BPM.'],pairs:[['G','C'],['Em','G']],pat:'baixocima',bpm:66,progs:[['G','D','Em','C'],['C','Am','Dm','G']]},
+  {t:'Uma progressão inteira',tech:['Toque C por quatro tempos e solte a mão. Repita até montar o acorde de uma vez só.','Toque G, D, Em, C em loop, quatro tempos em cada. Se um acorde atrasar, toque as cordas soltas e siga.'],pairs:[['G','C'],['G','D'],['D','A']],pat:'baixocima',bpm:66,progs:[['G','D','Em','C'],['C','Am','Dm','G'],['D','A','G','A']]}],
+ [{t:'Trocas a 30 por minuto',tech:['Troque de acorde sem parar a mão direita. Se a esquerda atrasar, toque as cordas soltas e siga em frente.','Conte as trocas por 1 minuto em Treinar, Trocas. A meta é 30 com qualquer par de acordes abertos.'],pairs:[['G','D7'],['C','G7'],['D','A7']],pat:'baixocima',bpm:76,progs:[['G','Em','C','D7'],['A','D','E7','A']]},
+  {t:'Batida pop',tech:['No tempo 3 a mão desce sem encostar nas cordas. Toque a batida pop abafada, contando em voz alta, até o movimento ficar automático.','Toque a batida pop sobre o E, com o metrônomo a 76 BPM, por um minuto. Depois suba de 4 em 4 até 80.'],pairs:[['E','B7'],['Am','E7']],pat:'pop',bpm:76,progs:[['E','A','B7','E'],['Am','Dm','E7','Am']]},
+  {t:'A mão direita não para',tech:['Monte o B7 devagar, dedo por dedo, e toque corda por corda até limpar.','Toque só os baixos: a nota mais grave de cada acorde da progressão, no tempo 1, e a batida pop nos outros tempos.'],pairs:[['E','B7'],['G','D7'],['C','G7']],pat:'pop',bpm:80,progs:[['E','A','B7','E'],['G','Em','C','D7'],['A','D','E7','A']]},
+  {t:'Duas músicas inteiras',tech:['Cadastre duas músicas em Evolução, Músicas, com acordes do seu nível. Elas entram no bloco de repertório do treino.','Toque cada música do começo ao fim sem parar. Só depois volte aos trechos difíceis e repita cada um devagar.'],pairs:[['G','D7'],['C','G7'],['Am','E7']],pat:'pop',bpm:80,progs:[['G','Em','C','D7'],['C','Am','Dm','G7']]}],
+ [{t:'A pestana começa na casa 5',tech:['Faça a pestana só com o indicador na casa 5, onde a corda é mais leve. Toque corda por corda até todas soarem.','Monte o F em etapas: pestana, dedo 2, depois dedos 3 e 4. Desmonte e repita. Pare se doer.'],pairs:[['C','Fmaj7'],['C','F']],pat:'baixocima',bpm:72,progs:[['C','Am','Fmaj7','G'],['C','Am','F','G']]},
+  {t:'Bm: o Am que anda pelo braço',tech:['Segure a pestana por 10 segundos e descanse 10. Cinco vezes.','Monte o Bm: pestana na casa 2 e o desenho do Am duas casas acima. Toque corda por corda.'],pairs:[['G','Bm'],['D','Bm']],pat:'baixobatida',bpm:72,progs:[['D','Bm','G','A'],['G','Bm','C','D']]},
+  {t:'Trocas com pestana',tech:['Troque C e F por 1 minuto contando as trocas. Deixe a pestana cair primeiro e os outros dedos logo atrás.','Monte o F#m e o Bb: são o Em e o A com pestana, na casa 2 e na casa 1. Toque corda por corda.'],pairs:[['C','F'],['Am','F'],['A','F#m']],pat:'baixobatida',bpm:72,progs:[['Am','F','C','G'],['A','F#m','D','E']]},
+  {t:'Uma música com pestana',tech:['Escolha uma música com F ou Bm e toque inteira, sem pular a pestana. Se o acorde falhar, siga no tempo e volte a ele depois.','Toque a progressão do treino sem parar a mão direita, mesmo quando a pestana não sair limpa.'],pairs:[['C','F'],['G','Bm'],['F','Bb']],pat:'baixobatida',bpm:72,progs:[['C','Am','F','G'],['D','Bm','G','A'],['F','Bb','C','F']]}],
+ [{t:'P-I-M-A sobre um acorde',tech:['Polegar (P) no baixo, indicador (I) na 3ª corda, médio (M) na 2ª, anelar (A) na 1ª. Toque P-I-M-A sobre o Am, bem devagar, sem olhar para a mão direita.','Mantenha a mão direita parada, movendo só os dedos. Cada nota deve soar com o mesmo volume.'],pairs:[['Am','E'],['C','Am7']],pat:'pima',bpm:60,progs:[['Am','E'],['C','Am7']]},
+  {t:'Dedilhando e trocando',tech:['Toque P-I-M-A sobre C, Am7, Dm7 e G7, um compasso em cada, sem perder o tempo na troca.','Alterne o baixo: polegar na 5ª e depois na 4ª corda, mantendo I-M-A nas cordas de cima.'],pairs:[['C','Am7'],['Dm7','G7'],['Am','Dm7']],pat:'pima',bpm:60,progs:[['C','Am7','Dm7','G7'],['Am','Dm7','G7','C']]},
+  {t:'Subindo até 80 BPM',tech:['Padrão P-I-M-A-M-I em C e Am, com o metrônomo a 60 BPM. Suba 4 BPM a cada compasso limpo até chegar a 80.','Dedilhe por 2 minutos sem parar sobre Am, Em7, Cmaj7 e G. Se errar, não pare: entre na próxima nota.'],pairs:[['Em7','Cmaj7'],['Am','Em7']],pat:'pima',bpm:72,progs:[['Am','Em7','Cmaj7','G'],['Em7','Cmaj7','G','D']]},
+  {t:'Uma música dedilhada',tech:['Escolha uma música lenta e toque com P-I-M-A no lugar da batida. Um padrão por compasso.','Toque a música inteira dedilhada, a 80 BPM, sem olhar para a mão direita.'],pairs:[['C','Am7'],['Em7','Cmaj7'],['Dm7','G7']],pat:'pima',bpm:80,progs:[['C','Am7','Dm7','G7'],['Am','Em7','Cmaj7','G'],['Em7','Cmaj7','G','D']]}],
+ [{t:'Pentatônica de Lá menor',tech:['Pentatônica de Lá menor na casa 5. Da 6ª para a 1ª corda: casas 5-8, 5-7, 5-7, 5-7, 5-8, 5-8. Suba e desça, uma nota por clique, a 60 BPM.','Suba o metrônomo 4 BPM por dia até tocar a escala limpa a 80 BPM.'],pairs:[['Am','G'],['Am','E']],pat:'abafada',bpm:80,progs:[['Am','G','F','E'],['Am','Dm','E7','Am']]},
+  {t:'Escala de Dó maior',tech:['Escala de Dó maior na primeira posição, falando o nome de cada nota. Veja as notas em Acordes, Notas.','Toque a escala de trás para a frente e de cor, sem olhar o braço.'],pairs:[['C','G'],['Em','C']],pat:'abafada',bpm:80,progs:[['C','G','Am','F'],['Em','C','G','D']]},
+  {t:'Improviso sobre Am',tech:['Deixe o app tocar Am, G, F, E em loop (Meu treino) e improvise com a pentatônica de Lá menor por 1 minuto. Poucas notas, bem colocadas.','Termine cada frase na nota Lá: é a tônica, e a frase soa concluída.'],pairs:[['Am','F'],['F','E']],pat:'abafada',bpm:80,progs:[['Am','G','F','E']]},
+  {t:'Ligados e pestanas menores',tech:['Ligados entre as casas 5 e 7 em cada corda: martele para subir, puxe para descer. Só a mão esquerda faz a segunda nota soar.','Monte o Cm e o Gm: o desenho do Am e do Em com pestana na casa 3. Toque corda por corda.'],pairs:[['Cm','Gm'],['Bm','F#m'],['F','Bb']],pat:'abafada',bpm:80,progs:[['Cm','Gm','Bb','F'],['Am','G','F','E']]}]
+];
+const ROAD_TOTAL=ROAD.reduce((a,l)=>a+l.length,0);
+const skillsDone=n=>LEVELS[n-1].skills.filter((_,j)=>S.skills[n+'.'+j]).length;
+const weekOf=n=>{const i=LEVELS[n-1].skills.findIndex((_,j)=>!S.skills[n+'.'+j]);return i<0?ROAD[n-1].length-1:i;}; // primeira meta não cumprida
+const levelDone=n=>skillsDone(n)===LEVELS[n-1].skills.length;
+const roadDone=()=>(S.level-1)*4+skillsDone(S.level); // semanas vencidas: níveis abaixo contam inteiros
+function roadEstimate(level,goal,done){ // semanas que faltam, ajustadas pelo tempo diário
+  const left=ROAD_TOTAL-(done==null?(level-1)*4:done),f={10:1.3,15:1,20:.85,30:.7}[goal]||1,w=Math.max(1,Math.round(left*f));
+  return w>=9?'cerca de '+w+' semanas, uns '+Math.round(w/4.3)+' meses':'cerca de '+w+(w===1?' semana':' semanas');
+}
+
 function planFor(k){
-  const L=LEVELS[S.level-1],p=k.split('-').map(Number),seed=Math.round(Date.UTC(p[0],p[1]-1,p[2])/864e5);
+  const L=LEVELS[S.level-1],W=ROAD[S.level-1][weekOf(S.level)],p=k.split('-').map(Number),seed=Math.round(Date.UTC(p[0],p[1]-1,p[2])/864e5);
   const pick=(a,o=0)=>a[(seed+o)%a.length],mins=SPLITS[S.goal]||SPLITS[15],five=mins.length===5;
-  const pair=pick(L.pairs),out=[];
-  const tech={id:'tech',title:'Técnica',text:pick(L.tech)};
-  const P=PAT[L.rhythm];
-  const rhy={id:'rhy',title:'Ritmo',text:P.arp?'Monte um acorde do seu nível e toque o “'+P.name+'” bem devagar. Depois ouça o exemplo e toque junto.':'Toque a batida “'+P.name+'” primeiro com as cordas abafadas, contando em voz alta. Depois ouça o exemplo e toque junto.',rhythm:P,bpm:L.bpm};
+  const pair=pick(W.pairs),out=[];
+  const tech={id:'tech',title:'Técnica',text:pick(W.tech)};
+  const P=PAT[W.pat];
+  const rhy={id:'rhy',title:'Ritmo',text:P.arp?'Monte um acorde do seu nível e toque o “'+P.name+'” bem devagar. Depois ouça o exemplo e toque junto.':'Toque a batida “'+P.name+'” primeiro com as cordas abafadas, contando em voz alta. Depois ouça o exemplo e toque junto.',rhythm:P,bpm:W.bpm};
   out.push({id:'warm',title:'Aquecimento',text:pick(WARM)});
   if(five){out.push(tech,rhy);}else{out.push(seed%2?rhy:tech);}
   out.push({id:'chg',title:'Trocas de acorde',text:'Troque entre '+pair[0]+' e '+pair[1]+'. Devagar primeiro: o que conta é o acorde novo soar limpo. Depois faça 1 minuto contando as trocas.',pair});
   const open=S.songs.filter(s=>s.status!=='dominada');
   if(open.length){const s=pick(open,1);out.push({id:'rep',title:'Repertório',text:'Toque “'+s.title+'”. Pare nos trechos difíceis e repita só eles, devagar, antes de seguir.',song:s});}
-  else{const pr=pick(L.prog,2);out.push({id:'rep',title:'Repertório',text:'Toque a progressão '+pr.join(', ')+' em loop, quatro tempos em cada acorde. Suas músicas entram aqui quando você cadastrar em Evolução.',prog:pr});}
+  else{const pr=pick(W.progs,2);out.push({id:'rep',title:'Repertório',text:'Toque a progressão '+pr.join(', ')+' em loop, quatro tempos em cada acorde. Suas músicas entram aqui quando você cadastrar em Evolução.',prog:pr});}
   out.forEach((b,i)=>b.min=mins[i]);
   return out;
 }
@@ -1020,17 +1092,62 @@ let ob={level:1,goal:15},resetArmed=false;
 const seg=(group,opts)=>'<div class="seg'+(opts.length>3?' tight':'')+'" role="group">'+opts.map(o=>'<button data-act="sub" data-g="'+group+'" data-v="'+o[0]+'" aria-pressed="'+(sub[group]===o[0])+'">'+o[1]+'</button>').join('')+'</div>';
 
 const V={};
+/* ---------- roteiro: telas ---------- */
+function roadNow(){ // painel curto na tela Hoje: em que semana a pessoa está e qual é a meta
+  const n=S.level,L=LEVELS[n-1],w=weekOf(n),W=ROAD[n-1][w],k=n+'.'+w,done=levelDone(n);
+  let h='<section class="panel road-now"><div class="between"><h3>Roteiro: nível '+n+', semana '+(w+1)+' de '+ROAD[n-1].length+'</h3><button class="link" style="padding:0;min-height:0" data-act="open-roteiro">Ver roteiro</button></div>';
+  if(done)h+='<p class="sub">Nível '+n+' concluído: as quatro metas estão cumpridas.</p>'+(n<LEVELS.length?'<button class="btn sm" style="margin-top:12px" data-act="set-level" data-l="'+(n+1)+'">Subir para o nível '+(n+1)+'</button>':'<p class="sub small">Você chegou ao fim do roteiro. Siga com Meu treino e com as suas músicas.</p>');
+  else h+='<p class="sub">'+esc(W.t)+'</p><button class="skill" data-act="skill" data-k="'+k+'" aria-pressed="false"><i>✓</i><span>Meta da semana: '+esc(L.skills[w])+'</span></button><p class="muted small">Marque quando conseguir. O treino de Hoje passa para a semana seguinte.</p>';
+  return h+'</section>';
+}
+function roadView(){
+  const n=S.level,L=LEVELS[n-1],done=roadDone(),pct=Math.round(done/ROAD_TOTAL*100);
+  let h='<section class="panel"><div class="between"><h2>Seu roteiro</h2><span class="tag">nível '+n+'</span></div><p class="sub">'+(n<LEVELS.length?'Do nível '+n+', '+esc(L.name)+', até o nível '+LEVELS.length:'Nível '+n+', '+esc(L.name)+': o último do roteiro')+'. Cada nível tem 4 semanas e cada semana tem uma meta. Marque a meta quando conseguir: o treino de Hoje passa para a semana seguinte. Sem pressa: uma semana pode levar mais de sete dias.</p>';
+  h+='<div class="prog"><i style="width:'+pct+'%"></i></div><div class="between small muted" style="margin-top:6px"><span>'+done+' de '+ROAD_TOTAL+' semanas vencidas</span><span>faltam '+roadEstimate(n,S.goal,done)+'</span></div>';
+  h+='<p class="muted small" style="margin-top:8px">A estimativa considera '+S.goal+' min por dia'+(S.levelSince?'. Neste nível desde '+esc(dayTxt(S.levelSince)):'')+'.</p>';
+  h+='<div class="acts" style="margin-top:6px"><button class="link" data-act="open-perfil">Mudar meu nível ou a meta diária</button></div></section>';
+  return h+LEVELS.map((L,i)=>roadLevel(i+1)).join('');
+}
+function roadLevel(n){
+  const L=LEVELS[n-1],cur=n===S.level,past=n<S.level,all=levelDone(n),w=weekOf(n);
+  const tag=cur?'<span class="tag">nível atual</span>':past?'<span class="tag done">concluído</span>':'<span class="muted small">a seguir</span>';
+  let h='<details class="road-lvl'+(cur?' cur':'')+'"'+(cur?' open':'')+'><summary><span class="rl-head"><h2>'+n+'. '+esc(L.name)+'</h2>'+tag+'</span><span class="sub small rl-desc">'+esc(L.desc)+' Acordes: '+L.chords.join(', ')+'.</span></summary><div class="road-weeks">';
+  ROAD[n-1].forEach((W,j)=>{
+    const k=n+'.'+j,ok=past||!!S.skills[k],now=cur&&!all&&j===w,P=PAT[W.pat],chords=[...new Set([].concat(...W.progs,...W.pairs))];
+    h+='<div class="road-wk'+(ok?' ok':'')+(now?' now':'')+'"><div class="road-hd"><span class="wk">'+(ok?'✓':j+1)+'</span><div><b>Semana '+(j+1)+': '+esc(W.t)+'</b>'+(now?' <span class="tag">você está aqui</span>':'')+'</div></div>';
+    h+='<button class="skill" data-act="skill" data-k="'+k+'" aria-pressed="'+!!S.skills[k]+'"><i>✓</i><span>Meta: '+esc(L.skills[j])+'</span></button>';
+    h+='<ul class="road-list"><li><b>Técnica:</b> '+W.tech.map(esc).join(' ')+'</li><li><b>Trocas:</b> '+W.pairs.map(p=>p.join(' e ')).join('; ')+'.</li><li><b>Batida:</b> '+esc(P.name)+', a '+W.bpm+' BPM.</li><li><b>Repertório:</b> '+W.progs.map(p=>p.join(' ')).join(' / ')+'.</li></ul>';
+    h+='<div class="chips road-ch">'+chords.map(c=>'<button class="chip" data-act="th-open" data-c="'+esc(c)+'" aria-label="Como se forma o '+esc(c)+'">'+esc(c)+'</button>').join('')+'</div><p class="muted small" style="margin-top:6px">Toque num acorde para ver como ele é formado.</p>';
+    h+='<div class="acts"><button class="btn sm quiet" data-act="road-build" data-l="'+n+'" data-w="'+j+'">Montar este treino</button><button class="link" data-act="open-batida" data-p="'+W.pat+'" data-bpm="'+W.bpm+'">Ouvir a batida</button><button class="link" data-act="open-trocas" data-a="'+esc(W.pairs[0][0])+'" data-b="'+esc(W.pairs[0][1])+'">Contar trocas</button></div></div>';
+  });
+  h+='</div>';
+  if(cur&&all&&n<LEVELS.length)h+='<button class="btn block" style="margin-top:14px" data-act="set-level" data-l="'+(n+1)+'">Subir para o nível '+(n+1)+'</button>';
+  else if(!cur)h+='<button class="link" data-act="set-level" data-l="'+n+'">'+(past?'Voltar a este nível':'Pular para este nível')+'</button>';
+  return h+'</details>';
+}
+function perfilView(){
+  let h='<section class="panel"><h2>Seu nível</h2><p class="sub small">O roteiro e o treino de Hoje seguem o nível escolhido. Mudar de nível não apaga nada: as metas de cada nível ficam guardadas.</p><div class="choices">'+LEVELS.map((L,i)=>{const n=i+1;return '<button class="choice" data-act="set-level" data-l="'+n+'" aria-pressed="'+(S.level===n)+'"><b>'+n+'. '+esc(L.name)+'</b><span>'+OB[i][0]+'. '+OB[i][1]+'</span></button>';}).join('')+'</div></section>';
+  h+='<section class="panel"><h2>Meta diária</h2><p class="sub small">Quanto tempo o treino de Hoje deve ter.</p><div class="row" style="margin-top:12px">'+[10,15,20,30].map(g=>'<button class="chip" data-act="goal" data-v="'+g+'" aria-pressed="'+(S.goal===g)+'">'+g+' min</button>').join('')+'</div></section>';
+  h+='<section class="panel"><h2>Seu nome</h2><p class="sub small">Opcional. Aparece no cumprimento da tela Hoje.</p><input class="inp" id="p-name" maxlength="30" placeholder="Como quer ser chamado?" aria-label="Seu nome" value="'+esc(S.name)+'" style="margin-top:12px"></section>';
+  h+=installPanel()+sndPanel();
+  h+='<section class="panel"><h2>Seus dados</h2><p class="sub">'+(NATIVE?'Seu progresso fica salvo neste aparelho, dentro do app.':'Seu progresso fica salvo neste aparelho, neste navegador. Cada pessoa que abrir o link tem o próprio progresso, separado do seu.')+'</p><button class="btn block danger" style="margin-top:14px" data-act="reset">'+(resetArmed?'Toque de novo para apagar tudo':'Apagar meu progresso')+'</button></section>';
+  return h;
+}
+
 V.hoje=function(){
   if(!S.onboarded){
-    const lv=[[1,'Nunca toquei','Começo do zero: postura, afinação, Em e Am.'],[2,'Sei um ou dois acordes','Hora de aprender C, G, D e companhia.'],[3,'Toco acordes, mas troco devagar','Foco em trocas rápidas e batidas.'],[4,'Quero vencer a pestana','F, Bm e depois dedilhado.']];
+    const OL=LEVELS[ob.level-1],OW=ROAD[ob.level-1];
     return '<header class="top"><div><h1>Violão Diário</h1><p class="sub">Um treino curto por dia, montado para o seu nível.</p></div></header>'+installBanner()+
-      '<div class="stack"><h2>Onde você está hoje?</h2>'+lv.map(l=>'<button class="choice" data-act="ob-level" data-v="'+l[0]+'" aria-pressed="'+(ob.level===l[0])+'"><b>'+l[1]+'</b><span>'+l[2]+'</span></button>').join('')+
+      '<div class="stack"><h2>Onde você está hoje?</h2>'+OB.map((o,i)=>'<button class="choice" data-act="ob-level" data-v="'+(i+1)+'" aria-pressed="'+(ob.level===i+1)+'"><b>'+o[0]+'</b><span>'+o[1]+'</span></button>').join('')+
       '<h2 style="margin-top:26px">Quanto tempo por dia?</h2><div class="row">'+[10,15,20,30].map(g=>'<button class="chip" data-act="ob-goal" data-v="'+g+'" aria-pressed="'+(ob.goal===g)+'">'+g+' min</button>').join('')+'</div>'+
-      '<p class="muted small">Quinze minutos todo dia rendem mais que duas horas no sábado.</p><button class="btn block" data-act="ob-go">Montar meu treino</button></div>';
+      '<p class="muted small">Quinze minutos todo dia rendem mais que duas horas no sábado.</p>'+
+      '<section class="panel road-now"><h3>Seu roteiro</h3><p class="sub">Começa no nível '+ob.level+', '+esc(OL.name)+', com '+OW.length+' semanas. Semana 1: '+esc(OW[0].t)+'.</p><p class="sub small">'+(ob.level<LEVELS.length?'Do nível '+ob.level+' ao '+LEVELS.length:'É o último nível do roteiro')+': '+roadEstimate(ob.level,ob.goal)+' com '+ob.goal+' min por dia. Você pode mudar o nível depois, em Evolução, Perfil.</p></section>'+
+      '<button class="btn block" data-act="ob-go">Montar meu treino</button></div>';
   }
   const k=today(),d=day(k),plan=planFor(k),L=LEVELS[S.level-1],st=streak(),all=plan.every(b=>d.done[b.id]);
-  const dateStr=new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});
-  let h='<header class="top"><div><h1>Hoje</h1><p class="sub">'+esc(dateStr)+'</p></div><div class="streak" aria-label="'+st+' dias seguidos"><span class="num">'+st+'</span><span class="lbl">'+(st===1?'dia<br>seguido':'dias<br>seguidos')+'</span></div></header>';
+  const dateStr=new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'}),hr=new Date().getHours();
+  const hello=S.name?(hr<12?'Bom dia':hr<18?'Boa tarde':'Boa noite')+', '+esc(S.name)+'. ':'';
+  let h='<header class="top"><div><h1>Hoje</h1><p class="sub">'+hello+esc(hello?dateStr.charAt(0).toUpperCase()+dateStr.slice(1):dateStr)+'</p></div><div class="streak" aria-label="'+st+' dias seguidos"><span class="num">'+st+'</span><span class="lbl">'+(st===1?'dia<br>seguido':'dias<br>seguidos')+'</span></div></header>';
   h+=installBanner();
   h+='<section class="neck">'+neckSVG()+'</section>';
   h+='<section class="panel"><div class="between"><h2>Treino de '+S.goal+' minutos</h2><span class="muted small">'+d.min+' min hoje</span></div><p class="sub small">Nível '+S.level+', '+esc(L.name)+'</p><ol class="blocks" style="margin-top:10px">';
@@ -1051,6 +1168,7 @@ V.hoje=function(){
     h+='</div></li>';
   });
   h+='</ol></section>';
+  h+=roadNow();
   if(S.custom.length)h+='<section class="panel ct"><div class="between"><h2>Seus treinos</h2><button class="link" style="padding:0;min-height:0" data-act="open-meu">Ver todos</button></div>'+S.custom.slice(-3).reverse().map(t=>{t=ctClean(t);
     return '<div class="between" style="margin-top:12px;align-items:center"><div><b>'+esc(ctName(t))+'</b><div class="muted small">'+t.min+' min, '+t.bpm+' BPM</div></div><button class="btn sm" data-act="cs-start" data-id="'+esc(t.id)+'">Começar</button></div>';}).join('')+'</section>';
   h+='<section class="panel">'+(all?'<h3>Treino de hoje concluído.</h3><p class="sub">Volte amanhã para manter a sequência. Se quiser tocar mais, registre abaixo.</p>':'<h3>Tocou fora do treino?</h3><p class="sub">Prática livre também conta para a sequência.</p>')+'<div class="acts" style="margin-top:12px"><button class="btn sm line" data-act="free-add" data-v="5">Somar 5 min</button> <button class="btn sm line" data-act="free-add" data-v="15">Somar 15 min</button></div>'+(S.custom.length?'':'<button class="link" style="margin-top:4px" data-act="open-meu">Montar um treino com os seus acordes e batidas</button>')+'</section>';
@@ -1129,7 +1247,7 @@ V.acordes=function(){
 };
 
 V.evolucao=function(){
-  let h='<header class="top"><div><h1>Evolução</h1></div></header>'+seg('evolucao',[['numeros','Números'],['trilha','Trilha'],['musicas','Músicas'],['ajustes','Ajustes']]);
+  let h='<header class="top"><div><h1>Evolução</h1></div></header>'+seg('evolucao',[['numeros','Números'],['roteiro','Roteiro'],['musicas','Músicas'],['perfil','Perfil']]);
   if(sub.evolucao==='numeros'){
     const ks=Object.keys(S.days).filter(practiced),tot=ks.reduce((a,k)=>a+S.days[k].min,0);
     h+='<div class="stats"><div><b class="num">'+streak()+'</b><span>dias seguidos</span></div><div><b class="num">'+bestStreak()+'</b><span>maior sequência</span></div><div><b class="num">'+tot+'</b><span>minutos tocados</span></div><div><b class="num">'+ks.length+'</b><span>dias praticados</span></div></div>';
@@ -1138,21 +1256,13 @@ V.evolucao=function(){
     h+='<section class="panel chart" style="margin-top:14px"><div class="between"><h2>Últimos 14 dias</h2><span class="muted small">linha: meta de '+S.goal+' min</span></div><div style="margin-top:14px">'+dayBars(days,vals,S.goal)+'</div></section>';
     const dom=CHORDS.filter(x=>S.chords[x.n]==='dominado').length,pk=Object.keys(S.changes).filter(x=>S.changes[x].length).sort((a,b)=>bestOf(b)-bestOf(a))[0];
     h+='<section class="panel"><h2>Marcas</h2><div style="margin-top:6px"><div class="kv"><span>Acordes dominados</span><b>'+dom+' de '+CHORDS.length+'</b></div><div class="kv"><span>Melhor troca em 1 minuto</span><b>'+(pk?bestOf(pk)+' ('+esc(pk.replace('|',' e '))+')':'ainda sem medição')+'</b></div><div class="kv"><span>Metrônomo mais rápido por 1 minuto</span><b>'+(S.maxBpm?S.maxBpm+' BPM':'ainda sem registro')+'</b></div><div class="kv"><span>Acertos no treino de ouvido</span><b>'+(S.ear.total?Math.round(S.ear.ok/S.ear.total*100)+'% de '+S.ear.total:'ainda sem respostas')+'</b></div></div></section>';
-  }else if(sub.evolucao==='trilha'){
-    h+='<section class="panel">'+LEVELS.map((L,i)=>{const n=i+1,cur=S.level===n,done=L.skills.filter((_,j)=>S.skills[n+'.'+j]).length,all=done===L.skills.length;
-      let x='<div class="lvl"><div class="between"><h2>'+n+'. '+esc(L.name)+'</h2>'+(cur?'<span class="tag">nível atual</span>':'<span class="muted small">'+done+' de '+L.skills.length+'</span>')+'</div><p class="sub small">'+esc(L.desc)+' Acordes: '+L.chords.join(', ')+'.</p>';
-      if(cur){x+='<div style="margin-top:8px">'+L.skills.map((s,j)=>'<button class="skill" data-act="skill" data-k="'+n+'.'+j+'" aria-pressed="'+!!S.skills[n+'.'+j]+'"><i>✓</i><span>'+esc(s)+'</span></button>').join('')+'</div><div class="prog"><i style="width:'+(done/L.skills.length*100)+'%"></i></div>';
-        if(all&&n<LEVELS.length)x+='<button class="btn block" style="margin-top:14px" data-act="set-level" data-l="'+(n+1)+'">Subir para o nível '+(n+1)+'</button>';}
-      else x+='<button class="link" data-act="set-level" data-l="'+n+'">Treinar neste nível</button>';
-      return x+'</div>';}).join('')+'</section>';
+  }else if(sub.evolucao==='roteiro'){
+    h+=roadView();
   }else if(sub.evolucao==='musicas'){
     h+='<section class="panel"><h2>Adicionar música</h2><p class="sub small">As músicas que você está aprendendo entram no bloco de repertório do treino diário.</p><div class="stack" style="margin-top:12px"><input class="inp" id="s-title" maxlength="80" placeholder="Nome da música" aria-label="Nome da música"><input class="inp" id="s-chords" maxlength="120" placeholder="Acordes, por exemplo: G D Em C" aria-label="Acordes da música"><button class="btn block" data-act="song-add">Adicionar música</button></div></section>';
     h+='<section class="panel">'+(S.songs.length?S.songs.map(s=>'<div class="song"><div class="between"><h3>'+esc(s.title)+'</h3><button class="link" style="padding:0;min-height:32px" data-act="song-del" data-id="'+esc(s.id)+'">Remover</button></div>'+(s.chords?'<p class="cif">'+esc(s.chords)+'</p>':'')+'<select data-song="'+esc(s.id)+'" style="margin-top:10px" aria-label="Situação da música">'+[['aprendendo','Aprendendo'],['devagar','Toco devagar'],['dominada','Dominada']].map(o=>'<option value="'+o[0]+'"'+(s.status===o[0]?' selected':'')+'>'+o[1]+'</option>').join('')+'</select></div>').join(''):'<h3>Nenhuma música ainda.</h3><p class="sub">Escolha uma música de que você gosta e que use acordes do seu nível. É ela que vai fazer você pegar o violão todo dia.</p>')+'</section>';
   }else{
-    h+='<section class="panel"><h2>Meta diária</h2><div class="row" style="margin-top:12px">'+[10,15,20,30].map(g=>'<button class="chip" data-act="goal" data-v="'+g+'" aria-pressed="'+(S.goal===g)+'">'+g+' min</button>').join('')+'</div></section>';
-    h+=installPanel();
-    h+=sndPanel();
-    h+='<section class="panel"><h2>Seus dados</h2><p class="sub">'+(NATIVE?'Seu progresso fica salvo neste aparelho, dentro do app.':'Seu progresso fica salvo neste aparelho, neste navegador. Cada pessoa que abrir o link tem o próprio progresso, separado do seu.')+'</p><button class="btn block danger" style="margin-top:14px" data-act="reset">'+(resetArmed?'Toque de novo para apagar tudo':'Apagar meu progresso')+'</button></section>';
+    h+=perfilView();
   }
   return h;
 };
@@ -1216,7 +1326,12 @@ const ACT={
   sub:el=>{const g=el.dataset.g;sub[g]=el.dataset.v;if(g==='treinar')grStop(true);if(g==='ferramentas'&&sub[g]!=='afinador')micStop();if(g==='ouvido')E.q=null;if(g==='treinar'&&(T.phase==='count'||T.phase==='run'))T.phase='idle';render();},
   'ob-level':el=>{ob.level=+el.dataset.v;render();},
   'ob-goal':el=>{ob.goal=+el.dataset.v;render();},
-  'ob-go':()=>{S.level=ob.level;S.goal=ob.goal;S.onboarded=true;save();audio();render();},
+  'ob-go':()=>{S.level=ob.level;S.goal=ob.goal;S.levelSince=today();S.onboarded=true;save();audio();render();},
+  'open-roteiro':()=>{sub.evolucao='roteiro';go('evolucao');},
+  'open-perfil':()=>{sub.evolucao='perfil';if(view!=='evolucao')go('evolucao');else{render();window.scrollTo(0,0);}},
+  'road-build':el=>{const W=ROAD[+el.dataset.l-1][+el.dataset.w];if(!W)return;if(CS){if(!CS.done)csSettle();CS=null;}CHI=null;
+    const prog=W.progs.reduce((a,b)=>b.length>a.length?b:a); // a progressão mais completa da semana
+    CE={id:null,name:'Semana '+(+el.dataset.w+1)+': '+W.t,chords:prog.slice(),pats:[W.pat],bpm:W.bpm,min:CT_MINS.includes(S.goal)?S.goal:10};ceDelArmed=false;go('meu');},
   'blk-start':el=>{audio();B={id:el.dataset.id,total:+el.dataset.min,left:+el.dataset.min*60,running:true,last:Date.now()};render();},
   'blk-pause':()=>{if(!B)return;B.running=!B.running;B.last=Date.now();render();},
   'blk-done':el=>{if(!B)return;const used=Math.max(1,Math.round((B.total*60-B.left)/60));blockDone(el.dataset.id,Math.min(B.total,used));},
@@ -1291,7 +1406,7 @@ const ACT={
   'play-int':el=>{const a=+el.dataset.a,b=+el.dataset.b;pluck(a,0,.6);pluck(b,.7,.6);pluck(a,1.5,.5);pluck(b,1.5,.5);},
   'chord-st':el=>{const c=el.dataset.c,cur=S.chords[c];if(!cur)S.chords[c]='aprendendo';else if(cur==='aprendendo')S.chords[c]='dominado';else delete S.chords[c];save();render();},
   skill:el=>{const k=el.dataset.k;if(S.skills[k])delete S.skills[k];else S.skills[k]=true;save();render();},
-  'set-level':el=>{S.level=+el.dataset.l;B=null;E.q=null;save();render();},
+  'set-level':el=>{const n=+el.dataset.l;if(n===S.level)return;S.level=n;S.levelSince=today();B=null;E.q=null;save();render();},
   'song-add':()=>{const t=$('#s-title').value.trim(),c=$('#s-chords').value.trim();if(!t){$('#s-title').focus();return;}S.songs.push({id:'s'+Date.now().toString(36),title:t.slice(0,80),chords:c.slice(0,120),status:'aprendendo'});save();render();},
   'song-del':el=>{S.songs=S.songs.filter(s=>s.id!==el.dataset.id);save();render();},
   goal:el=>{S.goal=+el.dataset.v;B=null;save();render();},
@@ -1308,6 +1423,7 @@ document.addEventListener('input',e=>{const id=e.target.id;
   else if(id==='ce-name'&&CE)CE.name=e.target.value;});
 document.addEventListener('change',e=>{const t=e.target;
   if(t.id==='t-a'){T.a=t.value;render();}else if(t.id==='t-b'){T.b=t.value;render();}
+  else if(t.id==='p-name'){S.name=t.value.trim().slice(0,30);save();}
   else if(t.dataset&&t.dataset.song){const s=S.songs.find(x=>x.id===t.dataset.song);if(s){s.status=t.value;save();}}});
 function onShow(){if(AC&&AC.state!=='running'){try{AC.resume().catch(()=>{});}catch(e){}}if(!NATIVE&&awakeOn)awakeSync(true);}
 function onHide(){if(SIL&&!SIL.paused)SIL.pause();if(MIC){micStop();render();}if(GR.on)grStop();}
