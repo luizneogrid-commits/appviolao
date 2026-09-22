@@ -111,11 +111,6 @@ h3{font-weight:700;font-size:1.02rem;line-height:1.25}
 .neck.ring .str:nth-of-type(2){animation-delay:.04s}.neck.ring .str:nth-of-type(3){animation-delay:.08s}
 .neck.ring .str:nth-of-type(4){animation-delay:.12s}.neck.ring .str:nth-of-type(5){animation-delay:.16s}.neck.ring .str:nth-of-type(6){animation-delay:.2s}
 @media (prefers-reduced-motion: reduce){.neck.ring .str{animation:none}.btn:active{transform:none}.toast{transition:none}.lvl i{transition:none}html{scroll-behavior:auto}}
-/* telas largas (tablet, computador): a mesma coluna, um pouco mais larga, e grades com mais colunas */
-@media (min-width:700px){.app{max-width:760px}.cgrid{grid-template-columns:repeat(3,1fr)}.stats{grid-template-columns:repeat(4,1fr)}.thdiag{max-width:420px}.pair{max-width:320px}.tabs button{font-size:.82rem;font-stretch:90%}}
-@media (min-width:1000px){.app{max-width:880px}.cgrid{grid-template-columns:repeat(4,1fr)}}
-/* impressão: os acordes viram uma folha para a parede; barras, botões e avisos somem */
-@media print{body{background:#fff;color:#000}body::before,.tabs,.pill,.toast,#cifpop,.seg,.filters,.acts,.link,.btn,.st,.chips,.why,.streak,.neck,.fbinfo{display:none!important}.app{max-width:none;padding:0}.panel,.ctile{border:1px solid #bbb;break-inside:avoid;page-break-inside:avoid;box-shadow:none}.cgrid{grid-template-columns:repeat(4,1fr)}.ctile .name{font-size:1.4rem}.chord .fd{fill:#333}.chord .ft{fill:#fff}.chord .nutc{fill:#000}}
 
 /* plan */
 .blocks{list-style:none;counter-reset:b}
@@ -450,6 +445,11 @@ span.chip{display:inline-flex;align-items:center;gap:4px}
 .tabs svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .tabs button[aria-current="page"]{color:var(--primary)}
 @media (max-width:350px){.tabs button{font-stretch:70%;font-size:.66rem}}
+/* telas largas (tablet, computador): a mesma coluna, um pouco mais larga, e grades com mais colunas (fica no fim para vencer as regras acima) */
+@media (min-width:700px){.app{max-width:760px}.cgrid{grid-template-columns:repeat(3,1fr)}.stats{grid-template-columns:repeat(4,1fr)}.thdiag{max-width:420px}.pair{max-width:320px}.tabs button{font-size:.82rem;font-stretch:90%}}
+@media (min-width:1000px){.app{max-width:880px}.cgrid{grid-template-columns:repeat(4,1fr)}}
+/* impressão: os acordes viram uma folha para a parede; barras, botões e avisos somem */
+@media print{body{background:#fff;color:#000}body::before,.tabs,.pill,.toast,#cifpop,.seg,.filters,.acts,.link,.btn,.st,.chips,.why,.streak,.neck,.fbinfo{display:none!important}.app{max-width:none;padding:0}.panel,.ctile{border:1px solid #bbb;break-inside:avoid;page-break-inside:avoid;box-shadow:none}.cgrid{grid-template-columns:repeat(4,1fr)}.ctile .name{font-size:1.4rem}.chord .fd{fill:#333}.chord .ft{fill:#fff}.chord .nutc{fill:#000}}
 </style>
 </head>
 <body>
