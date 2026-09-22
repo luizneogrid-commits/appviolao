@@ -29,10 +29,14 @@ const err = m => errors.push(m);
 
 // acordes: nome que a teoria sabe ler, 6 casas e 6 dedos, pestana coerente
 D.CHORDS.forEach(c => {
-  if (!/^([A-G])([#b]?)(m(?!aj))?(maj7|7)?(sus2|sus4|add9)?$/.test(c.n)) err(`acorde ${c.n}: nome fora do padrão que a teoria explica`);
-  if (c.f.length !== 6 || c.d.length !== 6) err(`acorde ${c.n}: precisa de 6 casas e 6 dedos`);
-  c.f.forEach((f, i) => { if (f > 0 && !c.d[i]) err(`acorde ${c.n}: corda ${6 - i} apertada sem dedo`); if (f <= 0 && c.d[i]) err(`acorde ${c.n}: corda ${6 - i} solta com dedo`); });
-  if (c.barre && !c.f.some((f, i) => f === c.barre.fret && i >= c.barre.from && i <= c.barre.to)) err(`acorde ${c.n}: pestana sem cordas na casa`);
+  if (!/^([A-G])([#b]?)(m(?!aj))?(maj7|7)?(sus2|sus4|add9)?(\/[A-G][#b]?)?$/.test(c.n)) err(`acorde ${c.n}: nome fora do padrão que a teoria explica`);
+  // o desenho normal e, se houver, a versão fácil seguem as mesmas regras
+  [c].concat(c.easy ? [Object.assign({ n: c.n + ' (fácil)' }, c.easy)] : []).forEach(s => {
+    if (s.f.length !== 6 || s.d.length !== 6) err(`acorde ${s.n}: precisa de 6 casas e 6 dedos`);
+    s.f.forEach((f, i) => { if (f > 0 && !s.d[i]) err(`acorde ${s.n}: corda ${6 - i} apertada sem dedo`); if (f <= 0 && s.d[i]) err(`acorde ${s.n}: corda ${6 - i} solta com dedo`); });
+    if (s.barre && !s.f.some((f, i) => f === s.barre.fret && i >= s.barre.from && i <= s.barre.to)) err(`acorde ${s.n}: pestana sem cordas na casa`);
+  });
+  if (c.easy && c.easy.f.filter(f => f >= 0).length >= c.f.filter(f => f >= 0).length) err(`acorde ${c.n}: a versão fácil não é mais fácil (mesmas cordas ou mais)`);
 });
 // batidas: células conhecidas, 6 ou 8 por compasso
 D.PATTERNS.forEach(p => {
