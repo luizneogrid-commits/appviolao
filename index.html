@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Violão Diário</title>
-<meta name="app-version" content="1.29.0">
+<meta name="app-version" content="1.30.0">
 <meta name="description" content="Treino diário de violão: plano por nível, metrônomo, afinador, batidas para tocar junto, acordes e notas.">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#F2EEF0" media="(prefers-color-scheme: light)">
@@ -461,6 +461,7 @@ body.flash::after{content:"";position:fixed;inset:0;background:var(--brass);opac
 .cdiag{width:118px;flex:none;margin-left:10px}
 .vol{display:grid;grid-template-columns:118px 1fr 52px;align-items:center;gap:8px;margin-top:6px}.vol b{text-align:right} /* volumes em Perfil, Som */
 .cif-ch.sel{box-shadow:0 0 0 2px var(--brass)} /* trecho em loop marcado na cifra */
+.fb button.right i{background:var(--ok);border-color:var(--ok);color:#fff}.fb button.wrong i{border-color:var(--warn);color:var(--warn)} /* ouvido, Braço: posições certas e a errada */
 .tabs button{font-size:.76rem;font-stretch:75%;padding-left:0;padding-right:0} /* nomes maiores: medidos com a fonte Archivo, o nome mais longo (Ferramentas) cabe na coluna com folga em cada faixa de largura */
 @media (min-width:480px){.tabs button{font-size:.82rem;font-stretch:80%}}
 @media (max-width:429px){.tabs button{font-size:.72rem;font-stretch:70%}}
@@ -828,7 +829,13 @@ const BADGES=[
  ['ouvido','Ouvido afiado','Vinte respostas no treino de ouvido, com 80% de acerto.',()=>S.ear.total>=20&&S.ear.ok/S.ear.total>=.8],
  ['meutreino','Treino próprio','Dez vezes em treinos montados por você.',()=>Object.values(S.ctLog).reduce((a,l)=>a+Object.values(l).reduce((b,e)=>b+(e.n||0),0),0)>=10],
  ['nivel','Subiu de nível','Cumpriu as quatro metas de um nível e passou ao seguinte.',()=>S.level>(S.startLevel||1)],
- ['roteiro','Roteiro completo','As 24 semanas vencidas.',()=>roadDone()>=ROAD_TOTAL]
+ ['roteiro','Roteiro completo','As '+ROAD_TOTAL+' semanas vencidas.',()=>roadDone()>=ROAD_TOTAL],
+ ['dias100','Cem dias de violão','Cem dias com prática registrada.',()=>Object.keys(S.days).filter(practiced).length>=100],
+ ['seq100','Cem dias seguidos','Cem dias sem falhar.',()=>bestStreak()>=100],
+ ['min3000','3000 minutos','Cinquenta horas de prática.',()=>totalMin()>=3000],
+ ['musica1','Primeira música','Uma música marcada como dominada.',()=>S.songs.some(s=>s.status==='dominada')],
+ ['musicas5','Repertório','Cinco músicas dominadas.',()=>S.songs.filter(s=>s.status==='dominada').length>=5],
+ ['minhabatida','Batida própria','Criou uma batida sua em Treinar, Batidas.',()=>(S.mypats||[]).length>0]
 ];
 function checkBadges(){const got=[];BADGES.forEach(b=>{try{if(!S.badges[b[0]]&&b[3]()){S.badges[b[0]]=today();got.push(b[1]);}}catch(e){}});if(got.length){save();got.forEach(n=>toast('Conquista: '+n));}}
 function roadEstimate(level,goal,done){ // semanas que faltam, ajustadas pelo tempo diário
@@ -1513,6 +1520,7 @@ function earNew(){
   else if(sub.ouvido==='ivl'){const r=45+Math.floor(Math.random()*13),iv=shuffle(IVLS),a=iv[0];E.q={midis:[r,r+a[0]],gap:.55,ans:a[1],opts:shuffle(iv.slice(0,4).map(x=>x[1]))};} // duas notas em sequência, a partir de uma nota grave
   else if(sub.ouvido==='prog'){const ps=shuffle(earProgs()),a=ps[0];E.q={names:a,ans:a.join(' '),opts:shuffle(ps.slice(0,4).map(p=>p.join(' ')))};}
   else if(sub.ouvido==='sing'){const m=[52,53,55,57,59,60,62,64][Math.floor(Math.random()*8)];E.q={midis:[m],sing:true,ans:NPT[m%12],opts:[]};if(MIC&&MIC.mode==='sing'){MIC.hold=0;MIC.hist=[];}} // uma nota entre Mi3 e Mi4
+  else if(sub.ouvido==='fb'){const si=Math.floor(Math.random()*6),f=Math.floor(Math.random()*8),m=OPEN[si]+f;E.q={midis:[m],fb:true,ans:NPT[m%12]+' (por exemplo, '+(6-si)+'ª corda '+(f?'casa '+f:'solta')+')',opts:[]};} // uma nota até a 7ª casa; vale qualquer posição com a mesma altura
   else{const pool=shuffle(earPool()),ans=pool[0];E.q={midis:chordMidis(ans),ans,opts:shuffle(pool.slice(0,4))};}
 }
 const strumSeq=(names,gap)=>names.forEach((n,i)=>chordMidis(n).forEach((m,k)=>pluck(m,i*gap+k*.035,.34))); // acordes um atrás do outro
@@ -2350,13 +2358,21 @@ V.treinar=function(){
     }
   }else{
     if(!E.q)earNew();
-    h+=seg('ouvido',[['mm','Maior/menor'],['qual','Acorde'],['ivl','Intervalo'],['prog','Progressão'],['sing','Cantar']]);
+    h+=seg('ouvido',[['mm','Maior/menor'],['qual','Acorde'],['ivl','Intervalo'],['prog','Progressão'],['sing','Cantar'],['fb','Braço']]);
     if(sub.ouvido==='sing'){const on=!!(MIC&&MIC.mode==='sing');
       h+='<section class="panel"><h2>Cante a nota que você ouviu</h2><p class="sub">Ouça, cante a mesma nota e segure. Vale em qualquer oitava: o que importa é a nota, não a altura. Cantar o que se ouve é o primeiro passo para tirar música de ouvido.</p><button class="btn block quiet" style="margin:16px 0" data-act="ear-play">Ouvir a nota'+(E.ans?' ('+esc(E.q.ans)+')':'')+'</button>';
       if(on)h+='<div class="meter"><div class="needle" id="sing-needle"></div></div><div class="between small muted"><span>grave</span><span>aguda</span></div><div class="lvl"><i id="sing-lvl"></i></div><p style="text-align:center;margin:12px 0;font-weight:650;min-height:1.4em" id="sing-msg" aria-live="polite">'+(E.ans==='ok'?'Certo!':'Cante a nota e segure, com a boca perto do celular.')+'</p>';
       else h+='<p class="sub small">'+(micErr?(NATIVE?'O app está sem acesso ao microfone. Libere nos ajustes do celular.':'O microfone não está disponível aqui. Permita o acesso quando o navegador pedir.'):'O microfone fica ligado só nesta tela.')+'</p>';
       if(E.ans)h+='<p style="margin:14px 0"><b>'+(E.ans==='ok'?'Certo.':'Era '+esc(E.q.ans)+'.')+'</b></p><button class="btn block" data-act="ear-next">Próxima nota</button>';
       h+='<div class="acts">'+(on?'<button class="btn sm line" data-act="sing-mic">Desligar microfone</button><button class="link" data-act="mic-again" data-mode="sing">Religar o microfone</button>':'<button class="btn sm" data-act="sing-mic">Ligar o microfone e cantar</button>')+(E.ans?'':'<button class="link" data-act="sing-skip">Não consegui, próxima</button>')+'</div>';
+      h+='<p class="muted small" style="margin-top:14px">Nesta sessão: '+E.ok+' de '+E.total+'. No total: '+S.ear.ok+' de '+S.ear.total+'.</p></section>';return h;}
+    if(sub.ouvido==='fb'){if(!E.q||!E.q.fb)earNew();const q=E.q,a=E.ans,right=[];for(let si=0;si<6;si++)for(let f=0;f<=12;f++)if(OPEN[si]+f===q.midis[0])right.push(si+':'+f);
+      h+='<section class="panel"><h2>Onde está a nota?</h2><p class="sub">Ouça a nota e toque no braço onde ela está. Vale qualquer posição com a mesma altura: a mesma nota mora em mais de uma corda. Treina o ouvido e o braço ao mesmo tempo.</p><button class="btn block quiet" style="margin:16px 0" data-act="ear-play">Ouvir a nota</button>';
+      let g='<div class="hd"></div>';for(let f=0;f<=12;f++)g+='<div class="hd'+([3,5,7,9,12].includes(f)?' mk':'')+'">'+(f===0?'solta':f+([3,5,7,9,12].includes(f)?' •':''))+'</div>';
+      for(let si=5;si>=0;si--){g+='<div class="sl">'+(6-si)+'ª</div>';for(let f=0;f<=12;f++){const k=si+':'+f,cls=(f===0?'open ':'')+(a&&right.includes(k)?'right ':'')+(a&&a.si===si&&a.f===f&&!right.includes(k)?'wrong ':'');g+='<button class="'+cls.trim()+'" data-act="ear-fb" data-si="'+si+'" data-f="'+f+'" aria-label="'+(6-si)+'ª corda, '+(f?'casa '+f:'solta')+'"><i>'+(a?NL[(OPEN[si]+f)%12]:'?')+'</i></button>';}}
+      h+='<div class="fbwrap" tabindex="0" role="region" aria-label="Braço para responder, rola para o lado"><div class="fb'+(S.lefty?' lefty':'')+'">'+g+'</div></div>';
+      if(a)h+='<p style="margin:14px 0"><b>'+(a.ok?'Certo: '+esc(q.ans)+'.':'Era '+esc(q.ans)+'. As posições certas estão marcadas.')+'</b></p><button class="btn block" data-act="ear-next">Próxima nota</button>';
+      else h+='<p class="muted small" style="margin-top:10px">As notas ficam escondidas até você responder.</p>';
       h+='<p class="muted small" style="margin-top:14px">Nesta sessão: '+E.ok+' de '+E.total+'. No total: '+S.ear.ok+' de '+S.ear.total+'.</p></section>';return h;}
     const EAR={mm:['O acorde é maior ou menor?','Maior costuma soar aberto e alegre. Menor, fechado e triste.','Ouvir o acorde'],qual:['Qual acorde você ouviu?','As opções vêm dos acordes do seu nível.','Ouvir o acorde'],ivl:['Qual é a distância entre as duas notas?','Duas notas, uma depois da outra. Cante a primeira e suba até a segunda: a distância é o intervalo. As escalas em Acordes, Teoria mostram cada um.','Ouvir as duas notas'],prog:['Qual progressão você ouviu?','Quatro acordes em sequência, das progressões do seu nível. Ouça o baixo de cada acorde: ele conta a história.','Ouvir a progressão']}[sub.ouvido]||['','',''];
     h+='<section class="panel"><h2>'+EAR[0]+'</h2><p class="sub">'+EAR[1]+'</p><button class="btn block quiet" style="margin:16px 0" data-act="ear-play">'+EAR[2]+'</button><div class="opts'+(sub.ouvido==='prog'?' one':'')+'">'+E.q.opts.map(o=>{let c='opt';if(E.ans){if(o===E.q.ans)c+=' right';else if(o===E.ans)c+=' wrong';}return '<button class="'+c+'" data-act="ear-ans" data-v="'+esc(o)+'">'+esc(o)+'</button>';}).join('')+'</div>';
@@ -2462,7 +2478,7 @@ V.evolucao=function(){
     const wa=weekStats(0),wb=weekStats(1);
     h+='<section class="panel"><h2>Esta semana</h2><div style="margin-top:6px"><div class="kv"><span>Minutos</span><b>'+wa.min+(wb.min?' <small class="muted">(semana passada: '+wb.min+')</small>':'')+'</b></div><div class="kv"><span>Dias praticados</span><b>'+wa.days+' de 7'+(wb.min?' <small class="muted">(passada: '+wb.days+')</small>':'')+'</b></div></div></section>';
     h+='<section class="panel"><h2>Conquistas</h2><p class="sub small">'+Object.keys(S.badges).length+' de '+BADGES.length+'</p><div class="badges">'+BADGES.map(b=>{const got=S.badges[b[0]];return '<div class="badge'+(got?' got':'')+'"><b>'+esc(b[1])+'</b><span>'+esc(b[2])+'</span>'+(got?'<small>'+esc(dayTxt(got))+'</small>':'')+'</div>';}).join('')+'</div></section>';
-    const EM={mm:'Maior ou menor',qual:'Acorde',ivl:'Intervalo',prog:'Progressão',sing:'Cantar a nota'},em=Object.keys(EM).filter(x=>S.earLog[x]&&S.earLog[x].total);
+    const EM={mm:'Maior ou menor',qual:'Acorde',ivl:'Intervalo',prog:'Progressão',sing:'Cantar a nota',fb:'Onde está a nota'},em=Object.keys(EM).filter(x=>S.earLog[x]&&S.earLog[x].total);
     if(em.length)h+='<section class="panel"><h2>Ouvido por modalidade</h2><div style="margin-top:6px">'+em.map(x=>{const e=S.earLog[x];return '<div class="kv"><span>'+EM[x]+'</span><b>'+Math.round(100*e.ok/e.total)+'% <small class="muted">('+e.ok+' de '+e.total+')</small></b></div>';}).join('')+'</div><p class="muted small" style="margin-top:8px">Contado a partir da versão 1.27; o total geral, em Marcas, inclui o que veio antes.</p></section>';
     h+='<section class="panel"><h2>Marcas</h2><div style="margin-top:6px"><div class="kv"><span>Acordes dominados</span><b>'+dom+' de '+CHORDS.length+'</b></div><div class="kv"><span>Melhor troca em 1 minuto</span><b>'+(pk?bestOf(pk)+' ('+esc(pk.replace('|',' e '))+')':'ainda sem medição')+'</b></div><div class="kv"><span>Metrônomo mais rápido por 1 minuto</span><b>'+(S.maxBpm?S.maxBpm+' BPM':'ainda sem registro')+'</b></div><div class="kv"><span>Acertos no treino de ouvido</span><b>'+(S.ear.total?Math.round(S.ear.ok/S.ear.total*100)+'% de '+S.ear.total:'ainda sem respostas')+'</b></div><div class="kv"><span>Revisão rápida: itens firmes</span><b>'+Object.keys(S.rev).filter(x=>S.rev[x].s>=3).length+' de '+Object.keys(S.rev).length+'</b></div></div></section>';
   }else if(sub.evolucao==='roteiro'){
@@ -2540,6 +2556,7 @@ if(PWA.host){
 const TABS=[['hoje','Hoje','<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.8 2.8L16 9.5"/>'],['meu','Meu treino','<path d="M4 6h8M16 6h4M4 12h2M10 12h10M4 18h10M18 18h2"/><circle cx="14" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="18" r="2"/>'],['treinar','Treinar','<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/>'],['ferramentas','Ferramentas','<path d="M9 3h6l4 18H5L9 3zM12 17l4-11M7.2 13h9.6"/>'],['acordes','Acordes','<path d="M5 4v16M12 4v16M19 4v16M5 4h14M5 10h14M5 16h14"/><circle cx="12" cy="7" r="1.7" fill="currentColor"/>'],['evolucao','Evolução','<path d="M5 20V11M12 20V4M19 20v-6M2 20h20"/>'],['perfil','Perfil','<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>']];
 /* ---------- novidades de cada versão, mostradas uma vez ---------- */
 const NEWS=[
+ ['1.30.0',['Ouvido, Braço: ouça a nota e toque no braço onde ela está; vale qualquer posição com a mesma altura.','Seis conquistas novas: cem dias de violão, cem dias seguidos, 3000 minutos, primeira música dominada, cinco dominadas e batida própria.','Ficha e capturas da loja atualizadas com tudo o que entrou nas últimas versões.']],
  ['1.29.0',['Tocar junto com trecho em loop: escolha o acorde de início e o de fim e só aquela parte se repete.','Perfil, Som: volumes separados para o violão e para o clique ou bateria.','Botão Voltar do Android e tecla Esc fecham o que está aberto por cima (desenho do acorde, palco, música) antes de voltar para Hoje.','Depois de tocar junto uma música inteira três vezes, o app sugere marcá-la como dominada.']],
  ['1.28.0',['Acordes, Descobrir: marque as casas num diagrama e o app diz que acorde é, mostra as notas e toca; abaixo, as formas móveis de E e de A em qualquer casa.','Na cifra, o tom provável da música (com o relativo) e os acordes do tom.','Remover uma música pede confirmação e dá para desfazer.']],
  ['1.27.0',['Depois do nível 9, Hoje vira manutenção: cada dia revisita uma semana do roteiro, com os seus pares de troca mais lentos e as suas músicas.','Evolução, Números: minutos por semana nas últimas 12 semanas (com a meta semanal), melhor troca por minuto de cada semana e acertos do ouvido por modalidade.','Hoje, em Mais: “Praticar agora” liga um cronômetro que conta mesmo com a tela apagada e soma os minutos ao parar.','Site instalável com prévia das telas na instalação; testes de tela com auditoria de acessibilidade (axe-core).']],
@@ -2749,7 +2766,8 @@ const ACT={
   't-adj':el=>{T.count=Math.max(0,T.count+(+el.dataset.d));const n=$('#t-n');if(n)n.textContent=T.count;},
   't-mic':()=>{micAgain('count');},
   'mic-again':el=>{micAgain(el.dataset.mode||'tune');},
-  'ear-play':()=>{earPlay();},
+  'ear-fb':el=>{if(E.ans||!E.q||!E.q.fb)return;const si=+el.dataset.si,f=+el.dataset.f,m=OPEN[si]+f,ok=m===E.q.midis[0];E.ans={si,f,ok};E.total++;S.ear.total++;if(ok){E.ok++;S.ear.ok++;}earLogAdd(ok);if(audio())pluckAt(m,AC.currentTime+.01,.6,si);save();checkProofs();render();},
+'ear-play':()=>{earPlay();},
   'ear-ans':el=>{if(E.ans||!E.q)return;E.ans=el.dataset.v;const ok=E.ans===E.q.ans;E.total++;S.ear.total++;if(ok){E.ok++;S.ear.ok++;}earLogAdd(ok);save();checkProofs();render();},
   'ear-next':()=>{earNew();earPlay();render();},
   'chord-play':el=>strum(chordMidis(el.dataset.c),.045),
