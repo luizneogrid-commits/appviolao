@@ -110,7 +110,8 @@ O `index.html` percebe que está dentro do app (Capacitor) e:
 - vibra pelo motor de vibração do aparelho, inclusive no iPhone;
 - no Android, o botão voltar leva para Hoje e, em Hoje, minimiza o app;
 - guarda o progresso também no armazenamento do aparelho, que o sistema não apaga sozinho;
-- pede o microfone pelo sistema na primeira vez que o afinador é ligado.
+- pede o microfone pelo sistema na primeira vez que o afinador é ligado;
+- manda um lembrete diário no horário escolhido em Evolução, Perfil (notificação local; no Android 13 ou mais novo o sistema pede permissão na primeira vez).
 
 No navegador, nada disso muda: o site continua igual.
 

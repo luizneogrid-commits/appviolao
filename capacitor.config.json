@@ -3,6 +3,10 @@
   "appName": "Violão Diário",
   "webDir": "www",
   "plugins": {
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_violao",
+      "iconColor": "#7A2E4D"
+    },
     "SplashScreen": {
       "launchShowDuration": 3000,
       "launchAutoHide": true,

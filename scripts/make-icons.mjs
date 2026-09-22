@@ -86,6 +86,7 @@ function out(file, svgText, widthPx, opaque = false) {
 const full = s => svg({ w: s, h: s, bg: C.bg, cx: s / 2, cy: s / 2, k: s / 512 });                                  // ícone original, sangrado
 const legacy = clip => svg({ w: 48, h: 48, bg: C.bg, clip, margin: 2, cx: 24, cy: 24, k: 44 / 512 });                // Android 7: ícone com forma própria
 const foreground = mono => svg({ w: 108, h: 108, cx: 54, cy: 54, k: 0.145, mono });                                 // camada do ícone adaptável
+const statIcon = svg({ w: 24, h: 24, cx: 12, cy: 12, k: 0.052, mono: true });                                       // ícone branco da barra de status (notificações)
 const SPLASH_R = 60;                                                                                                  // raio da rosácea na abertura, em dp/pt
 const splashIcon = svg({ w: 288, h: 288, cx: 144, cy: 144, k: SPLASH_R / 185.5, strings: 290 });                     // Android 12+: cabe no círculo de 192 dp
 const splashFull = (w, h, r) => svg({ w, h, bg: C.bg, cx: w / 2, cy: h / 2, k: r / 185.5, strings: 290 });
@@ -97,6 +98,7 @@ for (const [d, f] of Object.entries(DENSITIES)) {
   out(join(RES, `mipmap-${d}`, 'ic_launcher_foreground.png'), foreground(false), 108 * f);
   out(join(RES, `mipmap-${d}`, 'ic_launcher_monochrome.png'), foreground(true), 108 * f);
   out(join(RES, `drawable-${d}`, 'splash_icon.png'), splashIcon, 288 * f);
+  out(join(RES, `drawable-${d}`, 'ic_stat_violao.png'), statIcon, 24 * f);
   // Tela de abertura antiga (usada só se a API de abertura do Android 12 falhar)
   const port = { mdpi: [320, 480], hdpi: [480, 800], xhdpi: [720, 1280], xxhdpi: [960, 1600], xxxhdpi: [1280, 1920] }[d];
   out(join(RES, `drawable-port-${d}`, 'splash.png'), splashFull(port[0], port[1], SPLASH_R * f), port[0]);
