@@ -28,7 +28,7 @@ public class MainActivity extends BridgeActivity {
         if (intent == null || !Intent.ACTION_SEND.equals(intent.getAction())) return intent;
         String text = intent.getStringExtra(Intent.EXTRA_TEXT);
         if (text == null || text.trim().isEmpty()) return intent;
-        if (text.length() > 6000) text = text.substring(0, 6000);
+        if (text.length() > 12000) text = text.substring(0, 12000);
         Uri.Builder link = new Uri.Builder().scheme("app.violaodiario").authority("musica").appendQueryParameter("texto", text);
         String title = intent.getStringExtra(Intent.EXTRA_SUBJECT);
         if (title != null && !title.trim().isEmpty()) link.appendQueryParameter("titulo", title.trim());
