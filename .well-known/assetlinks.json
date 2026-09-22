@@ -1,0 +1,10 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "app.violaodiario",
+    "sha256_cert_fingerprints": [
+      "B0:E4:27:08:71:58:AB:65:21:22:46:A4:87:B6:EC:4B:A9:95:CB:D4:60:CE:3D:32:AB:F3:58:6A:F1:CD:93:80"
+    ]
+  }
+}]

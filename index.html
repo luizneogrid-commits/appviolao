@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Violão Diário</title>
-<meta name="app-version" content="1.17.0">
+<meta name="app-version" content="1.18.0">
 <meta name="description" content="Treino diário de violão: plano por nível, metrônomo, afinador, batidas para tocar junto, acordes e notas.">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#F2EEF0" media="(prefers-color-scheme: light)">
@@ -247,6 +247,9 @@ select{min-height:46px;border-radius:12px;border:1.5px solid var(--line);backgro
 textarea.inp{padding:10px 14px;min-height:96px;resize:vertical;line-height:1.4;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.92rem}
 .cifra{white-space:pre-wrap;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.95rem;line-height:1.55;margin-top:12px;padding-bottom:40vh}
 .cifra.big{font-size:1.15rem}
+/* modo palco: só a cifra, letra maior, sem barras nem cabeçalho */
+body.stage .tabs,body.stage .pill,body.stage header.top,body.stage .seg{display:none}body.stage .app{padding:10px 14px 24px}body.stage .stagebar{border:0;background:transparent;padding:0}body.stage .cifra{font-size:1.25rem;line-height:1.6}body.stage .cifra.big{font-size:1.6rem}
+.tcard .panel{border:0;border-radius:0;padding:12px 0 4px;border-top:1px solid var(--line)}.tcard .panel:first-child{border-top:0;padding-top:4px}
 .cif-ch{font:inherit;font-weight:800;color:var(--primary);background:var(--primary-soft);border:0;border-radius:6px;padding:0 4px;cursor:pointer}
 .cif-ch.off{background:none;color:var(--muted);font-weight:700;cursor:default}.cif-ch.now{background:var(--primary);color:var(--on-primary)}
 .cifpop{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);width:min(92vw,360px);background:var(--surface);border:1.5px solid var(--line);border-radius:18px;box-shadow:0 12px 32px rgba(0,0,0,.22);padding:12px 14px;z-index:40;display:grid;grid-template-columns:104px 1fr;gap:12px;align-items:center}
@@ -488,7 +491,7 @@ const KEY_BASE='violao-diario-v1',PROF=(()=>{try{const p=JSON.parse(localStorage
 if(PROF.current&&!PROF.list.some(p=>p.id===PROF.current))PROF.current='';
 function profSave(){try{localStorage.setItem('violao-diario-perfis',JSON.stringify(PROF));}catch(e){}}
 const KEY=KEY_BASE+(PROF.current?'-p-'+PROF.current:'');
-const DEF={v:1,onboarded:false,name:'',level:1,levelSince:'',goal:15,cntMode:'tap',skills:{},days:{},changes:{},chords:{},songs:[],custom:[],ctLog:{},stats:{tuned:0,play:{},prog4:false},proven:{},badges:{},rest:0,startLevel:0,lastWeekSeen:'',rev:{},adj:null,quick:'',remind:'',bpmLog:{},font:0,theme:'',seenVer:'',msub:1,macc:'first',mgap:0,mvib:false,tuning:'padrao',tuneMode:'cordas',lastExport:'',backupAsk:'',recs:[],lefty:false,easyOn:{},ear:{ok:0,total:0},maxBpm:0,bpm:70,beats:4,altOut:false,installDismissed:false};
+const DEF={v:1,onboarded:false,name:'',level:1,levelSince:'',goal:15,cntMode:'tap',skills:{},days:{},changes:{},chords:{},songs:[],custom:[],ctLog:{},stats:{tuned:0,play:{},prog4:false},proven:{},badges:{},rest:0,startLevel:0,lastWeekSeen:'',rev:{},adj:null,quick:'',remind:'',bpmLog:{},font:0,theme:'',seenVer:'',msub:1,macc:'first',mgap:0,mvib:false,tuning:'padrao',tuneMode:'cordas',lastExport:'',backupAsk:'',recs:[],hojeMore:false,lefty:false,easyOn:{},ear:{ok:0,total:0},maxBpm:0,bpm:70,beats:4,altOut:false,installDismissed:false};
 let S,hadLocal=false;
 function adopt(o){
   S=Object.assign(JSON.parse(JSON.stringify(DEF)),o&&typeof o==='object'?o:{});
@@ -506,7 +509,7 @@ function adopt(o){
   if(!S.easyOn||typeof S.easyOn!=='object'||Array.isArray(S.easyOn))S.easyOn={};
   S.font=[0,1,2].includes(+S.font)?+S.font:0;S.theme=['light','dark'].includes(S.theme)?S.theme:'';
   S.msub=[1,2,3].includes(+S.msub)?+S.msub:1;S.macc=['first','none','back'].includes(S.macc)?S.macc:'first';S.mgap=[0,2,4].includes(+S.mgap)?+S.mgap:0;S.mvib=!!S.mvib;S.lefty=!!S.lefty;
-  S.tuning=['padrao','meio','dropd'].includes(S.tuning)?S.tuning:'padrao';S.tuneMode=S.tuneMode==='crom'?'crom':'cordas';
+  S.tuning=['padrao','meio','dropd'].includes(S.tuning)?S.tuning:'padrao';S.tuneMode=S.tuneMode==='crom'?'crom':'cordas';S.hojeMore=!!S.hojeMore;
   S.lastExport=typeof S.lastExport==='string'?S.lastExport:'';S.backupAsk=typeof S.backupAsk==='string'?S.backupAsk:'';S.recs=Array.isArray(S.recs)?S.recs.filter(r=>r&&typeof r==='object'&&r.id&&r.d):[];
   if(typeof S.seenVer!=='string')S.seenVer='';if(!S.seenVer&&S.onboarded&&!(o&&'seenVer' in o))S.seenVer='1.6.1'; // quem já usava o app antes deste recurso vê as novidades desde então
   S.level=Math.max(1,Math.min(9,Math.round(+S.level)||1)); // 9 = quantidade de níveis em LEVELS (definido mais abaixo)
@@ -1308,7 +1311,7 @@ function changesDone(){
 /* ---------- tela acesa enquanto algo está tocando, contando ou ouvindo ---------- */
 let awakeOn=false,WL=null;
 function awakeSync(force){
-  const want=M.on||GR.on||SG.on||!!(B&&B.running)||!!MIC||T.phase==='count'||T.phase==='run'||!!TM.timer;
+  const want=M.on||GR.on||SG.on||!!(B&&B.running)||!!MIC||T.phase==='count'||T.phase==='run'||!!TM.timer||!!svTimer||REC.on; // a cifra rolando e a gravação também seguram a tela acesa
   if(want===awakeOn&&!force)return;awakeOn=want;
   if(NATIVE){native('KeepAwake',want?'keepAwake':'allowSleep');return;}
   try{if(WL){WL.release().catch(()=>{});WL=null;}
@@ -1745,7 +1748,7 @@ function perfilView(){
   h+='<section class="panel"><h2>Folga na sequência</h2><p class="sub small">Com a folga, um dia sem tocar por semana não quebra a sequência de dias. Descansar faz parte de aprender.</p><div class="chips" style="margin-top:12px"><button class="chip" data-act="rest" data-v="0" aria-pressed="'+(S.rest?'false':'true')+'">Sem folga</button><button class="chip" data-act="rest" data-v="1" aria-pressed="'+(S.rest?'true':'false')+'">1 dia por semana</button></div></section>';
   h+='<section class="panel"><h2>Seu nome</h2><p class="sub small">Opcional. Aparece no cumprimento da tela Hoje.</p><input class="inp" id="p-name" maxlength="30" placeholder="Como quer ser chamado?" aria-label="Seu nome" value="'+esc(S.name)+'" style="margin-top:12px"></section>';
   h+='<section class="panel"><h2>Lembrete diário</h2>'+(NATIVE?'<p class="sub small">Uma notificação no horário escolhido, todo dia. Quem pratica sempre na mesma hora falta menos.</p><div class="chips" style="margin-top:12px"><button class="chip" data-act="remind" data-v="" aria-pressed="'+!S.remind+'">Desligado</button>'+REMIND_TIMES.map(t=>'<button class="chip" data-act="remind" data-v="'+t+'" aria-pressed="'+(S.remind===t)+'">'+t+'</button>').join('')+'</div>':'<p class="sub small">Os lembretes ficam disponíveis no app instalado pela loja ou pelo APK. No site, escolha um horário fixo e crie um lembrete no relógio do celular: quem pratica sempre na mesma hora falta menos.</p>')+'</section>';
-  h+=installPanel()+sndPanel();
+  h+=installPanel()+aboutPanel()+sndPanel();
   h+='<section class="panel"><h2>Aparência</h2><p class="grp">Mão</p><div class="chips">'+[[0,'Destro'],[1,'Canhoto']].map(o=>'<button class="chip" data-act="lefty" data-v="'+o[0]+'" aria-pressed="'+(!!S.lefty===!!o[0])+'">'+o[1]+'</button>').join('')+'</div><p class="muted small" style="margin-top:6px">Canhoto espelha os desenhos de acordes e o braço: a 6ª corda fica à direita.</p><p class="grp">Tamanho da letra</p><div class="chips">'+[[0,'Normal'],[1,'Maior'],[2,'Bem maior']].map(o=>'<button class="chip" data-act="font" data-v="'+o[0]+'" aria-pressed="'+(S.font===o[0])+'">'+o[1]+'</button>').join('')+'</div><p class="grp">Tema</p><div class="chips">'+[['','Automático'],['light','Claro'],['dark','Escuro']].map(o=>'<button class="chip" data-act="theme" data-v="'+o[0]+'" aria-pressed="'+(S.theme===o[0])+'">'+o[1]+'</button>').join('')+'</div></section>';
   h+='<section class="panel"><h2>Perfis neste aparelho</h2><p class="sub small">Duas pessoas no mesmo celular, cada uma com o próprio nível, treino e progresso. Trocar de perfil recarrega o app.</p><div class="chips" style="margin-top:12px"><button class="chip" data-act="prof-use" data-id="" aria-pressed="'+!PROF.current+'">Principal</button>'+PROF.list.map(p=>'<button class="chip" data-act="prof-use" data-id="'+esc(p.id)+'" aria-pressed="'+(PROF.current===p.id)+'">'+esc(p.name)+'</button>').join('')+'</div>';
   h+='<div class="row" style="margin-top:12px"><input class="inp" id="prof-name" maxlength="20" placeholder="Nome do novo perfil" aria-label="Nome do novo perfil"><button class="btn sm" data-act="prof-add">Criar</button></div>';
@@ -1780,7 +1783,7 @@ function scheduleReminder(){
 }
 
 /* ---------- cifras: cifra com rolagem automática e sugestões de músicas ---------- */
-const SV={id:null,speed:0,big:false,edit:false,editId:null,cfg:null};let svTimer=null;
+const SV={id:null,speed:0,big:false,edit:false,editId:null,cfg:null,stage:false};let svTimer=null;
 // Arranjos simplificados, em tons fáceis, só com os nomes dos acordes. Para o tom original, capotraste.
 const SONGBOOK=[
  ['Knockin\' on Heaven\'s Door','Bob Dylan',['G','D','Am','C']],['Stand by Me','Ben E. King',['G','Em','C','D']],['Let It Be','The Beatles',['C','G','Am','F']],
@@ -1839,10 +1842,12 @@ function songView(){
   let h='<section class="panel"><div class="between"><h2>'+esc(s.title)+'</h2><button class="link" style="padding:0;min-height:0" data-act="song-close">Fechar</button></div>'+(list.length?'<p class="cif">'+list.map(esc).join(' ')+'</p>':s.chords?'<p class="cif">'+esc(s.chords)+'</p>':'');
   if(SV.edit||!s.cifra){h+='<textarea class="inp" id="sv-cifra" rows="12" maxlength="6000" placeholder="Cole a cifra: acordes em cima da letra, como nos sites de cifras." aria-label="Cifra" data-song-cifra="'+esc(s.id)+'">'+esc(s.cifra||'')+'</textarea><p class="muted small" style="margin-top:6px">Salva sozinho. Nas linhas de acordes, os que o app conhece viram botões: toque para ver o desenho e ouvir.</p>'+(s.cifra?'<button class="btn block line" style="margin-top:10px" data-act="song-edit">Pronto</button>':'');return h+'</section>';}
   const P=cifraParse(s.cifra,k),playing=svPlaying(),pid=PAT[s.pid]?s.pid:L.rhythm,bpm=s.bpm||PAT[pid].bpm,per=s.per||1,capo=capoSuggest(s);
+  if(SV.stage){ // modo palco: só a cifra, grande, sem barras; a tela fica acesa enquanto rola
+    return '<section class="panel stagebar"><div class="acts"><button class="btn sm" data-act="song-stage">Sair do palco</button><span class="muted small">Rolagem</span>'+[0,1,2,3].map(v=>'<button class="chip" data-act="song-speed" data-v="'+v+'" aria-pressed="'+(SV.speed===v)+'">'+(v===0?'parada':v)+'</button>').join('')+'<button class="chip" data-act="song-big" aria-pressed="'+SV.big+'">A+</button>'+(P.seq.length?'<button class="chip" data-act="song-playalong" data-id="'+esc(s.id)+'" aria-pressed="'+playing+'">'+(playing?'Parar':'Tocar junto')+'</button>':'')+'</div><h2 style="margin-top:10px">'+esc(s.title)+'</h2><pre class="cifra'+(SV.big?' big':'')+'">'+P.html+'</pre></section>';}
   // tom e capotraste
   h+='<div class="svtom"><div class="acts"><span class="muted small">Tom</span><button class="chip" data-act="song-tr" data-id="'+esc(s.id)+'" data-d="-1" aria-label="Meio tom abaixo">−</button><b>'+(s.tr>0?'+':'')+(s.tr||0)+'</b><button class="chip" data-act="song-tr" data-id="'+esc(s.id)+'" data-d="1" aria-label="Meio tom acima">+</button><span class="muted small" style="margin-left:6px">Capotraste</span><select id="sv-capo" aria-label="Casa do capotraste">'+[0,1,2,3,4,5,6,7].map(c=>'<option value="'+c+'"'+(c===(s.capo||0)?' selected':'')+'>'+(c?'casa '+c:'sem')+'</option>').join('')+'</select></div>';
   h+='<p class="muted small" style="margin-top:6px">'+(!s.tr&&!s.capo?'Acordes como na cifra original.':(s.capo?'Capotraste na casa '+s.capo+': os desenhos mudam e o som '+(s.tr?'fica '+tomTxt(s.tr)+' do original':'fica no tom original')+'.':'Acordes '+tomTxt(s.tr)+' do original.'))+(capo?' <button class="link" style="padding:0;min-height:0" data-act="song-capo" data-id="'+esc(s.id)+'" data-v="'+capo+'">Capotraste na casa '+capo+' deixa todos os acordes sem pestana inteira.</button>':'')+'</p></div>';
-  h+='<div class="acts" style="margin-top:10px"><span class="muted small">Rolagem</span>'+[0,1,2,3].map(v=>'<button class="chip" data-act="song-speed" data-v="'+v+'" aria-pressed="'+(SV.speed===v)+'">'+(v===0?'parada':v)+'</button>').join('')+'<button class="chip" data-act="song-big" aria-pressed="'+SV.big+'">A+</button><button class="link" data-act="song-edit">Editar</button><button class="link" data-act="song-train" data-id="'+esc(s.id)+'">Treinar as trocas</button></div>';
+  h+='<div class="acts" style="margin-top:10px"><span class="muted small">Rolagem</span>'+[0,1,2,3].map(v=>'<button class="chip" data-act="song-speed" data-v="'+v+'" aria-pressed="'+(SV.speed===v)+'">'+(v===0?'parada':v)+'</button>').join('')+'<button class="chip" data-act="song-big" aria-pressed="'+SV.big+'">A+</button><button class="link" data-act="song-edit">Editar</button><button class="link" data-act="song-train" data-id="'+esc(s.id)+'">Treinar as trocas</button><button class="link" data-act="song-stage">Modo palco</button></div>';
   // tocar junto: os acordes da cifra na ordem, com a batida escolhida
   h+='<div class="svplay"><div class="between"><b>Tocar junto</b><span class="muted small">'+(P.seq.length?P.seq.length+(P.seq.length===1?' acorde':' acordes')+' na cifra':'')+'</span></div>';
   if(!P.seq.length)h+='<p class="muted small" style="margin-top:6px">Nenhum acorde que o app conheça nas linhas de acordes desta cifra.</p>';
@@ -1852,7 +1857,7 @@ function songView(){
   h+='</div><pre class="cifra'+(SV.big?' big':'')+'">'+P.html+'</pre>';
   return h+'</section>';
 }
-function svSync(){const want=view==='evolucao'&&sub.evolucao==='musicas'&&SV.id&&SV.speed&&!SV.edit;if(want&&!svTimer)svTimer=setInterval(()=>window.scrollBy(0,[0,.5,1,1.8][SV.speed]),50);else if(!want&&svTimer){clearInterval(svTimer);svTimer=null;}}
+function svSync(){const want=view==='evolucao'&&sub.evolucao==='musicas'&&SV.id&&SV.speed&&!SV.edit;if(want&&!svTimer){svTimer=setInterval(()=>window.scrollBy(0,[0,.5,1,1.8][SV.speed]),50);awakeSync();}else if(!want&&svTimer){clearInterval(svTimer);svTimer=null;awakeSync();}}
 
 /* ---------- calendário: os últimos 12 meses ---------- */
 function yearHeat(){
@@ -1990,13 +1995,16 @@ V.hoje=function(){
   h+=roadNow();
   if(S.custom.length)h+='<section class="panel ct"><div class="between"><h2>Seus treinos</h2><button class="link" style="padding:0;min-height:0" data-act="open-meu">Ver todos</button></div>'+S.custom.slice(-3).reverse().map(t=>{t=ctClean(t);
     return '<div class="between" style="margin-top:12px;align-items:center"><div><b>'+esc(ctName(t))+'</b><div class="muted small">'+t.min+' min, '+t.bpm+' BPM</div></div><button class="btn sm" data-act="cs-start" data-id="'+esc(t.id)+'">Começar</button></div>';}).join('')+'</section>';
-  if(all){ // resumo da sessão: o que aconteceu hoje e o que vem amanhã
+  if(all){ // resumo da sessão: o que aconteceu hoje e o que vem amanhã; a prática livre entra aqui, porque o treino já acabou
     const provenToday=Object.keys(S.proven).filter(x=>S.proven[x]===k).map(x=>{const p=x.split('.');return LEVELS[p[0]-1].skills[p[1]];}),recs=Object.keys(S.changes).filter(x=>{const a=S.changes[x];return a.length&&a[a.length-1].d===k&&a[a.length-1].n===bestOf(x)&&a[a.length-1].n>0;}),badgesToday=BADGES.filter(b=>S.badges[b[0]]===k).map(b=>b[1]),w=weekOf(S.level),W=ROAD[S.level-1][w];
     h+='<section class="panel"><h3>Treino de hoje concluído.</h3><div style="margin-top:6px"><div class="kv"><span>Minutos hoje</span><b>'+d.min+'</b></div><div class="kv"><span>Blocos</span><b>'+plan.length+' de '+plan.length+'</b></div>'+(recs.length?'<div class="kv"><span>Recorde de trocas</span><b>'+esc(recs.map(x=>x.replace('|',' e ')+': '+bestOf(x)).join('; '))+'</b></div>':'')+(provenToday.length?'<div class="kv"><span>Meta comprovada</span><b>'+esc(provenToday.join('; '))+'</b></div>':'')+(badgesToday.length?'<div class="kv"><span>Conquista</span><b>'+esc(badgesToday.join('; '))+'</b></div>':'')+(d.rev?'<div class="kv"><span>Revisão rápida</span><b>'+d.rev.ok+' de '+d.rev.n+'</b></div>':'')+'</div><p class="sub small" style="margin-top:10px">Amanhã: '+(levelDone(S.level)?(S.level<LEVELS.length?'subir para o nível '+(S.level+1):'continuar com Meu treino e suas músicas'):'semana '+(w+1)+', '+esc(W.t))+'. Volte para manter a sequência.</p>';
-  }else h+='<section class="panel"><h3>Tocou fora do treino?</h3><p class="sub">Prática livre também conta para a sequência.</p>';
-  h+='<div class="acts" style="margin-top:12px"><button class="btn sm line" data-act="free-add" data-v="5">Somar 5 min</button> <button class="btn sm line" data-act="free-add" data-v="15">Somar 15 min</button></div>'+(S.custom.length?'':'<button class="link" style="margin-top:4px" data-act="open-meu">Montar um treino com os seus acordes e batidas</button>')+'</section>';
-  h+='<section class="panel"><h3>Diário</h3><p class="sub small">Uma linha sobre hoje: o que travou, o que fluiu. Fica guardada em Evolução.</p><input class="inp" id="d-note" maxlength="140" placeholder="Hoje…" aria-label="Diário de hoje" value="'+esc(d.note||'')+'" style="margin-top:10px"></section>';
-  h+=recPanel()+backupPanel();
+    h+='<div class="acts" style="margin-top:12px"><button class="btn sm line" data-act="free-add" data-v="5">Somar 5 min</button> <button class="btn sm line" data-act="free-add" data-v="15">Somar 15 min</button></div></section>';
+  }
+  // o resto de Hoje fica recolhido numa linha, para a tela não crescer: prática livre, diário e gravação
+  let more=all?'':'<section class="panel"><h3>Tocou fora do treino?</h3><p class="sub">Prática livre também conta para a sequência.</p><div class="acts" style="margin-top:12px"><button class="btn sm line" data-act="free-add" data-v="5">Somar 5 min</button> <button class="btn sm line" data-act="free-add" data-v="15">Somar 15 min</button></div>'+(S.custom.length?'':'<button class="link" style="margin-top:4px" data-act="open-meu">Montar um treino com os seus acordes e batidas</button>')+'</section>';
+  more+='<section class="panel"><h3>Diário</h3><p class="sub small">Uma linha sobre hoje: o que travou, o que fluiu. Fica guardada em Evolução.</p><input class="inp" id="d-note" maxlength="140" placeholder="Hoje…" aria-label="Diário de hoje" value="'+esc(d.note||'')+'" style="margin-top:10px"></section>'+recPanel();
+  h+='<section class="panel"><details class="tcard" id="hoje-more"'+(S.hojeMore||REC.on?' open':'')+'><summary>Mais: '+(all?'':'prática livre, ')+'diário'+(window.MediaRecorder?' e gravação':'')+(d.note?' <span class="tag">diário escrito</span>':'')+'</summary><div>'+more+'</div></details></section>';
+  h+=backupPanel();
   return h;
 };
 function backupPanel(){ // o progresso só existe no aparelho: a cada 30 dias, um lembrete de exportar
@@ -2040,7 +2048,7 @@ function recPanel(){ // em Hoje
 }
 function recList(){ // em Evolução, Números
   if(!S.recs.length)return '';
-  return '<section class="panel"><h2>Suas gravações</h2><p class="sub small">Ouça a mais nova e uma antiga, uma atrás da outra. Ficam só neste aparelho e não entram na exportação.</p><audio id="rec-audio" controls style="width:100%;margin-top:10px"'+(REC.url?' src="'+REC.url+'"':'')+'></audio><ul class="hist" style="margin-top:8px">'+S.recs.map(r=>'<li><div><b>'+esc(dayTxt(r.d))+'</b><div class="muted small">'+r.sec+' s</div></div><div class="acts" style="margin-top:0"><button class="btn sm quiet" data-act="rec-play" data-id="'+esc(r.id)+'">Ouvir</button><button class="link" data-act="rec-del" data-id="'+esc(r.id)+'">Apagar</button></div></li>').join('')+'</ul></section>';
+  return '<section class="panel"><h2>Suas gravações</h2><p class="sub small">Ouça a mais nova e uma antiga, uma atrás da outra. Ficam só neste aparelho e não entram na exportação.</p><audio id="rec-audio" controls style="width:100%;margin-top:10px"'+(REC.url?' src="'+REC.url+'"':'')+'></audio><ul class="hist" style="margin-top:8px">'+S.recs.map(r=>'<li><div><b>'+esc(dayTxt(r.d))+'</b><div class="muted small">'+(r.t?new Date(r.t).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})+', ':'')+r.sec+' s</div></div><div class="acts" style="margin-top:0"><button class="btn sm quiet" data-act="rec-play" data-id="'+esc(r.id)+'">Ouvir</button><button class="link" data-act="rec-del" data-id="'+esc(r.id)+'">Apagar</button></div></li>').join('')+'</ul></section>';
 }
 
 V.meu=function(){
@@ -2214,8 +2222,17 @@ function installSteps(){
   if(/Android/i.test(ua))return '<ol class="steps muted"><li>Abra este link no Chrome.</li><li>Toque no menu ⋮, no canto de cima.</li><li>Toque em “Instalar app” ou “Adicionar à tela inicial”.</li><li>Confirme em “Instalar”.</li></ol>';
   return '<p class="sub">No Chrome ou no Edge, clique no ícone de instalar na barra de endereço. No celular, abra este mesmo link e siga os passos na tela.</p>';
 }
+function aboutPanel(){ // Sobre e ajuda: como usar, privacidade, versão e onde pedir ajuda
+  const card=(t,b)=>'<details class="tcard"><summary>'+t+'</summary><div>'+b+'</div></details>';
+  return '<section class="panel"><h2>Sobre e ajuda</h2><div class="kv" style="margin-top:6px"><span>Versão</span><b>'+esc(VER||'sem número')+'</b></div><div style="margin-top:8px">'+
+    card('Como usar em um minuto','<ol class="steps"><li><b>Hoje</b> monta o treino do dia para o seu nível: aquecimento, técnica, ritmo, trocas e repertório. Inicie um bloco, toque, conclua.</li><li><b>Treinar</b> mede: trocas por minuto, tocar junto com batidas, tempo e ouvido.</li><li><b>Ferramentas</b>: metrônomo e afinador.</li><li><b>Acordes</b>: a biblioteca, as notas no braço e a teoria que explica cada acorde.</li><li><b>Evolução</b>: números, roteiro, músicas com cifra e o seu perfil.</li></ol><p>Quinze minutos por dia rendem mais que duas horas no sábado. O app cuida do resto.</p>')+
+    card('Sem som ou microfone?','<p>O som do app depende do celular liberar o áudio: toque em qualquer botão de som uma vez. O microfone pede permissão na primeira vez; se não chegar som, use “Religar o microfone”.</p><button class="link" data-act="open-som">Abrir o diagnóstico de som</button>')+
+    card('Privacidade','<p>Nada sai do aparelho: não há conta, anúncios nem rastreamento. O microfone é analisado na hora, sem gravar; a única gravação é a que você mesmo faz em Hoje, e ela fica no celular.</p><a class="link" href="'+SITE_URL+'privacidade.html" target="_blank" rel="noopener">Política de privacidade</a>')+
+    card('Encontrou um problema?','<p>Copie o diagnóstico e descreva o que aconteceu num chamado. Sem e-mail nem cadastro: o chamado é público, então não escreva dados pessoais.</p><div class="acts"><button class="btn sm line" data-act="snd-copy">Copiar diagnóstico</button><a class="link" href="https://github.com/luizneogrid-commits/appviolao/issues" target="_blank" rel="noopener">Abrir chamado no GitHub</a></div>')+
+    '</div></section>';
+}
 function installPanel(){
-  if(NATIVE)return '<section class="panel"><h2>Sobre o app</h2><div class="kv" style="margin-top:6px"><span>Versão</span><b>'+esc(VER||'sem número')+'</b></div></section>';
+  if(NATIVE)return '';
   if(!PWA.host)return '';
   let x='<section class="panel"><h2>App no celular</h2>';
   if(standalone())x+='<p class="sub">Instalado neste aparelho. Ele busca a versão nova sozinho sempre que abre com internet.</p>';
@@ -2249,6 +2266,7 @@ if(PWA.host){
 const TABS=[['hoje','Hoje','<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.8 2.8L16 9.5"/>'],['meu','Meu treino','<path d="M4 6h8M16 6h4M4 12h2M10 12h10M4 18h10M18 18h2"/><circle cx="14" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="18" r="2"/>'],['treinar','Treinar','<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/>'],['ferramentas','Ferramentas','<path d="M9 3h6l4 18H5L9 3zM12 17l4-11M7.2 13h9.6"/>'],['acordes','Acordes','<path d="M5 4v16M12 4v16M19 4v16M5 4h14M5 10h14M5 16h14"/><circle cx="12" cy="7" r="1.7" fill="currentColor"/>'],['evolucao','Evolução','<path d="M5 20V11M12 20V4M19 20v-6M2 20h20"/>']];
 /* ---------- novidades de cada versão, mostradas uma vez ---------- */
 const NEWS=[
+ ['1.18.0',['Cifra: modo palco (só a cifra, letra grande) e a tela fica acesa enquanto rola.','Hoje mais curto: prática livre, diário e gravação ficam numa linha recolhida.','Perfil: “Sobre e ajuda”, com como usar, privacidade e onde reportar problema.','No Android, links do site (treinos compartilhados, atalhos) abrem direto no app.']],
  ['1.17.0',['Roteiro com três níveis novos: ritmos brasileiros; baixos, power chords e pestanas móveis; cor, tom e ouvido.','Power chords E5, A5, D5, G5 e C5 na biblioteca.','Aquecimento com o exercício cromático tocado junto, casa por casa.','Treinar, Tempo: bater a batida na tela, célula por célula.']],
  ['1.16.0',['Perfis no mesmo aparelho (Perfil): cada pessoa com o próprio progresso.','Compartilhar um treino de Meu treino por link; quem abre recebe pronto.','Telas largas com mais colunas, folha de acordes para imprimir e ajustes de acessibilidade.']],
  ['1.15.0',['Lembrete que diz o treino da semana e some no dia em que a meta já foi batida; aviso de cópia de segurança a cada 30 dias.','Bloco de ritmo já começa com o metrônomo; “Desfazer” num bloco concluído sem querer.','Afinador: meio tom abaixo, Drop D e modo cromático com cents.','Gravação de 30 segundos em Hoje, para ouvir a evolução (fica só no aparelho).','Site instalado com atalhos e fonte embutida; metrônomo por vibração.']],
@@ -2271,6 +2289,7 @@ function newsPanel(){
 
 function render(){
   const pop=$('#cifpop');if(pop)pop.remove();
+  document.body.classList.toggle('stage',!!(view==='evolucao'&&sub.evolucao==='musicas'&&SV.id&&SV.stage&&!SV.edit&&S.songs.some(s=>s.id===SV.id&&s.cifra)));
   try{$('#view').innerHTML=V[view]();}
   catch(e){logErr('tela '+view+': '+(e&&e.message||e));$('#view').innerHTML='<section class="panel"><h2>Algo deu errado nesta tela</h2><p class="sub">'+esc(String(e&&e.message||e))+'</p><p class="sub small" style="margin-top:8px">Seu progresso está salvo. Volte para Hoje ou recarregue o app; se continuar, copie o diagnóstico em Evolução, Perfil e me mande.</p><div class="acts"><button class="btn sm" data-act="nav" data-v="hoje">Ir para Hoje</button><button class="btn sm line" data-act="pwa-reload">Recarregar</button></div></section>';}
   $('#tabs').innerHTML=TABS.map(t=>'<button data-act="nav" data-v="'+t[0]+'"'+(view===t[0]?' aria-current="page"':'')+'><svg viewBox="0 0 24 24" aria-hidden="true">'+t[2]+'</svg>'+t[1]+'</button>').join('');
@@ -2348,6 +2367,7 @@ const ACT={
   'pwa-dismiss':()=>{S.installDismissed=true;save();render();},
   'pwa-check':()=>{PWA.msg='Verificando';render();checkUpdate(true);},
   'pwa-reload':()=>{location.reload();},
+  'open-som':()=>{sub.ferramentas='afinador';go('ferramentas');setTimeout(()=>{const e=$('#snd-diag');if(e)e.closest('section').scrollIntoView({block:'start'});},60);},
   'snd-test':()=>{sndAsked=true;unlock();DIAG.sig=null;DIAG.clock=null;
     if(!audio()){sndPaint();return;}
     const t0=AC.currentTime,b=new Float32Array(1024),bb=new Uint8Array(1024);let mx=0,n=0;strum(chordMidis('G'),.05);tick(AC.currentTime+.6,2);
@@ -2451,7 +2471,8 @@ const ACT={
     if(svPlaying())grStop(true);if(CS&&!CS.done)csSettle();CS=null;CHI=null;ceNew();CE.name=('Trocas: '+s.title).slice(0,40);CE.chords=names.slice(0,CT_MAX);CE.pats=[PAT[s.pid]?s.pid:L.rhythm];CE.bpm=s.bpm||L.bpm;go('meu');toast('Treino montado com os acordes da música. Ajuste e salve.');},
   easy:el=>{const c=el.dataset.c;if(S.easyOn[c])delete S.easyOn[c];else S.easyOn[c]=true;save();render();},
   'song-open':el=>{const s=S.songs.find(x=>x.id===el.dataset.id);if(!s)return;SV.id=s.id;SV.edit=false;SV.speed=0;sub.evolucao='musicas';go('evolucao');},
-  'song-close':()=>{if(svPlaying())grStop(true);SV.id=null;SV.speed=0;SV.edit=false;render();},
+  'song-close':()=>{if(svPlaying())grStop(true);SV.id=null;SV.speed=0;SV.edit=false;SV.stage=false;render();},
+  'song-stage':()=>{SV.stage=!SV.stage;render();window.scrollTo(0,0);},
   'song-speed':el=>{SV.speed=+el.dataset.v;render();},
   'song-big':()=>{SV.big=!SV.big;render();},
   'song-edit':()=>{if(svPlaying())grStop(true);SV.edit=!SV.edit;SV.speed=0;render();},
@@ -2472,6 +2493,7 @@ document.addEventListener('input',e=>{const id=e.target.id;
   else if(id==='r-target')M.ramp.target=Math.max(40,Math.min(240,+e.target.value||120));
   else if(id==='ce-name'&&CE)CE.name=e.target.value;
   else if(e.target.dataset&&e.target.dataset.songCifra){const s=S.songs.find(x=>x.id===e.target.dataset.songCifra);if(s)s.cifra=e.target.value.slice(0,6000);}});
+document.addEventListener('toggle',e=>{const t=e.target;if(t&&t.id==='hoje-more'&&!REC.on){S.hojeMore=t.open;save();}},true); // lembra se a linha "Mais" de Hoje ficou aberta
 document.addEventListener('change',e=>{const t=e.target;
   if(t.id==='t-a'){T.a=t.value;render();}else if(t.id==='t-b'){T.b=t.value;render();}
   else if(t.id==='p-name'){S.name=t.value.trim().slice(0,30);save();}
@@ -2488,8 +2510,10 @@ function onShow(){
   if(!NATIVE&&awakeOn)awakeSync(true);
 }
 function onHide(){if(SIL&&!SIL.paused)SIL.pause();if(MIC){micStop();render();}if(GR.on)grStop();if(SG.on)sgStop();if(TM.timer)tmStop();}
-function openDeepLink(url){ // atalhos do Android (app.violaodiario://afinador) e links para dentro do app
-  const m=/^[a-z.]+:\/\/([a-z]+)/i.exec(String(url||''));if(!m||!S.onboarded)return;const p=m[1].toLowerCase();
+function openDeepLink(url){ // atalhos (app.violaodiario://afinador, ?ir=afinador) e links do site que abrem no app (App Links): #treino=...
+  url=String(url||'');
+  if(/#treino=/.test(url)){const t=parseTrain(url);if(!t)return;if(!S.custom.some(x=>trainCode(x)===trainCode(t))){S.custom.push(t);save();}ctMsg='Treino recebido: '+ctName(t)+'. Já está nos seus treinos.';if(S.onboarded)go('meu');else toast('Treino recebido. Monte seu perfil e ele estará em Meu treino.');return;}
+  const m=/^[a-z.]+:\/\/([a-z]+)/i.exec(url),ir=/[?&]ir=([a-z]+)/i.exec(url);const p=ir?ir[1].toLowerCase():m?m[1].toLowerCase():'';if(!p||!S.onboarded)return;
   if(p==='afinador'){sub.ferramentas='afinador';go('ferramentas');}
   else if(p==='metronomo'){sub.ferramentas='metronomo';go('ferramentas');}
   else if(p==='trocas'){sub.treinar='trocas';go('treinar');}
@@ -2499,8 +2523,7 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden)onHide();el
 
 render();updPaint();
 {const ir=new URLSearchParams(location.search).get('ir');if(ir){openDeepLink('app://'+ir);try{history.replaceState(null,'',location.pathname);}catch(e){}}} // atalhos do site instalado (manifest.webmanifest)
-{const hs=location.hash;if(/#treino=/.test(hs)){const t=parseTrain(hs);try{history.replaceState(null,'',location.pathname);}catch(e){} // link de treino compartilhado
-  if(t){if(!S.custom.some(x=>trainCode(x)===trainCode(t))){S.custom.push(t);save();}ctMsg='Treino recebido: '+ctName(t)+'. Já está nos seus treinos.';if(S.onboarded)go('meu');else toast('Treino recebido. Monte seu perfil e ele estará em Meu treino.');}else toast('O link de treino veio incompleto.');}}
+{const hs=location.hash;if(/#treino=/.test(hs)){try{history.replaceState(null,'',location.pathname);}catch(e){}if(parseTrain(hs))openDeepLink(hs);else toast('O link de treino veio incompleto.');}} // link de treino compartilhado, aberto no site
 
 if(NATIVE){
   const on=(plugin,ev,fn)=>{try{PLUG[plugin]&&PLUG[plugin].addListener(ev,fn);}catch(e){}};

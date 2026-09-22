@@ -31,6 +31,15 @@
                 <data android:scheme="app.violaodiario" />
             </intent-filter>
 
+            <!-- Links do site (treinos compartilhados, atalhos ?ir=) abrem no app: o Android confere
+                 https://luizneogrid-commits.github.io/.well-known/assetlinks.json (pasta .well-known do repositório) -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="luizneogrid-commits.github.io" android:pathPrefix="/appviolao/" />
+            </intent-filter>
+
             <!-- Atalhos ao segurar o ícone: afinador, metrônomo e trocas -->
             <meta-data
                 android:name="android.app.shortcuts"
