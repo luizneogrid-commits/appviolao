@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Violão Diário</title>
-<meta name="app-version" content="1.16.0">
+<meta name="app-version" content="1.17.0">
 <meta name="description" content="Treino diário de violão: plano por nível, metrônomo, afinador, batidas para tocar junto, acordes e notas.">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#F2EEF0" media="(prefers-color-scheme: light)">
@@ -134,6 +134,7 @@ h3{font-weight:700;font-size:1.02rem;line-height:1.25}
 .rhy span{font-size:.72rem;color:var(--muted);font-weight:600}
 .rhy div.on{background:var(--primary-soft)}
 .rhy div.now{background:var(--brass-soft);box-shadow:inset 0 0 0 2px var(--brass)}
+.rhy div.good{background:var(--ok-soft)}.rhy div.mid{background:var(--brass-soft)}.rhy div.bad{background:var(--primary-soft);box-shadow:inset 0 0 0 2px var(--warn)}.rhy div.miss{opacity:.5} /* resultado do "bater a batida" */
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .progrow{display:flex;gap:6px;margin-top:14px}
 .progrow span{flex:1;text-align:center;border-radius:12px;background:var(--surface-2);padding:10px 0;font-stretch:75%;font-weight:800;font-size:1.5rem;line-height:1}
@@ -500,7 +501,7 @@ function adopt(o){
   ['proven','badges'].forEach(k=>{if(!S[k]||typeof S[k]!=='object'||Array.isArray(S[k]))S[k]={};});
   S.rest=S.rest?1:0;S.startLevel=Math.round(+S.startLevel)||0;S.lastWeekSeen=typeof S.lastWeekSeen==='string'?S.lastWeekSeen:'';
   if(!S.rev||typeof S.rev!=='object'||Array.isArray(S.rev))S.rev={};if(!S.adj||typeof S.adj!=='object')S.adj=null;S.quick=typeof S.quick==='string'?S.quick:'';
-  S.remind=typeof S.remind==='string'?S.remind:'';if(!S.bpmLog||typeof S.bpmLog!=='object')S.bpmLog={};if(!S.stats.timing||typeof S.stats.timing!=='object')S.stats.timing={};
+  S.remind=typeof S.remind==='string'?S.remind:'';if(!S.bpmLog||typeof S.bpmLog!=='object')S.bpmLog={};if(!S.stats.timing||typeof S.stats.timing!=='object')S.stats.timing={};if(!S.stats.strum||typeof S.stats.strum!=='object')S.stats.strum={};
   S.songs.forEach(s=>{if(typeof s.cifra!=='string')s.cifra='';s.tr=Math.max(-11,Math.min(11,Math.round(+s.tr)||0));s.capo=Math.max(0,Math.min(7,Math.round(+s.capo)||0));if(typeof s.pid!=='string')delete s.pid;s.bpm=s.bpm?Math.max(40,Math.min(160,Math.round(+s.bpm)||0)):0;s.per=s.per===2?2:1;}); // tom, capotraste e batida de tocar junto, por música
   if(!S.easyOn||typeof S.easyOn!=='object'||Array.isArray(S.easyOn))S.easyOn={};
   S.font=[0,1,2].includes(+S.font)?+S.font:0;S.theme=['light','dark'].includes(S.theme)?S.theme:'';
@@ -508,7 +509,7 @@ function adopt(o){
   S.tuning=['padrao','meio','dropd'].includes(S.tuning)?S.tuning:'padrao';S.tuneMode=S.tuneMode==='crom'?'crom':'cordas';
   S.lastExport=typeof S.lastExport==='string'?S.lastExport:'';S.backupAsk=typeof S.backupAsk==='string'?S.backupAsk:'';S.recs=Array.isArray(S.recs)?S.recs.filter(r=>r&&typeof r==='object'&&r.id&&r.d):[];
   if(typeof S.seenVer!=='string')S.seenVer='';if(!S.seenVer&&S.onboarded&&!(o&&'seenVer' in o))S.seenVer='1.6.1'; // quem já usava o app antes deste recurso vê as novidades desde então
-  S.level=Math.max(1,Math.min(6,Math.round(+S.level)||1)); // 6 = quantidade de níveis em LEVELS (definido mais abaixo)
+  S.level=Math.max(1,Math.min(9,Math.round(+S.level)||1)); // 9 = quantidade de níveis em LEVELS (definido mais abaixo)
   if(!S.ear||typeof S.ear!=='object')S.ear={ok:0,total:0};
 }
 adopt(null);
@@ -604,7 +605,12 @@ const CHORDS=[
  {n:'C/G',g:'baixo',f:[3,3,2,0,1,0],d:[3,4,2,0,1,0]},
  {n:'G/B',g:'baixo',f:[-1,2,0,0,3,3],d:[0,1,0,0,3,4]},
  {n:'Am/G',g:'baixo',f:[3,0,2,2,1,0],d:[4,0,2,3,1,0]},
- {n:'E/G#',g:'baixo',f:[4,-1,2,1,0,0],d:[4,0,2,1,0,0]}
+ {n:'E/G#',g:'baixo',f:[4,-1,2,1,0,0],d:[4,0,2,1,0,0]},
+ {n:'E5',g:'power',f:[0,2,2,-1,-1,-1],d:[0,1,3,0,0,0]}, // power chords: tônica e quinta, cordas agudas abafadas
+ {n:'A5',g:'power',f:[-1,0,2,2,-1,-1],d:[0,0,1,3,0,0]},
+ {n:'D5',g:'power',f:[-1,-1,0,2,3,-1],d:[0,0,0,1,3,0]},
+ {n:'G5',g:'power',f:[3,5,5,-1,-1,-1],d:[1,3,4,0,0,0]},
+ {n:'C5',g:'power',f:[-1,3,5,5,-1,-1],d:[0,1,3,4,0,0]}
 ];
 const CH=Object.fromEntries(CHORDS.map(c=>[c.n,c]));
 const OPEN=[40,45,50,55,59,64];
@@ -657,14 +663,27 @@ const LEVELS=[
  {name:'Escalas e primeiros solos',desc:'Pentatônica, escala maior e ligados.',chords:['Cm','Gm'],pairs:[['Cm','Gm'],['Bm','F#m'],['F','Bb']],bpm:80,rhythm:'abafada',
   tech:['Pentatônica de Lá menor na casa 5. Da 6ª para a 1ª corda: casas 5-8, 5-7, 5-7, 5-7, 5-8, 5-8. Suba e desça.','Escala de Dó maior na primeira posição, falando o nome de cada nota.','Ligados entre as casas 5 e 7 em cada corda: martele para subir, puxe para descer.'],
   prog:[['Am','G','F','E'],['Am','Dm','E7','Am'],['Em','C','G','D']],
-  skills:['Toco a pentatônica de Lá menor a 80 BPM','Toco a escala de Dó maior de cor','Improviso 1 minuto sobre Am com a pentatônica','Faço ligados com som claro']}
+  skills:['Toco a pentatônica de Lá menor a 80 BPM','Toco a escala de Dó maior de cor','Improviso 1 minuto sobre Am com a pentatônica','Faço ligados com som claro']},
+ {name:'Ritmos brasileiros',desc:'Bossa nova, samba, xote e baião na mão direita.',chords:['Am7','Dm7','G7','Cmaj7','E7','D7'],pairs:[['Am7','Dm7'],['Dm7','G7'],['G7','Cmaj7'],['C','G7'],['G','D7']],bpm:80,rhythm:'bossa',
+  tech:['Bossa nova sobre um acorde só: polegar no baixo, os três dedos beliscando juntos fora do tempo forte. Conte “1 e 2 e 3 e 4 e” em voz alta.','Samba é a bossa mais curta e mais rápida: comece a 80 BPM e suba 4 por dia, sem deixar a pinça arrastar.','Xote e baião vivem do baixo alternado: toque só os baixos (polegar) por um minuto antes de somar a batida.'],
+  prog:[['Am7','Dm7','G7','Cmaj7'],['C','Am','Dm','G7'],['G','C','D7','G']],
+  skills:['Toco a bossa nova a 80 BPM por 1 minuto','Toco o samba a 96 BPM por 1 minuto','Toco o xote a 96 BPM por 1 minuto','Toco o baião a 100 BPM sem perder a síncope']},
+ {name:'Baixos, power chords e pestanas móveis',desc:'Baixos que andam, power chords e o desenho que percorre o braço.',chords:['D/F#','G/B','C/G','E/G#','E5','A5','D5','G5','C5'],pairs:[['G','D/F#'],['C','G/B'],['E5','A5'],['A5','D5'],['F','Gm'],['Bb','Bm']],bpm:96,rhythm:'rock',
+  tech:['G, D/F#, Em: o baixo desce Sol, Fá#, Mi. Toque só a corda mais grave de cada acorde e ouça a linha andar.','Power chords: duas ou três cordas, a lateral da mão direita abafa as agudas. Oito para baixo, curto e seco.','O F é o E uma casa acima; o Gm é o Em três casas acima. Suba o desenho casa por casa, dizendo o nome do acorde.'],
+  prog:[['G','D/F#','Em','C'],['E5','A5','D5','A5'],['F','Bb','Gm','C']],
+  skills:['Toco G, D/F#, Em e C com o baixo descendo limpo','Toco power chords a 100 BPM com as cordas agudas abafadas','Toco F, Gm e Bb com a pestana do E e do A, sem soltar','Troco Bb e Bm 20 vezes por minuto']},
+ {name:'Cor, tom e ouvido',desc:'Sus e add9, o tom certo para cantar e o ouvido que dispensa cifra.',chords:['Asus2','Asus4','Dsus2','Dsus4','Esus4','A7sus4','Cadd9'],pairs:[['A','Asus4'],['D','Dsus4'],['C','Cadd9'],['Em7','Cadd9'],['G','C']],bpm:84,rhythm:'colcheias',
+  tech:['Toque A, Asus4, A, Asus2 em loop: a nota que muda é só uma. Ouça a tensão entrar e sair.','Pegue uma cifra sua, suba meio tom com “Tom” e toque os acordes novos. Se aparecer pestana, aceite a sugestão de capotraste.','Treinar, Ouvido: dez progressões e dez notas cantadas. Preste atenção no baixo de cada acorde: é ele que conta a história.'],
+  prog:[['Em7','G','Dsus4','A7sus4'],['C','Am','F','G'],['D','Dsus4','D','Dsus2']],
+  skills:['Toco sus4 e add9 no lugar certo da música','Mudo o tom de uma música com capotraste ou transposição','Acerto 20 perguntas de ouvido','Gravo 30 segundos e ouço com orelha de músico']}
 ];
 const WARM=['Alongue dedos e punhos. Depois toque cada corda solta, da 6ª à 1ª, ouvindo se está afinada.','Um dedo por casa nas casas 1 a 4, corda por corda, da 6ª até a 1ª. Devagar e sem tensão no ombro.','Alterne indicador e médio da mão direita na 1ª corda solta, no tempo do metrônomo.'];
 const SPLITS={10:[1,3,3,3],15:[2,4,4,5],20:[2,4,4,4,6],30:[3,6,6,6,9]};
 
 /* ---------- roteiro de aprendizagem ---------- */
 // Quem é a pessoa em cada nível (usado na primeira tela e no Perfil).
-const OB=[['Nunca toquei','Começo do zero: postura, afinação, Em e Am.'],['Sei um ou dois acordes','Hora de aprender C, G, D e companhia.'],['Toco acordes, mas troco devagar','Foco em trocas rápidas e batidas.'],['Quero vencer a pestana','F, Bm e outras pestanas.'],['Já faço pestana e quero dedilhar','Mão direita: P-I-M-A e arpejos.'],['Quero escalas e primeiros solos','Pentatônica, escala maior e ligados.']];
+const OB=[['Nunca toquei','Começo do zero: postura, afinação, Em e Am.'],['Sei um ou dois acordes','Hora de aprender C, G, D e companhia.'],['Toco acordes, mas troco devagar','Foco em trocas rápidas e batidas.'],['Quero vencer a pestana','F, Bm e outras pestanas.'],['Já faço pestana e quero dedilhar','Mão direita: P-I-M-A e arpejos.'],['Quero escalas e primeiros solos','Pentatônica, escala maior e ligados.'],
+ ['Quero os ritmos brasileiros','Bossa nova, samba, xote e baião.'],['Quero baixos, power chords e pestanas móveis','D/F#, E5, o F que vira G e o Bb que vira Cm.'],['Quero cor, tom certo e ouvido','Sus, add9, capotraste, transposição e tirar de ouvido.']];
 // Cada nível tem 4 semanas. A meta da semana é a habilidade de mesmo número em LEVELS[n].skills.
 // O treino diário de Hoje usa a técnica, os pares, a batida e a progressão da semana atual.
 const ROAD=[
@@ -691,22 +710,40 @@ const ROAD=[
  [{t:'Pentatônica de Lá menor',tech:['Pentatônica de Lá menor na casa 5. Da 6ª para a 1ª corda: casas 5-8, 5-7, 5-7, 5-7, 5-8, 5-8. Suba e desça, uma nota por clique, a 60 BPM.','Suba o metrônomo 4 BPM por dia até tocar a escala limpa a 80 BPM.'],pairs:[['Am','G'],['Am','E']],pat:'abafada',bpm:80,progs:[['Am','G','F','E'],['Am','Dm','E7','Am']],scale:{pc:9,sc:'penta',pos:5}},
   {t:'Escala de Dó maior',tech:['Escala de Dó maior na primeira posição, falando o nome de cada nota. Veja as notas em Acordes, Notas.','Toque a escala de trás para a frente e de cor, sem olhar o braço.'],pairs:[['C','G'],['Em','C']],pat:'abafada',bpm:80,progs:[['C','G','Am','F'],['Em','C','G','D']],scale:{pc:0,sc:'maior',pos:0}},
   {t:'Improviso sobre Am',tech:['Deixe o app tocar Am, G, F, E em loop (Meu treino) e improvise com a pentatônica de Lá menor por 1 minuto. Poucas notas, bem colocadas.','Termine cada frase na nota Lá: é a tônica, e a frase soa concluída.'],pairs:[['Am','F'],['F','E']],pat:'abafada',bpm:80,progs:[['Am','G','F','E']],scale:{pc:9,sc:'penta',pos:5}},
-  {t:'Ligados e pestanas menores',tech:['Ligados entre as casas 5 e 7 em cada corda: martele para subir, puxe para descer. Só a mão esquerda faz a segunda nota soar.','Monte o Cm e o Gm: o desenho do Am e do Em com pestana na casa 3. Toque corda por corda.'],pairs:[['Cm','Gm'],['Bm','F#m'],['F','Bb']],pat:'abafada',bpm:80,progs:[['Cm','Gm','Bb','F'],['Am','G','F','E']],scale:{pc:9,sc:'natural',pos:5}}]
+  {t:'Ligados e pestanas menores',tech:['Ligados entre as casas 5 e 7 em cada corda: martele para subir, puxe para descer. Só a mão esquerda faz a segunda nota soar.','Monte o Cm e o Gm: o desenho do Am e do Em com pestana na casa 3. Toque corda por corda.'],pairs:[['Cm','Gm'],['Bm','F#m'],['F','Bb']],pat:'abafada',bpm:80,progs:[['Cm','Gm','Bb','F'],['Am','G','F','E']],scale:{pc:9,sc:'natural',pos:5}}],
+ [{t:'Bossa nova: a pinça',tech:['Polegar no baixo (tônica no 1, a corda seguinte no 3) e os três dedos beliscando as cordas agudas juntos, fora do tempo forte. Sobre um acorde só, contando em voz alta.','Toque a bossa junto com o app sobre Am7 e Dm7, a 72 BPM. O balanço mora no silêncio: não preencha os tempos vazios.'],pairs:[['Am7','Dm7'],['Dm7','G7']],pat:'bossa',bpm:72,progs:[['Am7','Dm7','G7','Cmaj7']]},
+  {t:'Samba: curto e rápido',tech:['A mesma pinça, mais acordes por compasso e pinças curtas como um pandeiro. Comece a 80 BPM.','Suba 4 BPM por dia até 96, só se a pinça continuar limpa. Samba rápido é samba limpo acelerado.'],pairs:[['C','Am'],['Dm','G7'],['G7','Cmaj7']],pat:'samba',bpm:80,progs:[['C','Am','Dm','G7'],['Am7','Dm7','G7','Cmaj7']]},
+  {t:'Xote: o balanço do forró',tech:['Baixo no 1 e no 3, batida para baixo e para cima no 2 e no 4, com a subida extra no “3 e”. Toque só os baixos por um minuto antes de somar a batida.','Xote sobre G, C e D7 (o mundo de Asa Branca), a 88 BPM, trocando de acorde sem parar a mão direita.'],pairs:[['G','C'],['C','D7'],['G','D7']],pat:'xote',bpm:88,progs:[['G','C','D7','G'],['C','G','D7','G']]},
+  {t:'Baião e a síncope',tech:['O baixo do “2 e” antecipa o tempo 3: conte “1, 2 e, 3, 4” batendo na perna antes de pegar o violão.','Baião sobre Am, G e E7 a 92 BPM. A abafada no 4 marca o pulso; se ela sumir, o baião vira marcha.'],pairs:[['Am','G'],['Am','E7'],['Dm','Am']],pat:'baiao',bpm:92,progs:[['Am','G','Am','E7'],['Am','Dm','E7','Am']]}],
+ [{t:'Baixos que andam',tech:['G, D/F#, Em, C: o baixo desce Sol, Fá#, Mi, Dó. Toque só a corda mais grave de cada acorde no tempo 1 e ouça a linha andar.','O D/F# pede o dedo 2 (ou o polegar por cima) na 6ª corda, casa 2. Monte e desmonte dez vezes sem tocar.'],pairs:[['G','D/F#'],['D/F#','Em'],['C','G/B'],['G/B','Am']],pat:'pima',bpm:66,progs:[['G','D/F#','Em','C'],['C','G/B','Am','F'],['E','E/G#','A','B7']]},
+  {t:'Power chords',tech:['E5, A5 e D5: duas ou três cordas, o resto abafado pela lateral da mão direita. Oito para baixo, curto e seco.','G5 e C5 são o E5 e o A5 subindo pelo braço: o mesmo desenho, três casas acima. Ande com ele até a casa 7.'],pairs:[['E5','A5'],['A5','D5'],['G5','C5']],pat:'rock',bpm:96,progs:[['E5','A5','D5','A5'],['G5','C5','D5','G5']]},
+  {t:'O desenho do E anda',tech:['F é o E uma casa acima; Gm é o Em três casas acima. Suba o desenho casa por casa, dizendo o nome de cada acorde (F, F#, G…).','Troque F e Gm por um minuto, contando as trocas. Deixe a pestana cair primeiro e os outros dedos logo atrás.'],pairs:[['F','Gm'],['F#m','F'],['G5','F']],pat:'colcheias',bpm:84,progs:[['F','Bb','Gm','C'],['Gm','F','Bb','F']]},
+  {t:'O desenho do A anda',tech:['Bb é o A uma casa acima; Bm e Cm são o Am duas e três casas acima. Monte os três em sequência sem tocar, só olhando para onde vai o dedo 1.','Toque Bb, Cm, F, Bb com a batida baixo e batida. Se a pestana falhar, siga no tempo e volte a ela depois.'],pairs:[['Bb','Bm'],['Bm','Cm'],['Bb','Cm']],pat:'baixobatida',bpm:84,progs:[['Bb','Cm','F','Bb'],['Bm','F#m','Bm','A']]}],
+ [{t:'Suspensos e add9',tech:['A, Asus4, A, Asus2 em loop: só uma nota muda. Ouça a tensão entrar e sair; o sus pede para voltar.','Em7, G, Dsus4, A7sus4 (o mundo de Wonderwall) com desce e sobe, sem parar a mão direita.'],pairs:[['A','Asus4'],['D','Dsus4'],['C','Cadd9'],['Em7','Cadd9']],pat:'colcheias',bpm:84,progs:[['Em7','G','Dsus4','A7sus4'],['C','Cadd9','G','Dsus2']]},
+  {t:'Tom e capotraste',tech:['Em Músicas, pegue uma cifra sua e suba meio tom com “Tom”. Toque os acordes novos; se aparecer pestana, aceite a sugestão de capotraste.','Capotraste na casa 2 com os desenhos de G, C e D: o som sai em Lá. Cante junto e escolha o tom em que a sua voz fica confortável.'],pairs:[['G','C'],['D','A'],['C','G']],pat:'baixocima',bpm:84,progs:[['G','C','D','G'],['A','D','E','A']]},
+  {t:'Tirar de ouvido',tech:['Treinar, Ouvido, Progressão: dez acertos. Preste atenção no baixo de cada acorde, é ele que conta a história.','Treinar, Ouvido, Cantar: dez notas. Cantar o que se ouve é o caminho para tirar música sem cifra.'],pairs:[['C','Am'],['F','G'],['G','Em']],pat:'pop',bpm:88,progs:[['C','Am','F','G'],['G','Em','C','D']]},
+  {t:'Sua música, seu jeito',tech:['Escolha uma música, ache o tom em que você canta bem (Tom e capotraste) e toque inteira com a batida que combina com ela.','Grave 30 segundos em Hoje e ouça no dia seguinte: o que já soa como música e o que ainda pede repetição.'],pairs:[['Dsus4','D'],['Asus2','A'],['G','Cadd9']],pat:'pimami',bpm:76,progs:[['D','Dsus4','D','Dsus2'],['A','Asus2','A','Asus4'],['G','Cadd9','Em7','Dsus4']]}]
 ];
 const ROAD_TOTAL=ROAD.reduce((a,l)=>a+l.length,0);
 // Metas que o app consegue comprovar pelos próprios registros (nível.semana). As outras ficam por autoavaliação.
 const PROOF={'1.0':{t:'tuned',n:6},'1.2':{t:'play',pat:'baixo',bpm:60},'1.3':{t:'changes',pair:['Em','Am'],n:15},
  '2.1':{t:'changes',pair:['G','C'],n:20},'2.2':{t:'play',pat:'baixocima',bpm:40},'2.3':{t:'prog4'},
  '3.0':{t:'changes',n:30},'3.1':{t:'play',pat:'pop',bpm:80},'3.3':{t:'songs',n:2},
- '4.2':{t:'changes',pair:['C','F'],n:20},'5.2':{t:'play',pat:'pimami',bpm:80,sec:120}};
+ '4.2':{t:'changes',pair:['C','F'],n:20},'5.2':{t:'play',pat:'pimami',bpm:80,sec:120},
+ '7.0':{t:'play',pat:'bossa',bpm:80},'7.1':{t:'play',pat:'samba',bpm:96},'7.2':{t:'play',pat:'xote',bpm:96},'7.3':{t:'play',pat:'baiao',bpm:100},
+ '8.1':{t:'play',pat:'rock',bpm:100},'8.3':{t:'changes',pair:['Bb','Bm'],n:20},
+ '9.1':{t:'capo'},'9.2':{t:'ear',n:20},'9.3':{t:'rec'}};
 function proofOK(k){const p=PROOF[k];if(!p)return false;const st=S.stats;
   if(p.t==='tuned')return (st.tuned||0)>=p.n;
+  if(p.t==='ear')return S.ear.total>=p.n&&S.ear.ok/S.ear.total>=.7;
+  if(p.t==='capo')return S.songs.some(s=>s.tr||s.capo);
+  if(p.t==='rec')return S.recs.length>0;
   if(p.t==='changes')return p.pair?bestOf(pairKey(p.pair[0],p.pair[1]))>=p.n:Object.keys(S.changes).some(x=>bestOf(x)>=p.n);
   if(p.t==='play'){const q=(st.play||{})[p.pat];return !!q&&(q[p.sec||60]||0)>=p.bpm;}
   if(p.t==='prog4')return !!st.prog4;
   if(p.t==='songs')return S.songs.filter(s=>s.status==='devagar'||s.status==='dominada').length>=p.n;
   return false;}
-function proofText(p){if(p.t==='tuned')return 'afinar as seis cordas pelo afinador';if(p.t==='changes')return 'registrar '+p.n+' trocas por minuto'+(p.pair?' com '+p.pair[0]+' e '+p.pair[1]:' com qualquer par')+' em Treinar, Trocas';if(p.t==='play')return 'tocar junto com a batida “'+PAT[p.pat].name+'” a '+p.bpm+' BPM por '+((p.sec||60)===60?'1 minuto':'2 minutos');if(p.t==='prog4')return 'tocar junto uma progressão de 4 acordes por 1 minuto';if(p.t==='songs')return 'ter '+p.n+' músicas em “Toco devagar” ou “Dominada”';return '';}
+function proofText(p){if(p.t==='tuned')return 'afinar as seis cordas pelo afinador';if(p.t==='changes')return 'registrar '+p.n+' trocas por minuto'+(p.pair?' com '+p.pair[0]+' e '+p.pair[1]:' com qualquer par')+' em Treinar, Trocas';if(p.t==='play')return 'tocar junto com a batida “'+PAT[p.pat].name+'” a '+p.bpm+' BPM por '+((p.sec||60)===60?'1 minuto':'2 minutos');if(p.t==='prog4')return 'tocar junto uma progressão de 4 acordes por 1 minuto';if(p.t==='songs')return 'ter '+p.n+' músicas em “Toco devagar” ou “Dominada”';if(p.t==='ear')return 'acertar '+p.n+' perguntas no treino de ouvido, com 70% de acerto';if(p.t==='capo')return 'mudar o tom ou pôr capotraste numa música em Evolução, Músicas';if(p.t==='rec')return 'gravar 30 segundos em Hoje';return '';}
 const skillDone=k=>!!S.skills[k]||proofOK(k);
 const skillsDone=n=>LEVELS[n-1].skills.filter((_,j)=>skillDone(n+'.'+j)).length;
 const weekOf=n=>{const i=LEVELS[n-1].skills.findIndex((_,j)=>!skillDone(n+'.'+j));return i<0?ROAD[n-1].length-1:i;}; // primeira meta não cumprida
@@ -1065,7 +1102,7 @@ function ctBuilder(){
   let h='<section class="panel ct"><h2>'+(e.id?'Editar treino':'Monte seu treino')+'</h2><p class="sub">Escolha os acordes e as batidas. O app toca junto, um acorde por compasso, e o tempo entra na sua sequência de dias. Os treinos ficam salvos, cada um com o seu histórico.</p>'+(e.chords.length||e.pats.length?'':'<button class="link" data-act="ce-suggest">Começar pela sugestão do seu nível</button>')+'</section>';
   h+='<section class="panel ct"><div class="between"><h2>1. Acordes</h2><span class="muted small">'+e.chords.length+' de '+CT_MAX+'</span></div><p class="sub small">Toque na ordem em que quer tocar; pode repetir. Para tirar, toque no acorde da sequência.</p>';
   h+='<div class="seq">'+(e.chords.length?e.chords.map((c,i)=>'<button class="chip on" data-act="ce-del" data-i="'+i+'" aria-label="Tirar '+esc(c)+', posição '+(i+1)+'">'+esc(c)+' <span aria-hidden="true">×</span></button>').join(''):'<span class="muted small">Nenhum acorde ainda.</span>')+'</div>';
-  [['abertos','Abertos'],['setima','Com sétima'],['pestana','Pestana']].forEach(g=>{h+='<p class="grp">'+g[1]+'</p><div class="chips">'+CHORDS.filter(c=>c.g===g[0]).map(c=>'<button class="chip" data-act="ce-add" data-c="'+esc(c.n)+'"'+(full?' disabled':'')+'>'+esc(c.n)+'</button>').join('')+'</div>';});
+  [['abertos','Abertos'],['setima','Com sétima'],['pestana','Pestana'],['sus','Sus e add9'],['baixo','Com baixo'],['power','Power chords']].forEach(g=>{h+='<p class="grp">'+g[1]+'</p><div class="chips">'+CHORDS.filter(c=>c.g===g[0]).map(c=>'<button class="chip" data-act="ce-add" data-c="'+esc(c.n)+'"'+(full?' disabled':'')+'>'+esc(c.n)+'</button>').join('')+'</div>';});
   if(uniq.length)h+='<div class="cmini">'+uniq.map(c=>'<button class="chord" data-act="chord-play" data-c="'+esc(c)+'" aria-label="Ouvir '+esc(c)+'">'+chordBox(c)+'</button>').join('')+'</div><p class="muted small" style="margin-top:6px">Toque num diagrama para ouvir o acorde.</p><button class="link" data-act="th-open" data-c="'+esc(uniq[0])+'">Entenda como esses acordes são formados</button>';
   h+='</section>';
   h+='<section class="panel ct"><h2>2. Batidas</h2><p class="sub small">Escolha uma ou mais. O tempo do treino é dividido entre elas, na ordem em que você escolher.</p><div class="chips" style="margin-top:12px">'+PATTERNS.map(p=>{const k=e.pats.indexOf(p.id);return '<button class="chip" data-act="ce-pat" data-v="'+p.id+'" aria-pressed="'+(k>=0)+'">'+(k>=0?(k+1)+'. ':'')+esc(p.name)+'</button>';}).join('')+'</div>'+e.pats.map(id=>'<div class="patprev"><b>'+esc(PAT[id].name)+'</b>'+rhythmHTML(PAT[id])+'</div>').join('')+'</section>';
@@ -1238,7 +1275,7 @@ function singTick(){
   let d=((midi-E.q.midis[0])%12+12)%12;if(d>6)d-=12;const cents=d*100; // distância até a nota, em qualquer oitava
   if(nd)nd.style.left=(50+Math.max(-50,Math.min(50,cents/2)))+'%';
   if(Math.abs(cents)<=35){MIC.hold++;msg.textContent=MIC.hold<6?'Chegou. Segure a nota…':'Certo!';
-    if(MIC.hold===6){E.ans='ok';E.ok++;E.total++;S.ear.ok++;S.ear.total++;save();buzz(20);render();}}
+    if(MIC.hold===6){E.ans='ok';E.ok++;E.total++;S.ear.ok++;S.ear.total++;save();buzz(20);checkProofs();render();}}
   else{MIC.hold=0;msg.textContent=cents<0?'Está grave: suba um pouco.':'Está agudo: desça um pouco.';}
 }
 
@@ -1280,18 +1317,30 @@ function awakeSync(force){
 
 /* ---------- no tempo: toque junto com o clique e veja se adianta ou atrasa ---------- */
 // 4 cliques de preparação e 16 tempos medidos. Cada toque é comparado com o tempo mais próximo, no relógio do áudio.
-const TM={phase:'idle',bpm:80,t0:0,i:0,timer:null,taps:[],res:null},TM_COUNT=4,TM_BEATS=16;
-function tmStart(){const ac=audio();if(!ac)return;grStop(true);if(M.on)mStop();TM.phase='count';TM.taps=[];TM.res=null;TM.i=0;TM.t0=ac.currentTime+.3;TM.timer=setInterval(tmSched,25);render();awakeSync();}
+// Dois modos: "pulso" (um toque por clique, 16 tempos) e "batida" (um toque em cada seta da batida, 4 compassos; o app
+// compara cada toque com a célula mais próxima e mostra, célula por célula, onde adianta ou atrasa).
+const TM={phase:'idle',bpm:80,t0:0,i:0,timer:null,taps:[],res:null,mode:'pulso',pid:null,slots:[],extra:0},TM_COUNT=4,TM_BEATS=16,TM_BARS=4;
+const tmPid=()=>PAT[TM.pid]?TM.pid:ROAD[S.level-1][weekOf(S.level)].pat;
+const tmBeats=()=>TM.mode==='batida'?TM_BARS*PAT[tmPid()].cells.length/2:TM_BEATS;
+function tmStart(){const ac=audio();if(!ac)return;grStop(true);if(M.on)mStop();TM.phase='count';TM.taps=[];TM.res=null;TM.i=0;TM.extra=0;TM.slots=[];TM.t0=ac.currentTime+.3;
+  if(TM.mode==='batida'){const P=PAT[tmPid()],n=P.cells.length,per=60/TM.bpm;for(let b=0;b<TM_BARS;b++)P.cells.forEach((c,i)=>{if(c)TM.slots.push({t:TM.t0+(TM_COUNT+b*n/2+i/2)*per,i,b,d:null});});}
+  TM.timer=setInterval(tmSched,25);render();awakeSync();}
 function tmStop(){clearInterval(TM.timer);TM.timer=null;TM.phase='idle';render();awakeSync();}
 function tmSched(){
-  if(!AC)return;const per=60/TM.bpm,total=TM_COUNT+TM_BEATS;
-  while(TM.i<total&&TM.t0+TM.i*per<AC.currentTime+.12){const i=TM.i,t=TM.t0+i*per;tick(t,i<TM_COUNT?2:(i-TM_COUNT)%4===0?1:0,.9);
-    setTimeout(()=>{if(!TM.timer)return;if(i===TM_COUNT)TM.phase='run';const el=$('#tm-beat');if(el)el.textContent=i<TM_COUNT?'Prepare: '+(TM_COUNT-i):String(i-TM_COUNT+1);document.querySelectorAll('.dots i').forEach((d,k)=>d.classList.toggle('on',k===i%4));},Math.max(0,(t-AC.currentTime)*1000));
+  if(!AC)return;const per=60/TM.bpm,total=TM_COUNT+tmBeats(),n=TM.mode==='batida'?PAT[tmPid()].cells.length:0;
+  while(TM.i<total&&TM.t0+TM.i*per<AC.currentTime+.12){const i=TM.i,t=TM.t0+i*per;tick(t,i<TM_COUNT?2:(i-TM_COUNT)%(n?n/2:4)===0?1:0,.9);
+    setTimeout(()=>{if(!TM.timer)return;if(i===TM_COUNT)TM.phase='run';const el=$('#tm-beat');if(el)el.textContent=i<TM_COUNT?'Prepare: '+(TM_COUNT-i):String((i-TM_COUNT)%(n?n/2:4)+1);document.querySelectorAll('.dots i').forEach((d,k)=>d.classList.toggle('on',k===i%4));},Math.max(0,(t-AC.currentTime)*1000));
+    if(n&&i>=TM_COUNT)[0,1].forEach(h=>{const cell=((i-TM_COUNT)*2+h)%n;setTimeout(()=>{if(!TM.timer)return;document.querySelectorAll('#tm-grid>div').forEach((el,k)=>el.classList.toggle('now',k===cell));},Math.max(0,(t+h*per/2-AC.currentTime)*1000));}); // acende a célula da vez
     TM.i++;}
   if(TM.i>=total&&AC.currentTime>TM.t0+(total-.5)*per+.4)tmFinish();
 }
 function tmTap(){
   if(!AC||!TM.timer)return;const per=60/TM.bpm,now=AC.currentTime,idx=Math.round((now-TM.t0)/per);
+  if(TM.mode==='batida'){let best=null;TM.slots.forEach(s=>{if(best==null||Math.abs(now-s.t)<Math.abs(now-best.t))best=s;});
+    if(!best||best.d!=null||Math.abs(now-best.t)>per/4){TM.extra++;return;} // longe de qualquer seta, ou seta já tocada
+    best.d=Math.round((now-best.t)*1000);TM.taps.push({i:best.i,d:best.d});
+    const el=$('#tm-last');if(el){el.textContent=(best.d>0?'+':'')+best.d+' ms';el.className='num tm-last '+(Math.abs(best.d)<=40?'good':Math.abs(best.d)<=90?'mid':'bad');}
+    buzz(8);return;}
   if(idx<TM_COUNT||idx>=TM_COUNT+TM_BEATS||TM.taps.some(x=>x.i===idx))return; // só os tempos medidos, um toque por tempo
   const d=Math.round((now-(TM.t0+idx*per))*1000);TM.taps.push({i:idx,d});
   const el=$('#tm-last');if(el){el.textContent=(d>0?'+':'')+d+' ms';el.className='num tm-last '+(Math.abs(d)<=40?'good':Math.abs(d)<=90?'mid':'bad');}
@@ -1301,7 +1350,10 @@ function tmFinish(){
   clearInterval(TM.timer);TM.timer=null;TM.phase='done';const ds=TM.taps.map(x=>x.d),n=ds.length;
   const mean=n?Math.round(ds.reduce((a,b)=>a+b,0)/n):0,sd=n?Math.round(Math.sqrt(ds.reduce((a,b)=>a+(b-mean)*(b-mean),0)/n)):0,hits=ds.filter(d=>Math.abs(d)<=60).length;
   TM.res={mean,sd,hits,n};
-  if(n>=8){const t=S.stats.timing,k=String(TM.bpm);if(t[k]==null||sd<t[k]){t[k]=sd;TM.res.record=true;}addMinutes(1);save();}
+  if(TM.mode==='batida'){const P=PAT[tmPid()],total=TM.slots.length,cells=P.cells.map((c,i)=>{if(!c)return null;const cd=TM.taps.filter(x=>x.i===i).map(x=>x.d);return cd.length?Math.round(cd.reduce((a,b)=>a+b,0)/cd.length):null;});
+    const score=total?Math.round(hits/total*100):0;Object.assign(TM.res,{total,missed:total-n,extra:TM.extra,cells,score});
+    if(n>=4){const k=tmPid();if((S.stats.strum[k]||0)<score){S.stats.strum[k]=score;TM.res.record=true;}addMinutes(1);save();}}
+  else if(n>=8){const t=S.stats.timing,k=String(TM.bpm);if(t[k]==null||sd<t[k]){t[k]=sd;TM.res.record=true;}addMinutes(1);save();}
   awakeSync();render();
 }
 
@@ -1390,14 +1442,14 @@ function spell(L,rootPc,steps,semis){ // nota a "steps" letras e "semis" semiton
   return {pc,semis,letter:N+acc,pt:LPT[N]+acc};
 }
 function chordInfo(n){
-  const m=/^([A-G])([#b]?)(m(?!aj))?(maj7|7)?(sus2|sus4|add9)?(?:\/([A-G])([#b]?))?$/.exec(n);if(!m||!CH[n])return null;
-  const L=m[1],rootPc=(LPC[LET.indexOf(L)]+(m[2]==='#'?1:m[2]==='b'?11:0))%12,minor=!!m[3],sev=m[4]||'',ext=m[5]||'';
+  const m=/^([A-G])([#b]?)(m(?!aj))?(maj7|7|5)?(sus2|sus4|add9)?(?:\/([A-G])([#b]?))?$/.exec(n);if(!m||!CH[n])return null;
+  const L=m[1],rootPc=(LPC[LET.indexOf(L)]+(m[2]==='#'?1:m[2]==='b'?11:0))%12,minor=!!m[3],pow=m[4]==='5',sev=pow?'':m[4]||'',ext=m[5]||'';
   const third=ext==='sus2'?Object.assign({r:'2M'},spell(L,rootPc,1,2)):ext==='sus4'?Object.assign({r:'4J'},spell(L,rootPc,3,5)):Object.assign({r:minor?'3m':'3M'},spell(L,rootPc,2,minor?3:4)); // suspenso: a terça dá lugar à segunda ou à quarta
-  const tones=[Object.assign({r:'T'},spell(L,rootPc,0,0)),third,Object.assign({r:'5J'},spell(L,rootPc,4,7))];
+  const tones=pow?[Object.assign({r:'T'},spell(L,rootPc,0,0)),Object.assign({r:'5J'},spell(L,rootPc,4,7))]:[Object.assign({r:'T'},spell(L,rootPc,0,0)),third,Object.assign({r:'5J'},spell(L,rootPc,4,7))]; // power chord: só tônica e quinta
   if(sev)tones.push(Object.assign({r:sev==='maj7'?'7M':'7m'},spell(L,rootPc,6,sev==='maj7'?11:10)));
   if(ext==='add9')tones.push(Object.assign({r:'9M'},spell(L,rootPc,8,14))); // a segunda, uma oitava acima
-  let qual=ext==='sus2'?'suspenso na segunda (sus2)':ext==='sus4'?(sev?'com sétima, suspenso na quarta (7sus4)':'suspenso na quarta (sus4)'):ext==='add9'?'maior com nona (add9)':minor?(sev?'menor com sétima':'menor'):sev==='maj7'?'com sétima maior':sev?'com sétima':'maior';
-  const info={n,sym:[m[1]+m[2],m[3]||'',sev,ext],rootPc,tones,qual};
+  let qual=pow?'power chord (tônica e quinta, sem terça)':ext==='sus2'?'suspenso na segunda (sus2)':ext==='sus4'?(sev?'com sétima, suspenso na quarta (7sus4)':'suspenso na quarta (sus4)'):ext==='add9'?'maior com nona (add9)':minor?(sev?'menor com sétima':'menor'):sev==='maj7'?'com sétima maior':sev?'com sétima':'maior';
+  const info={n,sym:[m[1]+m[2],m[3]||'',m[4]||'',ext],rootPc,tones,qual};
   if(m[6]){const bpc=(LPC[LET.indexOf(m[6])]+(m[7]==='#'?1:m[7]==='b'?11:0))%12,bt=tones.find(t=>t.pc===bpc);info.bass={letter:m[6]+m[7],pt:LPT[m[6]]+m[7],pc:bpc,r:bt?bt.r:'?'};info.qual+=', com o baixo em '+info.bass.pt;} // D/F#: a barra diz qual nota fica no baixo
   return info;
 }
@@ -1437,6 +1489,7 @@ function cifraTxt(ci){
   if(mm)p.push('<b>m</b> = menor (terça menor)');
   if(sev==='7')p.push('<b>7</b> = sétima menor acrescentada');
   if(sev==='maj7')p.push('<b>maj7</b> = sétima maior acrescentada (também se escreve 7M)');
+  if(sev==='5')p.push('<b>5</b> = power chord: só a tônica e a quinta, sem terça, nem maior nem menor');
   if(ext==='sus2')p.push('<b>sus2</b> = suspenso: a terça sai e entra a segunda maior');
   if(ext==='sus4')p.push('<b>sus4</b> = suspenso: a terça sai e entra a quarta justa');
   if(ext==='add9')p.push('<b>add9</b> = acrescenta a nona maior (a segunda, uma oitava acima) e mantém a terça');
@@ -1573,17 +1626,27 @@ function scaleBox(notes,p){ // notas da escala nas casas p a p+3 (com as soltas 
 }
 const sgValid=notes=>[0,1,2,3,4,5,6,7,8,9].filter(p=>scaleBox(notes,p).ok);
 function sgPos(notes){const v=sgValid(notes),rf6=(notes[0].pc-4+12)%12;if(TH.pos!=null&&v.includes(TH.pos))return TH.pos;return v.includes(rf6)?rf6:v[0];} // padrão: tônica na 6ª corda
-const SG={on:false,seq:[],i:0,next:0,timer:null,bpm:60,run:0};
-function sgStart(seq){
+const SG={on:false,seq:[],i:0,next:0,timer:null,bpm:60,run:0,kind:'scale'};
+function sgStart(seq,kind){
   const ac=audio();if(!ac)return;if(M.on)mStop();grStop(true);if(TM.timer)tmStop();
-  SG.seq=seq.concat(seq.slice(1,-1).reverse());SG.on=true;SG.i=0;SG.run++;SG.next=ac.currentTime+.15;SG.timer=setInterval(sgSched,25);render();awakeSync();
+  SG.kind=kind||'scale';SG.seq=seq.concat(seq.slice(1,-1).reverse());SG.on=true;SG.i=0;SG.run++;SG.next=ac.currentTime+.15;SG.timer=setInterval(sgSched,25);render();awakeSync();
+}
+// Aquecimento cromático: um dedo por casa, casas 1 a 4, da 6ª à 1ª corda e de volta, no mesmo motor da escala guiada.
+function warmSeq(){const out=[];for(let si=0;si<6;si++)for(let f=1;f<=4;f++)out.push({si,f,midi:OPEN[si]+f,pt:NPT[(OPEN[si]+f)%12],deg:''});return out;}
+function warmSVG(){ // grade de 4 casas com os mesmos ids (sn-corda-casa) do braço das escalas, para a nota da vez acender
+  const fw=40,x0=30,y0=18,rh=17,W=x0+fw*4+6,H=y0+rh*6+4,fx=f=>x0+fw*(S.lefty?4-f:f-1);
+  let s='<svg viewBox="0 0 '+W+' '+H+'" style="width:'+W+'px;height:auto;display:block" role="img" aria-label="Casas 1 a 4, um dedo por casa"><title>Aquecimento: dedos 1, 2, 3 e 4 nas casas 1 a 4, corda por corda</title>';
+  for(let f=1;f<=4;f++)s+='<text class="fh" x="'+(fx(f)+fw/2)+'" y="12">casa '+f+'</text>';
+  for(let row=0;row<6;row++){const si=5-row,y=y0+rh*row+rh/2;s+='<text class="sl" x="'+(x0-9)+'" y="'+(y+3)+'">'+(6-si)+'ª</text><line class="g" x1="'+x0+'" y1="'+y+'" x2="'+(x0+fw*4)+'" y2="'+y+'"/>';
+    for(let f=1;f<=4;f++){const x=fx(f)+fw/2;s+='<circle id="sn-'+si+'-'+f+'" class="snote" cx="'+x+'" cy="'+y+'" r="7.5"/><text class="snt" x="'+x+'" y="'+(y+2.6)+'">'+f+'</text>';}}
+  return s+'</svg>';
 }
 function sgStop(quiet){if(!SG.on)return;SG.on=false;clearInterval(SG.timer);if(AC)dampAll(AC.currentTime+.05);if(!quiet)render();awakeSync();}
 function sgSched(){
   if(!SG.on||!AC)return;
   while(SG.next<AC.currentTime+.12){const k=SG.i%SG.seq.length,nt=SG.seq[k],t=SG.next,run=SG.run;
     tick(t,k===0?1:0,.25);pluckAt(nt.midi,t,.5,nt.si);
-    setTimeout(()=>{if(!SG.on||SG.run!==run)return;document.querySelectorAll('.sfb circle.on').forEach(e=>e.classList.remove('on'));const e=$('#sn-'+nt.si+'-'+nt.f);if(e)e.classList.add('on');const s=$('#sg-status');if(s)s.textContent=nt.pt+' (grau '+nt.deg+'): '+(6-nt.si)+'ª corda, '+(nt.f?'casa '+nt.f:'solta')+(k<SG.seq.length/2?'. Subindo.':'. Descendo.');},Math.max(0,(t-AC.currentTime)*1000));
+    setTimeout(()=>{if(!SG.on||SG.run!==run)return;document.querySelectorAll('.sfb circle.on').forEach(e=>e.classList.remove('on'));const e=$('#sn-'+nt.si+'-'+nt.f);if(e)e.classList.add('on');const s=$('#sg-status');if(s)s.textContent=nt.pt+(nt.deg?' (grau '+nt.deg+')':'')+': '+(6-nt.si)+'ª corda, '+(nt.f?'casa '+nt.f:'solta')+(nt.deg?'':', dedo '+nt.f)+(k<SG.seq.length/2?'. Subindo.':'. Descendo.');},Math.max(0,(t-AC.currentTime)*1000));
     SG.next+=60/SG.bpm;SG.i++;}
 }
 function scalesPanel(ci){
@@ -1623,7 +1686,7 @@ function theoryConcepts(){
     card('Tríade: o acorde básico','<p>O acorde mais simples tem três notas, empilhadas de terça em terça: a tônica (a nota que dá nome ao acorde), a terça e a quinta. A letra da cifra é a tônica: em G, a tônica é Sol.</p><p>No violão, essas três notas se espalham pelas seis cordas, repetidas em outras alturas.</p>'+acts(note(48,'Dó (tônica)')+note(52,'Mi (terça)')+note(55,'Sol (quinta)')+'<button class="btn sm quiet" data-act="play-notes" data-m="48,52,55" data-g="0">As três juntas</button>'))+
     card('Acorde maior','<p>Tônica + terça maior (4 semitons) + quinta justa (7 semitons). Soa aberto e estável.</p><p>C = Dó, Mi e Sol. G = Sol, Si e Ré. D = Ré, Fá# e Lá.</p>'+acts(chords('C,G','Ouvir C e G')))+
     card('Acorde menor (m)','<p>Tônica + terça menor (3 semitons) + quinta justa. Em relação ao maior, só a terça muda: ela desce meio tom. O som fica mais fechado, mais triste.</p><p>Dá para ver isso no violão. De A para Am, só a 2ª corda muda: da casa 2 (Dó#) para a casa 1 (Dó). De E para Em, a 3ª corda sai da casa 1 (Sol#) e fica solta (Sol).</p>'+acts(chords('A,Am','Ouvir A e Am')+chords('E,Em','Ouvir E e Em')))+
-    card('Quinta justa','<p>É o intervalo de 7 semitons. Quarta, quinta e oitava se chamam justas porque têm uma forma natural só, sem versão maior ou menor como a terça. Por isso a quinta é a mesma no acorde maior e no menor.</p><p>Depois da oitava, é o intervalo mais estável. Tônica e quinta sem a terça formam o power chord (E5, A5), muito usado no rock: ele não é maior nem menor.</p>'+acts(note(40,'Mi')+note(47,'Si')+'<button class="chip" data-act="play-notes" data-m="40,47" data-g="0">Juntas</button><button class="btn sm quiet" data-act="play-notes" data-m="40,47,52" data-g=".03">Ouvir E5</button>'))+
+    card('Quinta justa','<p>É o intervalo de 7 semitons. Quarta, quinta e oitava se chamam justas porque têm uma forma natural só, sem versão maior ou menor como a terça. Por isso a quinta é a mesma no acorde maior e no menor.</p><p>Depois da oitava, é o intervalo mais estável. Tônica e quinta sem a terça formam o power chord (E5, A5), muito usado no rock: ele não é maior nem menor.</p>'+acts(note(40,'Mi')+note(47,'Si')+'<button class="chip" data-act="play-notes" data-m="40,47" data-g="0">Juntas</button>'+chords('E,E5')+chords('A,A5')))+
     card('Acorde com sétima (7)','<p>Acorde maior + sétima menor, 10 semitons acima da tônica. G7 = Sol, Si, Ré e Fá.</p><p>Também é chamado de dominante: cria uma tensão que pede para resolver no acorde que fica uma quinta abaixo. G7 puxa para C, D7 puxa para G, E7 puxa para A ou Am.</p>'+acts(chords('G7,C','Ouvir G7 e C')+chords('E7,Am','Ouvir E7 e Am')))+
     card('Sétima maior (maj7 ou 7M)','<p>Acorde maior + sétima maior, 11 semitons acima da tônica, meio tom abaixo da oitava. Soa suave e aberto, e é comum na bossa nova e na MPB.</p><p>De C para Cmaj7, só a 2ª corda muda: da casa 1 (Dó) para solta (Si).</p>'+acts(chords('C,Cmaj7','Ouvir C e Cmaj7')))+
     card('Menor com sétima (m7)','<p>Acorde menor + sétima menor. Am7 = Lá, Dó, Mi e Sol. Soa mais macio que o menor sem a sétima.</p>'+acts(chords('Am,Am7','Ouvir Am e Am7')))+
@@ -1903,6 +1966,7 @@ V.hoje=function(){
     const done=!!d.done[b.id],act=B&&B.id===b.id;
     h+='<li class="blk'+(done?' done':'')+(act?' active':'')+'"><div><div class="between"><h3>'+b.title+'</h3><span class="mins">'+(done?'Feito':b.min+' min')+'</span></div><p>'+esc(b.text)+'</p>';
     if(!done&&WHY[b.id])h+='<details class="why extra"><summary>Por que este exercício?</summary><p>'+esc(WHY[b.id])+'</p></details>';
+    if(b.id==='warm'&&!done)h+='<div class="extra"><div class="sfb" style="max-width:200px">'+warmSVG()+'</div><div class="acts" style="margin-top:6px"><button class="btn sm quiet" data-act="warm-toggle">'+(SG.on&&SG.kind==='warm'?'Parar':'Tocar junto: um dedo por casa')+'</button><span class="muted small" id="sg-status">'+(SG.on&&SG.kind==='warm'?'Tocando.':SG.bpm+' BPM, casas 1 a 4, da 6ª à 1ª corda e de volta.')+'</span></div></div>';
     if(b.rhythm)h+='<div class="extra">'+rhythmHTML(b.rhythm)+'</div>';
     if(b.pair)h+='<div class="extra pair">'+b.pair.map(c=>'<div class="chord"><strong>'+esc(c)+'</strong>'+chordSVG(c)+'</div>').join('')+'</div>';
     if(b.song&&b.song.chords)h+='<p class="extra small">Acordes: '+esc(b.song.chords)+'</p>';
@@ -1913,7 +1977,7 @@ V.hoje=function(){
     if(!done){
       if(act)h+='<div class="timer num" id="blk-time" aria-live="off">'+mmss(B.left)+'</div><div class="acts"><button class="btn sm quiet" data-act="blk-pause">'+(B.running?'Pausar':'Continuar')+'</button><button class="btn sm" data-act="blk-done" data-id="'+b.id+'">Concluir bloco</button></div>';
       else{h+='<div class="acts"><button class="btn sm" data-act="blk-start" data-id="'+b.id+'" data-min="'+b.min+'" data-bpm="'+(b.bpm||'')+'">Iniciar '+b.min+' min'+(b.bpm?' com metrônomo':'')+'</button>';
-        if(b.rhythm)h+='<button class="link" data-act="open-batida" data-p="'+b.rhythm.id+'" data-bpm="'+b.bpm+'">Ouvir a batida e tocar junto</button>';
+        if(b.rhythm)h+='<button class="link" data-act="open-batida" data-p="'+b.rhythm.id+'" data-bpm="'+b.bpm+'">Ouvir a batida e tocar junto</button><button class="link" data-act="open-tempo" data-p="'+b.rhythm.id+'" data-bpm="'+b.bpm+'">Bater a batida na tela</button>';
         if(b.bpm)h+='<button class="link" data-act="open-metro" data-bpm="'+b.bpm+'">Abrir metrônomo a '+b.bpm+' BPM</button>';
         if(b.pair)h+='<button class="link" data-act="open-trocas" data-a="'+esc(b.pair[0])+'" data-b="'+esc(b.pair[1])+'">Contar trocas por 1 minuto</button><button class="link" data-act="chk-open" data-c="'+esc(b.pair[0])+'">Conferir o '+esc(b.pair[0])+' pelo som</button>';
         if(b.scale)h+='<button class="link" data-act="road-scale" data-pc="'+b.scale.pc+'" data-sc="'+b.scale.sc+'" data-pos="'+(b.scale.pos!=null?b.scale.pos:'')+'">Tocar junto a escala</button>';
@@ -1960,7 +2024,7 @@ async function recStart(){
       try{stream.getTracks().forEach(t=>t.stop());}catch(e){}try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch(e){}
       REC.on=false;REC.mr=null;clearInterval(REC.timer);REC.timer=null;
       if(sec<2||!blob.size){render();toast('Gravação muito curta.');return;}
-      recPut({id,blob}).then(()=>{S.recs.unshift({id,d:today(),t:+id,sec,type:blob.type});while(S.recs.length>60){const old=S.recs.pop();recRemove(old.id).catch(()=>{});}save();render();toast('Gravação guardada.');},()=>{render();toast('Não consegui guardar a gravação.');});};
+      recPut({id,blob}).then(()=>{S.recs.unshift({id,d:today(),t:+id,sec,type:blob.type});while(S.recs.length>60){const old=S.recs.pop();recRemove(old.id).catch(()=>{});}save();checkProofs();render();toast('Gravação guardada.');},()=>{render();toast('Não consegui guardar a gravação.');});};
     mr.start(1000);REC.timer=setInterval(()=>{REC.left=Math.max(0,30-Math.round((Date.now()-REC.t0)/1000));const el=$('#rec-left');if(el)el.textContent=REC.left;if(REC.left<=0)recStop();},250);
     render();
   }catch(e){try{if(stream)stream.getTracks().forEach(t=>t.stop());}catch(e2){}try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch(e2){}REC.on=false;render();toast(NATIVE?'Sem acesso ao microfone. Libere nos ajustes do celular.':'Sem acesso ao microfone.');}
@@ -2022,17 +2086,27 @@ V.treinar=function(){
     h+='<section class="panel"><h3>Acordes do exemplo</h3><div class="chips" style="margin-top:10px">'+PROGS.map((p,i)=>'<button class="chip" data-act="gr-prog" data-i="'+i+'" aria-pressed="'+(p.join()===BAT.prog.join())+'">'+p.join(' ')+'</button>').join('')+'</div><div class="between" style="margin-top:16px"><span>Clique do metrônomo junto</span><button class="chip" data-act="gr-click" aria-pressed="'+BAT.click+'">'+(BAT.click?'Ligado':'Desligado')+'</button></div><p class="muted small" style="margin-top:12px">Quer escolher os acordes? Monte um treino seu em <button class="link" style="padding:0;min-height:0" data-act="nav" data-v="meu">Meu treino</button>.</p></section>';
   }else if(sub.treinar==='tempo'){
     const best=S.stats.timing[String(TM.bpm)];
+    const TP=PAT[tmPid()],batida=TM.mode==='batida';
     if(TM.phase==='idle'){
-      h+='<section class="panel metro"><h2>No tempo</h2><p class="sub">Quatro cliques de preparação e depois 16 tempos. Toque no botão grande junto com cada clique: o app mede, em milissegundos, se você adianta ou atrasa.</p><div class="bpmrow" style="justify-content:center;gap:18px"><button data-act="tm-bpm" data-d="-10" aria-label="Mais devagar">−</button><div><span class="num" style="font-size:2.6rem">'+TM.bpm+'</span> <span class="muted small">BPM</span></div><button data-act="tm-bpm" data-d="10" aria-label="Mais rápido">+</button></div>'+(best!=null?'<p class="sub small" style="margin-top:8px">Sua melhor regularidade a '+TM.bpm+' BPM: ±'+best+' ms.</p>':'')+'<button class="btn block" style="margin-top:14px" data-act="tm-start">Começar</button></section>';
-      const ks=Object.keys(S.stats.timing).sort((a,b)=>+a-+b);
-      if(ks.length)h+='<section class="panel"><h3>Seus registros</h3><div style="margin-top:6px">'+ks.map(x=>'<div class="kv"><span>'+x+' BPM</span><b>±'+S.stats.timing[x]+' ms</b></div>').join('')+'</div><p class="muted small" style="margin-top:8px">Até ±30 ms é muito preciso; até ±60 ms é bom. Abaixo de ±100 ms já soa no tempo para quem ouve.</p></section>';
+      h+='<section class="panel metro"><h2>No tempo</h2><div class="chips" style="margin-bottom:10px">'+[['pulso','O pulso'],['batida','A batida']].map(o=>'<button class="chip" data-act="tm-mode" data-v="'+o[0]+'" aria-pressed="'+(TM.mode===o[0])+'">'+o[1]+'</button>').join('')+'</div>';
+      if(batida)h+='<p class="sub">Quatro cliques de preparação e depois '+TM_BARS+' compassos da batida. Toque no botão grande em cada seta (ou em cada dedo, nos dedilhados), como se fosse a mão direita. O app diz, célula por célula, se você adianta ou atrasa.</p><select id="tm-pat" aria-label="Batida" style="margin-top:10px">'+PATTERNS.map(p=>'<option value="'+p.id+'"'+(p.id===TP.id?' selected':'')+'>'+esc(p.name)+'</option>').join('')+'</select><div style="margin-top:10px">'+rhythmHTML(TP)+'</div>';
+      else h+='<p class="sub">Quatro cliques de preparação e depois 16 tempos. Toque no botão grande junto com cada clique: o app mede, em milissegundos, se você adianta ou atrasa.</p>';
+      h+='<div class="bpmrow" style="justify-content:center;gap:18px"><button data-act="tm-bpm" data-d="-10" aria-label="Mais devagar">−</button><div><span class="num" style="font-size:2.6rem">'+TM.bpm+'</span> <span class="muted small">BPM</span></div><button data-act="tm-bpm" data-d="10" aria-label="Mais rápido">+</button></div>'+(batida?(S.stats.strum[TP.id]!=null?'<p class="sub small" style="margin-top:8px">Sua melhor pontuação nesta batida: '+S.stats.strum[TP.id]+'%.</p>':''):(best!=null?'<p class="sub small" style="margin-top:8px">Sua melhor regularidade a '+TM.bpm+' BPM: ±'+best+' ms.</p>':''))+'<button class="btn block" style="margin-top:14px" data-act="tm-start">Começar</button></section>';
+      const ks=Object.keys(S.stats.timing).sort((a,b)=>+a-+b),ss=Object.keys(S.stats.strum).filter(k=>PAT[k]);
+      if(ks.length||ss.length)h+='<section class="panel"><h3>Seus registros</h3><div style="margin-top:6px">'+ks.map(x=>'<div class="kv"><span>Pulso a '+x+' BPM</span><b>±'+S.stats.timing[x]+' ms</b></div>').join('')+ss.map(k=>'<div class="kv"><span>'+esc(PAT[k].name)+'</span><b>'+S.stats.strum[k]+'%</b></div>').join('')+'</div><p class="muted small" style="margin-top:8px">Até ±30 ms é muito preciso; até ±60 ms é bom. Abaixo de ±100 ms já soa no tempo para quem ouve.</p></section>';
+    }else if(TM.phase==='done'&&batida){
+      const r=TM.res;
+      h+='<section class="panel" style="text-align:center"><p class="sub">'+esc(TP.name)+', '+TM.bpm+' BPM</p><div class="big num">'+r.score+'%</div><p><b>das '+r.total+' batidas no tempo (até 60 ms)</b></p><p class="sub">'+(r.n<4?'Poucos toques registrados. Toque em cada seta, junto com a célula acesa.':r.score>=85?'Mão direita firme.':r.score>=60?'Bom. Repita mais devagar para limpar as células fracas.':'Vamos treinar: conte em voz alta e comece a 60 BPM.')+(r.record?' Novo recorde nesta batida.':'')+'</p>';
+      h+='<div style="margin:12px auto 0;max-width:'+(TP.cells.length*40)+'px"><div class="rhy" style="grid-template-columns:repeat('+TP.cells.length+',1fr)">'+TP.cells.map((c,i)=>{const d=r.cells[i],cls=!c?'':d==null?'miss':Math.abs(d)<=40?'good':Math.abs(d)<=90?'mid':'bad';return '<div class="'+(c?'on ':'')+cls+'"><b>'+c+'</b><span>'+(c?(d==null?'faltou':(d>0?'+':'')+d):'')+'</span></div>';}).join('')+'</div></div><p class="muted small" style="margin-top:6px">Média por célula, em ms: negativo adiantou, positivo atrasou.</p>';
+      h+='<div style="text-align:left;margin-top:12px"><div class="kv"><span>Faltaram</span><b>'+r.missed+'</b></div><div class="kv"><span>Toques fora de lugar</span><b>'+r.extra+'</b></div><div class="kv"><span>Tendência</span><b>'+(Math.abs(r.mean)<=15?'no ponto':r.mean<0?'adianta '+(-r.mean)+' ms':'atrasa '+r.mean+' ms')+'</b></div></div>';
+      h+='<div class="stack" style="margin-top:18px"><button class="btn block" data-act="tm-start">Tentar de novo</button><button class="btn block line" data-act="tm-stop">Voltar</button></div></section>';
     }else if(TM.phase==='done'){
       const r=TM.res,verdict=r.n<8?'Poucos toques registrados. Tente de novo tocando em todos os tempos.':r.sd<=30?'Muito preciso.':r.sd<=60?'Bom. Continue assim.':'Vamos treinar: escolha um andamento mais lento e ouça o clique antes de tocar.';
       h+='<section class="panel" style="text-align:center"><p class="sub">'+TM.bpm+' BPM</p><div class="big num">±'+r.sd+'</div><p><b>ms de regularidade</b></p><p class="sub">'+verdict+(r.record?' Novo recorde neste andamento.':'')+'</p><div style="text-align:left;margin-top:8px"><div class="kv"><span>No tempo (até 60 ms)</span><b>'+r.hits+' de '+r.n+'</b></div><div class="kv"><span>Tendência</span><b>'+(Math.abs(r.mean)<=15?'no ponto':r.mean<0?'adianta '+(-r.mean)+' ms':'atrasa '+r.mean+' ms')+'</b></div></div>';
       h+='<div class="tmdots">'+TM.taps.map(x=>'<i class="'+(Math.abs(x.d)<=40?'good':Math.abs(x.d)<=90?'mid':'bad')+'" style="left:'+(50+Math.max(-48,Math.min(48,x.d/4)))+'%"></i>').join('')+'<b></b></div><p class="muted small">Cada ponto é um toque: à esquerda adiantou, à direita atrasou.</p>';
       h+='<div class="stack" style="margin-top:18px"><button class="btn block" data-act="tm-start">Tentar de novo</button><button class="btn block line" data-act="tm-stop">Voltar</button></div></section>';
     }else{
-      h+='<div class="between" style="margin-bottom:8px"><b>'+TM.bpm+' BPM</b><span class="num tm-last" id="tm-last" style="font-size:1.4rem">&nbsp;</span></div><div class="dots" aria-hidden="true"><i class="first"></i><i></i><i></i><i></i></div><button class="tap" data-tm-tap="1" aria-label="Toque no tempo"><span class="num" id="tm-beat">Prepare</span><span>Toque junto com o clique</span></button><p style="text-align:center;margin-top:12px"><button class="link" data-act="tm-stop">Parar</button></p>';
+      h+='<div class="between" style="margin-bottom:8px"><b>'+(batida?esc(TP.name)+', ':'')+TM.bpm+' BPM</b><span class="num tm-last" id="tm-last" style="font-size:1.4rem">&nbsp;</span></div><div class="dots" aria-hidden="true"><i class="first"></i><i></i><i></i><i></i></div>'+(batida?'<div style="margin:0 auto 12px;max-width:'+(TP.cells.length*40)+'px">'+rhythmHTML(TP,'tm-grid')+'</div>':'')+'<button class="tap" data-tm-tap="1" aria-label="Toque no tempo"><span class="num" id="tm-beat">Prepare</span><span>'+(batida?'Toque em cada seta, junto com a célula acesa':'Toque junto com o clique')+'</span></button><p style="text-align:center;margin-top:12px"><button class="link" data-act="tm-stop">Parar</button></p>';
     }
   }else{
     if(!E.q)earNew();
@@ -2080,7 +2154,7 @@ V.acordes=function(){
     const f=sub.filtro,list=CHORDS.filter(c=>f==='todos'||c.g===f||(f==='nivel'&&earPool().includes(c.n)));
     const lbl={aprendendo:'Aprendendo',dominado:'Dominado'};
     h+=checkPanel();
-    h+='<p class="sub" style="margin:-4px 0 14px">Toque no diagrama para ouvir. Os números são os dedos: 1 indicador, 2 médio, 3 anelar, 4 mindinho. × não toca, ○ corda solta. <button class="link" style="padding:0;min-height:0" data-act="print">Imprimir esta lista</button></p><div class="filters">'+[['todos','Todos'],['nivel','Do meu nível'],['abertos','Abertos'],['setima','Com sétima'],['pestana','Pestana'],['sus','Sus e add9'],['baixo','Com baixo']].map(o=>'<button class="chip" data-act="sub" data-g="filtro" data-v="'+o[0]+'" aria-pressed="'+(f===o[0])+'">'+o[1]+'</button>').join('')+'</div><div class="cgrid">'+list.map(c=>{const st=S.chords[c.n];return '<div class="ctile"><button class="play chord" data-act="chord-play" data-c="'+esc(c.n)+'" aria-label="Ouvir '+esc(c.n)+'"><span class="name">'+esc(c.n)+(S.easyOn[c.n]?' <span class="tag">fácil</span>':'')+'</span>'+chordSVG(c.n)+'</button><button class="st" data-act="chord-st" data-c="'+esc(c.n)+'" data-s="'+(st||'')+'">'+(st?lbl[st]:'Marcar')+'</button>'+(c.easy?'<button class="link thlink" data-act="easy" data-c="'+esc(c.n)+'" aria-pressed="'+!!S.easyOn[c.n]+'">'+(S.easyOn[c.n]?'Voltar à versão completa':'Versão fácil')+'</button>':'')+'<button class="link thlink" data-act="th-open" data-c="'+esc(c.n)+'">Como se forma</button><button class="link thlink" data-act="chk-open" data-c="'+esc(c.n)+'">Conferir pelo som</button></div>';}).join('')+'</div>';
+    h+='<p class="sub" style="margin:-4px 0 14px">Toque no diagrama para ouvir. Os números são os dedos: 1 indicador, 2 médio, 3 anelar, 4 mindinho. × não toca, ○ corda solta. <button class="link" style="padding:0;min-height:0" data-act="print">Imprimir esta lista</button></p><div class="filters">'+[['todos','Todos'],['nivel','Do meu nível'],['abertos','Abertos'],['setima','Com sétima'],['pestana','Pestana'],['sus','Sus e add9'],['baixo','Com baixo'],['power','Power chords']].map(o=>'<button class="chip" data-act="sub" data-g="filtro" data-v="'+o[0]+'" aria-pressed="'+(f===o[0])+'">'+o[1]+'</button>').join('')+'</div><div class="cgrid">'+list.map(c=>{const st=S.chords[c.n];return '<div class="ctile"><button class="play chord" data-act="chord-play" data-c="'+esc(c.n)+'" aria-label="Ouvir '+esc(c.n)+'"><span class="name">'+esc(c.n)+(S.easyOn[c.n]?' <span class="tag">fácil</span>':'')+'</span>'+chordSVG(c.n)+'</button><button class="st" data-act="chord-st" data-c="'+esc(c.n)+'" data-s="'+(st||'')+'">'+(st?lbl[st]:'Marcar')+'</button>'+(c.easy?'<button class="link thlink" data-act="easy" data-c="'+esc(c.n)+'" aria-pressed="'+!!S.easyOn[c.n]+'">'+(S.easyOn[c.n]?'Voltar à versão completa':'Versão fácil')+'</button>':'')+'<button class="link thlink" data-act="th-open" data-c="'+esc(c.n)+'">Como se forma</button><button class="link thlink" data-act="chk-open" data-c="'+esc(c.n)+'">Conferir pelo som</button></div>';}).join('')+'</div>';
   }else{
     h+='<section class="panel"><h2>As sete notas</h2><p class="sub">Na cifra, cada letra é uma nota: C é Dó, D é Ré, e assim por diante. Toque para ouvir e veja onde fica no violão.</p><div class="scale" style="margin-top:14px">'+SCALE.map((p,k)=>{const m=OPEN[p[0]]+p[1],pc=m%12;return '<button data-act="note" data-si="'+p[0]+'" data-f="'+p[1]+'" data-k="'+k+'" aria-label="'+NPT[pc]+'"><b>'+NL[pc]+'</b><span>'+NPT[pc]+'</span><small>'+(6-p[0])+'ª corda, '+(p[1]?'casa '+p[1]:'solta')+'</small></button>';}).join('')+'</div><button class="btn block quiet" style="margin-top:14px" data-act="scale-play">Ouvir a escala de Dó</button></section>';
     let g='<div class="hd"></div>';for(let f=0;f<=12;f++)g+='<div class="hd'+([3,5,7,9,12].includes(f)?' mk':'')+'">'+(f===0?'solta':f+([3,5,7,9,12].includes(f)?' •':''))+'</div>';
@@ -2175,6 +2249,7 @@ if(PWA.host){
 const TABS=[['hoje','Hoje','<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.8 2.8L16 9.5"/>'],['meu','Meu treino','<path d="M4 6h8M16 6h4M4 12h2M10 12h10M4 18h10M18 18h2"/><circle cx="14" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="18" r="2"/>'],['treinar','Treinar','<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/>'],['ferramentas','Ferramentas','<path d="M9 3h6l4 18H5L9 3zM12 17l4-11M7.2 13h9.6"/>'],['acordes','Acordes','<path d="M5 4v16M12 4v16M19 4v16M5 4h14M5 10h14M5 16h14"/><circle cx="12" cy="7" r="1.7" fill="currentColor"/>'],['evolucao','Evolução','<path d="M5 20V11M12 20V4M19 20v-6M2 20h20"/>']];
 /* ---------- novidades de cada versão, mostradas uma vez ---------- */
 const NEWS=[
+ ['1.17.0',['Roteiro com três níveis novos: ritmos brasileiros; baixos, power chords e pestanas móveis; cor, tom e ouvido.','Power chords E5, A5, D5, G5 e C5 na biblioteca.','Aquecimento com o exercício cromático tocado junto, casa por casa.','Treinar, Tempo: bater a batida na tela, célula por célula.']],
  ['1.16.0',['Perfis no mesmo aparelho (Perfil): cada pessoa com o próprio progresso.','Compartilhar um treino de Meu treino por link; quem abre recebe pronto.','Telas largas com mais colunas, folha de acordes para imprimir e ajustes de acessibilidade.']],
  ['1.15.0',['Lembrete que diz o treino da semana e some no dia em que a meta já foi batida; aviso de cópia de segurança a cada 30 dias.','Bloco de ritmo já começa com o metrônomo; “Desfazer” num bloco concluído sem querer.','Afinador: meio tom abaixo, Drop D e modo cromático com cents.','Gravação de 30 segundos em Hoje, para ouvir a evolução (fica só no aparelho).','Site instalado com atalhos e fonte embutida; metrônomo por vibração.']],
  ['1.14.0',['Batidas brasileiras: bossa nova, samba, xote e baião.','Metrônomo com compasso mudo, para treinar o pulso interno.','Escalas: tocar junto nota por nota, com a posição marcada no braço.','Revisão rápida: montar o acorde no diagrama.','Ouvido: cante a nota, com o microfone dizendo se chegou.']],
@@ -2294,11 +2369,14 @@ const ACT={
   'm-gap':el=>{M.gap=+el.dataset.v||0;S.mgap=M.gap;M.bar=0;save();render();},
   'sg-pos':el=>{if(SG.on)sgStop(true);TH.pos=+el.dataset.v;render();},
   'sg-bpm':el=>{SG.bpm=Math.max(40,Math.min(160,SG.bpm+(+el.dataset.d)));const n=$('#sg-bpm');if(n)n.textContent=SG.bpm;},
-  'sg-toggle':()=>{if(SG.on){sgStop();return;}const sc=SCALES.find(s=>s.id===TH.sc)||SCALES[0],notes=scaleNotes(rootName(TH.sr,sc),sc),box=scaleBox(notes,sgPos(notes));if(box.seq.length)sgStart(box.seq);},
+  'sg-toggle':()=>{if(SG.on){sgStop();return;}const sc=SCALES.find(s=>s.id===TH.sc)||SCALES[0],notes=scaleNotes(rootName(TH.sr,sc),sc),box=scaleBox(notes,sgPos(notes));if(box.seq.length)sgStart(box.seq,'scale');},
+  'warm-toggle':()=>{if(SG.on){sgStop();return;}sgStart(warmSeq(),'warm');},
+  'open-tempo':el=>{TM.mode='batida';TM.pid=el.dataset.p;TM.bpm=Math.max(50,Math.min(140,+el.dataset.bpm||TM.bpm));sub.treinar='tempo';go('treinar');},
+  'tm-mode':el=>{TM.mode=el.dataset.v==='batida'?'batida':'pulso';render();},
   'rv-cell':el=>{if(!RV.on||RV.ans!=null)return;const si=+el.dataset.si,f=+el.dataset.f;if(RV.cells[si]===f)delete RV.cells[si];else RV.cells[si]=f;render();},
   'rv-build-check':()=>{if(!RV.on||RV.ans!=null||!RV.q||!RV.q.build)return;const c=shape(RV.q.build),ok=c.f.every((f,i)=>(f>0?f:0)===(RV.cells[i]||0));if(ok)RV.ok++;revGrade(RV.items[RV.i],ok);RV.ans=ok?'ok':'no';strum(chordMidis(RV.q.build),.045);save();render();},
   'sing-mic':()=>{if(MIC&&MIC.mode==='sing'){micStop();render();}else{if(MIC)micStop();micStart('sing');}},
-  'sing-skip':()=>{if(!E.q||E.ans)return;E.ans='skip';E.total++;S.ear.total++;save();render();},
+  'sing-skip':()=>{if(!E.q||E.ans)return;E.ans='skip';E.total++;S.ear.total++;save();checkProofs();render();},
   font:el=>{S.font=+el.dataset.v||0;save();applyLook();render();},
   'prof-use':el=>{const id=el.dataset.id||'';if(id===PROF.current)return;PROF.current=id;profSave();location.reload();},
   'prof-add':()=>{const name=(($('#prof-name')||{}).value||'').trim().slice(0,20);if(!name){const i=$('#prof-name');if(i)i.focus();return;}const id='p'+Date.now().toString(36);PROF.list.push({id,name});PROF.current=id;profSave();location.reload();},
@@ -2342,7 +2420,7 @@ const ACT={
   't-mic':()=>{micAgain('count');},
   'mic-again':el=>{micAgain(el.dataset.mode||'tune');},
   'ear-play':()=>{earPlay();},
-  'ear-ans':el=>{if(E.ans||!E.q)return;E.ans=el.dataset.v;const ok=E.ans===E.q.ans;E.total++;S.ear.total++;if(ok){E.ok++;S.ear.ok++;}save();render();},
+  'ear-ans':el=>{if(E.ans||!E.q)return;E.ans=el.dataset.v;const ok=E.ans===E.q.ans;E.total++;S.ear.total++;if(ok){E.ok++;S.ear.ok++;}save();checkProofs();render();},
   'ear-next':()=>{earNew();earPlay();render();},
   'chord-play':el=>strum(chordMidis(el.dataset.c),.045),
   'th-open':el=>{TH.c=el.dataset.c;TH.sr=null;TH.ck=null;sub.acordes='teoria';if(view!=='acordes')go('acordes');else{render();window.scrollTo(0,0);}},
@@ -2362,8 +2440,8 @@ const ACT={
   'song-play':el=>{const s=S.songs.find(x=>x.id===el.dataset.id);if(!s)return;if(svPlaying())grStop(true);SV.id=s.id;SV.edit=!s.cifra;SV.speed=0;render();window.scrollTo(0,0);},
   'cif-ch':el=>{const c=el.dataset.c;strum(chordMidis(c),.045);chordPop(c);},
   'pop-close':()=>{const p=$('#cifpop');if(p)p.remove();},
-  'song-tr':el=>{const s=S.songs.find(x=>x.id===el.dataset.id);if(!s)return;s.tr=Math.max(-11,Math.min(11,(s.tr||0)+(+el.dataset.d)));if(svPlaying())grStop(true);save();render();},
-  'song-capo':el=>{const s=S.songs.find(x=>x.id===el.dataset.id);if(!s)return;s.capo=Math.max(0,Math.min(7,+el.dataset.v||0));if(svPlaying())grStop(true);save();render();},
+  'song-tr':el=>{const s=S.songs.find(x=>x.id===el.dataset.id);if(!s)return;s.tr=Math.max(-11,Math.min(11,(s.tr||0)+(+el.dataset.d)));if(svPlaying())grStop(true);save();checkProofs();render();},
+  'song-capo':el=>{const s=S.songs.find(x=>x.id===el.dataset.id);if(!s)return;s.capo=Math.max(0,Math.min(7,+el.dataset.v||0));if(svPlaying())grStop(true);save();checkProofs();render();},
   'song-per':el=>{const s=S.songs.find(x=>x.id===el.dataset.id);if(!s)return;s.per=+el.dataset.v===2?2:1;if(svPlaying())grStop(true);save();render();},
   'song-bpm':el=>{const s=S.songs.find(x=>x.id===el.dataset.id);if(!s)return;const pid=PAT[s.pid]?s.pid:LEVELS[S.level-1].rhythm;s.bpm=Math.max(40,Math.min(160,(s.bpm||PAT[pid].bpm)+(+el.dataset.d)));if(SV.cfg)SV.cfg.bpm=s.bpm;const n=$('#gr-bpm');if(n)n.textContent=s.bpm;save();},
   'song-playalong':el=>{if(svPlaying()){grStop();return;}const s=S.songs.find(x=>x.id===el.dataset.id);if(!s)return;const seq=cifraParse(s.cifra||'',svShift(s)).seq;if(!seq.length)return;const pid=PAT[s.pid]?s.pid:LEVELS[S.level-1].rhythm;
@@ -2400,7 +2478,8 @@ document.addEventListener('change',e=>{const t=e.target;
   else if(t.id==='d-note'){day(today()).note=t.value.trim().slice(0,140);save();}
   else if(t.dataset&&t.dataset.songCifra){const s=S.songs.find(x=>x.id===t.dataset.songCifra);if(s){s.cifra=t.value.slice(0,6000);save();}}
   else if(t.id==='imp-file'){const f=t.files&&t.files[0];if(f&&f.text)f.text().then(importParse,()=>toast('Não consegui ler o arquivo.'));t.value='';}
-  else if(t.id==='sv-pat'||t.id==='sv-capo'){const s=S.songs.find(x=>x.id===SV.id);if(s){if(svPlaying())grStop(true);if(t.id==='sv-pat'){s.pid=t.value;s.bpm=0;}else s.capo=Math.max(0,Math.min(7,+t.value||0));save();render();}}
+  else if(t.id==='sv-pat'||t.id==='sv-capo'){const s=S.songs.find(x=>x.id===SV.id);if(s){if(svPlaying())grStop(true);if(t.id==='sv-pat'){s.pid=t.value;s.bpm=0;}else s.capo=Math.max(0,Math.min(7,+t.value||0));save();checkProofs();render();}}
+  else if(t.id==='tm-pat'){TM.pid=t.value;render();}
   else if(t.dataset&&t.dataset.song){const s=S.songs.find(x=>x.id===t.dataset.song);if(s){s.status=t.value;save();checkProofs();}}});
 function onShow(){
   if(AC&&AC.state==='closed')audioReset();

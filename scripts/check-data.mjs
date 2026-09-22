@@ -29,7 +29,7 @@ const err = m => errors.push(m);
 
 // acordes: nome que a teoria sabe ler, 6 casas e 6 dedos, pestana coerente
 D.CHORDS.forEach(c => {
-  if (!/^([A-G])([#b]?)(m(?!aj))?(maj7|7)?(sus2|sus4|add9)?(\/[A-G][#b]?)?$/.test(c.n)) err(`acorde ${c.n}: nome fora do padrão que a teoria explica`);
+  if (!/^([A-G])([#b]?)(m(?!aj))?(maj7|7|5)?(sus2|sus4|add9)?(\/[A-G][#b]?)?$/.test(c.n)) err(`acorde ${c.n}: nome fora do padrão que a teoria explica`);
   // o desenho normal e, se houver, a versão fácil seguem as mesmas regras
   [c].concat(c.easy ? [Object.assign({ n: c.n + ' (fácil)' }, c.easy)] : []).forEach(s => {
     if (s.f.length !== 6 || s.d.length !== 6) err(`acorde ${s.n}: precisa de 6 casas e 6 dedos`);
@@ -72,6 +72,7 @@ D.ROAD.forEach((weeks, li) => {
 Object.entries(D.PROOF).forEach(([k, p]) => {
   const [n, j] = k.split('.').map(Number);
   if (!(n >= 1 && n <= D.ROAD.length && j >= 0 && j < D.ROAD[n - 1].length)) err(`prova ${k}: semana inexistente`);
+  if (!['tuned', 'changes', 'play', 'prog4', 'songs', 'ear', 'capo', 'rec'].includes(p.t)) err(`prova ${k}: tipo desconhecido ${p.t}`);
   if (p.pat && !PT.has(p.pat)) err(`prova ${k}: batida desconhecida ${p.pat}`);
   (p.pair || []).forEach(c => { if (!CH.has(c)) err(`prova ${k}: acorde desconhecido ${c}`); });
 });
