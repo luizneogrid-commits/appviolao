@@ -16,6 +16,16 @@
     { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
     { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
+  "screenshots": [
+    { "src": "store/screenshots/01-hoje.png", "sizes": "1080x1920", "type": "image/png", "form_factor": "narrow", "label": "Hoje: o treino do dia, montado para o seu nível" },
+    { "src": "store/screenshots/02-treino.png", "sizes": "1080x1920", "type": "image/png", "form_factor": "narrow", "label": "Treinar: trocas por minuto, batidas, tempo e ouvido" },
+    { "src": "store/screenshots/03-acordes.png", "sizes": "1080x1920", "type": "image/png", "form_factor": "narrow", "label": "Acordes: diagramas com som" },
+    { "src": "store/screenshots/04-teoria.png", "sizes": "1080x1920", "type": "image/png", "form_factor": "narrow", "label": "Teoria: escalas e conceitos" },
+    { "src": "store/screenshots/05-batidas.png", "sizes": "1080x1920", "type": "image/png", "form_factor": "narrow", "label": "Batidas para tocar junto" },
+    { "src": "store/screenshots/06-metronomo.png", "sizes": "1080x1920", "type": "image/png", "form_factor": "narrow", "label": "Metrônomo" },
+    { "src": "store/screenshots/07-roteiro.png", "sizes": "1080x1920", "type": "image/png", "form_factor": "narrow", "label": "Roteiro por níveis" },
+    { "src": "store/screenshots/08-evolucao.png", "sizes": "1080x1920", "type": "image/png", "form_factor": "narrow", "label": "Evolução: sequência, minutos e conquistas" }
+  ],
   "share_target": { "action": "./", "method": "GET", "params": { "title": "titulo", "text": "texto", "url": "link" } },
   "shortcuts": [
     { "name": "Afinador", "short_name": "Afinador", "description": "Afinar o violão", "url": "./?ir=afinador", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
