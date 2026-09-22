@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Violão Diário</title>
-<meta name="app-version" content="1.28.0">
+<meta name="app-version" content="1.29.0">
 <meta name="description" content="Treino diário de violão: plano por nível, metrônomo, afinador, batidas para tocar junto, acordes e notas.">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#F2EEF0" media="(prefers-color-scheme: light)">
@@ -459,6 +459,8 @@ body.flash::after{content:"";position:fixed;inset:0;background:var(--brass);opac
 .cfg button{min-height:40px;border-radius:8px;background:var(--surface-2);border:1px solid var(--line);font-weight:700;color:var(--ink);font-size:1rem}
 .cfg button.on{background:var(--primary);color:var(--on-primary);border-color:var(--primary)}
 .cdiag{width:118px;flex:none;margin-left:10px}
+.vol{display:grid;grid-template-columns:118px 1fr 52px;align-items:center;gap:8px;margin-top:6px}.vol b{text-align:right} /* volumes em Perfil, Som */
+.cif-ch.sel{box-shadow:0 0 0 2px var(--brass)} /* trecho em loop marcado na cifra */
 .tabs button{font-size:.76rem;font-stretch:75%;padding-left:0;padding-right:0} /* nomes maiores: medidos com a fonte Archivo, o nome mais longo (Ferramentas) cabe na coluna com folga em cada faixa de largura */
 @media (min-width:480px){.tabs button{font-size:.82rem;font-stretch:80%}}
 @media (max-width:429px){.tabs button{font-size:.72rem;font-stretch:70%}}
@@ -515,7 +517,7 @@ const GUITARS={
   aco:{name:'Aço (folk)',desc:'Cordas de aço, mais brilho e sustentação: o violão folk.',exc:.35,pick:.13,w:.5,dark:0,decay:.9982,body:[['peaking',100,4,4],['peaking',235,5,3],['highshelf',3500,0,2]],gain:.7,detune:.0018,room:.12,sgain:.9},
   eletrico:{name:'Elétrico limpo',desc:'Guitarra com som limpo: palheta perto do cavalete e sustentação longa.',exc:.2,pick:.08,w:.7,dark:0,decay:.9992,body:[['lowpass',4200,.7,0],['peaking',2400,1.2,2]],gain:.85,detune:0,room:.1,sgain:.9}
 }; // room: quanto de sala (reverberação curta) nas vozes de violão; sgain: volume das amostras gravadas
-const DEF={v:1,onboarded:false,name:'',level:1,levelSince:'',goal:15,cntMode:'tap',skills:{},days:{},changes:{},chords:{},songs:[],custom:[],ctLog:{},stats:{tuned:0,play:{},prog4:false},proven:{},badges:{},rest:0,startLevel:0,lastWeekSeen:'',rev:{},adj:null,quick:'',remind:'',bpmLog:{},font:0,theme:'',seenVer:'',msub:1,macc:'first',mgap:0,mvib:false,tuning:'padrao',tuneMode:'cordas',lastExport:'',backupAsk:'',recs:[],hojeMore:false,guitar:'nylon',welcomed:false,wgoal:0,mclick:'beep',mflash:false,updSeen:'',lefty:false,easyOn:{},ear:{ok:0,total:0},maxBpm:0,bpm:70,beats:4,altOut:false,installDismissed:false,a4:440,mypats:[],earLog:{},freeStart:0};
+const DEF={v:1,onboarded:false,name:'',level:1,levelSince:'',goal:15,cntMode:'tap',skills:{},days:{},changes:{},chords:{},songs:[],custom:[],ctLog:{},stats:{tuned:0,play:{},prog4:false},proven:{},badges:{},rest:0,startLevel:0,lastWeekSeen:'',rev:{},adj:null,quick:'',remind:'',bpmLog:{},font:0,theme:'',seenVer:'',msub:1,macc:'first',mgap:0,mvib:false,tuning:'padrao',tuneMode:'cordas',lastExport:'',backupAsk:'',recs:[],hojeMore:false,guitar:'nylon',welcomed:false,wgoal:0,mclick:'beep',mflash:false,updSeen:'',lefty:false,easyOn:{},ear:{ok:0,total:0},maxBpm:0,bpm:70,beats:4,altOut:false,installDismissed:false,a4:440,mypats:[],earLog:{},freeStart:0,volGuitar:100,volClick:100};
 let S,hadLocal=false;
 const MP_CELLS=['','↓','↑','x','B']; // casas possíveis numa batida da pessoa (Treinar, Batidas, "Sua batida")
 function adopt(o){
@@ -530,9 +532,10 @@ function adopt(o){
   S.rest=S.rest?1:0;S.startLevel=Math.round(+S.startLevel)||0;S.lastWeekSeen=typeof S.lastWeekSeen==='string'?S.lastWeekSeen:'';
   if(!S.rev||typeof S.rev!=='object'||Array.isArray(S.rev))S.rev={};if(!S.adj||typeof S.adj!=='object')S.adj=null;S.quick=typeof S.quick==='string'?S.quick:'';
   S.remind=typeof S.remind==='string'?S.remind:'';if(!S.bpmLog||typeof S.bpmLog!=='object')S.bpmLog={};if(!S.stats.timing||typeof S.stats.timing!=='object')S.stats.timing={};if(!S.stats.strum||typeof S.stats.strum!=='object')S.stats.strum={};
-  S.songs.forEach(s=>{if(typeof s.cifra!=='string')s.cifra='';s.tr=Math.max(-11,Math.min(11,Math.round(+s.tr)||0));s.capo=Math.max(0,Math.min(7,Math.round(+s.capo)||0));if(typeof s.pid!=='string')delete s.pid;s.bpm=s.bpm?Math.max(40,Math.min(160,Math.round(+s.bpm)||0)):0;s.per=s.per===2?2:1;}); // tom, capotraste e batida de tocar junto, por música
+  S.songs.forEach(s=>{if(typeof s.cifra!=='string')s.cifra='';s.tr=Math.max(-11,Math.min(11,Math.round(+s.tr)||0));s.capo=Math.max(0,Math.min(7,Math.round(+s.capo)||0));if(typeof s.pid!=='string')delete s.pid;s.bpm=s.bpm?Math.max(40,Math.min(160,Math.round(+s.bpm)||0)):0;s.per=s.per===2?2:1;s.plays=Math.max(0,Math.round(+s.plays)||0);}); // tom, capotraste e batida de tocar junto, por música
   if(!S.easyOn||typeof S.easyOn!=='object'||Array.isArray(S.easyOn))S.easyOn={};
   if(!S.earLog||typeof S.earLog!=='object'||Array.isArray(S.earLog))S.earLog={};S.freeStart=Math.round(+S.freeStart)||0; // ouvido por modalidade; cronômetro de prática livre (carimbo de hora)
+  {const vv=x=>{const n=Math.round(+x);return isNaN(n)?100:Math.max(0,Math.min(150,n));};S.volGuitar=vv(S.volGuitar);S.volClick=vv(S.volClick);} // volumes do violão e do clique, em porcento
   S.a4=Math.max(430,Math.min(450,Math.round(+S.a4)||440)); // Lá de referência do afinador e das notas do app
   S.mypats=Array.isArray(S.mypats)?S.mypats.filter(p=>p&&typeof p==='object'&&typeof p.id==='string'&&/^u[a-z0-9]+$/.test(p.id)&&Array.isArray(p.cells)&&[6,8].includes(p.cells.length)&&p.cells.every(c=>MP_CELLS.includes(c))).map(p=>({id:p.id,name:String(p.name||'').slice(0,40)||'Minha batida',cells:p.cells.slice(),bpm:Math.max(40,Math.min(160,Math.round(+p.bpm)||70)),tip:'Sua batida.',custom:true})).slice(0,20):[];
   S.font=[0,1,2].includes(+S.font)?+S.font:0;S.theme=['light','dark'].includes(S.theme)?S.theme:'';
@@ -799,6 +802,7 @@ function metaBtn(k,label){const p=PROOF[k];
   return '<button class="skill" data-act="skill" data-k="'+k+'" aria-pressed="'+!!S.skills[k]+'"><i>✓</i><span>'+label+(p?'<small class="muted">Comprova sozinha ao '+esc(proofText(p))+'.</small>':'')+'</span></button>';}
 function checkProofs(){const n=S.level,got=[];ROAD[n-1].forEach((_,j)=>{const k=n+'.'+j;if(!S.proven[k]&&proofOK(k)){S.proven[k]=today();got.push(LEVELS[n-1].skills[j]);}});if(got.length){save();got.forEach(s=>toast('Meta comprovada: '+s));}}
 function recordPlay(cfg,sec){ // tocar junto: melhor BPM sustentado por 1 e por 2 minutos em cada batida, e progressão de 4 acordes
+  if(cfg&&cfg.sid&&!cfg.part&&cfg.cells){const s=S.songs.find(x=>x.id===cfg.sid),pass=(cfg.prog.length/(cfg.perBar||1))*cfg.cells*30/cfg.bpm;if(s&&pass>0){const n=Math.min(5,Math.floor((sec-cfg.cells*30/cfg.bpm)/pass));if(n>0){s.plays=(s.plays||0)+n;save();}}} // vezes que a música inteira foi tocada junto (descontada a contagem)
   if(!cfg||sec<60)return;const p=S.stats.play[cfg.pid]||(S.stats.play[cfg.pid]={});let ch=false;
   [60,120].forEach(th=>{if(sec>=th&&(p[th]||0)<cfg.bpm){p[th]=cfg.bpm;ch=true;}});
   if(cfg.prog&&cfg.prog.length>=4&&!S.stats.prog4){S.stats.prog4=true;ch=true;}
@@ -880,14 +884,14 @@ function planFor(k){
 }
 
 /* ---------- audio ---------- */
-let AC=null,OUT=null,COMP=null,METER=null,MSD=null,ALT=null,GUIT=null,GSMP=null,BODY=[],acT=0,acWall=0,resumeWall=0;const KS={},ROOM={},DIAG={sil:'',alt:'',html:'',sig:null,clock:null};
+let AC=null,OUT=null,CLK=null,COMP=null,METER=null,MSD=null,ALT=null,GUIT=null,GSMP=null,BODY=[],acT=0,acWall=0,resumeWall=0;const KS={},ROOM={},DIAG={sil:'',alt:'',html:'',sig:null,clock:null};
 /* No celular o motor de som pode morrer sem aviso: o sistema fecha o AudioContext (app em segundo plano, chamada,
    fone Bluetooth) ou o deixa "rodando" com o relógio parado. Antes, só reiniciar o app resolvia. Agora o motor é
    descartado e criado de novo no toque seguinte. */
 function audioReset(){
   if(!AC)return;const old=AC;AC=null;acT=acWall=resumeWall=0;primed=false;
   if(M.on)mStop();if(GR.on)grStop(true);if(MIC){micStop();render();}
-  for(const k in KS)delete KS[k];NOISE=null;for(const k in VOICE)delete VOICE[k];GUIT=null;GSMP=null;BODY=[];ROOM.in=null; // os sons guardados eram do motor antigo (as amostras decodificadas servem em qualquer motor)
+  for(const k in KS)delete KS[k];NOISE=null;for(const k in VOICE)delete VOICE[k];GUIT=null;GSMP=null;CLK=null;BODY=[];ROOM.in=null; // os sons guardados eram do motor antigo (as amostras decodificadas servem em qualquer motor)
   if(ALT){try{ALT.pause();ALT.srcObject=null;}catch(e){}}MSD=null;DIAG.sig=null;DIAG.clock=null;
   try{if(old.state!=='closed'){const r=old.close();if(r&&r.catch)r.catch(()=>{});}}catch(e){}
 }
@@ -901,7 +905,7 @@ function audioDead(){ // fechado pelo sistema, relógio parado há mais de 1,5 s
 function audio(){
   if(audioDead())audioReset();
   if(!AC){const C=window.AudioContext||window.webkitAudioContext;if(!C)return null;
-    try{AC=new C();COMP=AC.createDynamicsCompressor();METER=AC.createAnalyser();METER.fftSize=1024;OUT=AC.createGain();OUT.gain.value=.9;OUT.connect(COMP);route();guitarChain();}catch(e){AC=null;return null;}}
+    try{AC=new C();COMP=AC.createDynamicsCompressor();METER=AC.createAnalyser();METER.fftSize=1024;OUT=AC.createGain();OUT.gain.value=.9;OUT.connect(COMP);CLK=AC.createGain();CLK.gain.value=(S.volClick==null?100:S.volClick)/100;CLK.connect(OUT);route();guitarChain();}catch(e){AC=null;return null;}}
   if(AC.state!=='running'){if(!resumeWall)resumeWall=Date.now();try{const r=AC.resume();if(r&&r.catch)r.catch(()=>{});}catch(e){}}
   return AC;
 }
@@ -973,14 +977,17 @@ function sndPaint(){
 }
 ['touchend','pointerup','click','keydown'].forEach(ev=>document.addEventListener(ev,unlock,{capture:true,passive:true}));
 const guitar=()=>GUITARS[S.guitar]||GUITARS.nylon;
+const volG=()=>(S.volGuitar==null?100:S.volGuitar)/100;
+function applyVolumes(){const G=guitar();if(GUIT)GUIT.gain.value=G.gain*volG();if(GSMP)GSMP.gain.value=G.sgain*volG();if(CLK)CLK.gain.value=(S.volClick==null?100:S.volClick)/100;} // Perfil, Som: violão e clique (metrônomo, bateria, contagem) com volumes próprios
+function volPanel(){return '<p class="grp">Volume</p>'+[['vol-guitar','Violão',S.volGuitar],['vol-click','Clique e bateria',S.volClick]].map(v=>'<label class="vol"><span>'+v[1]+'</span><input type="range" id="'+v[0]+'" min="0" max="150" step="5" value="'+v[2]+'" aria-label="Volume: '+v[1]+'"><b>'+v[2]+'%</b></label>').join('')+'<p class="muted small" style="margin-top:6px">Acima de 100% o som fica mais forte que o padrão: útil quando o clique some atrás do violão.</p>';}
 function guitarChain(){ // as vozes de violão passam pela "caixa" (só a corda sintetizada) e por uma sala curta; metrônomo e cliques vão direto
   if(!AC||!OUT)return;const G=guitar();
   [GUIT,GSMP,ROOM.in,ROOM.dry,ROOM.wet,ROOM.conv].concat(BODY).forEach(n=>{if(n)try{n.disconnect();}catch(e){}});
   if(!ROOM.ir||ROOM.ir.sampleRate!==AC.sampleRate){const sr=AC.sampleRate,len=Math.floor(sr*.6),ir=AC.createBuffer(2,len,sr);for(let c=0;c<2;c++){const d=ir.getChannelData(c);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,3);}ROOM.ir=ir;} // impulso da sala: ruído que morre em 0,6 s
   ROOM.in=AC.createGain();ROOM.dry=AC.createGain();ROOM.wet=AC.createGain();ROOM.wet.gain.value=G.room;ROOM.conv=AC.createConvolver();ROOM.conv.buffer=ROOM.ir;
   ROOM.in.connect(ROOM.dry);ROOM.dry.connect(OUT);ROOM.in.connect(ROOM.conv);ROOM.conv.connect(ROOM.wet);ROOM.wet.connect(OUT);
-  GSMP=AC.createGain();GSMP.gain.value=G.sgain;GSMP.connect(ROOM.in); // amostras gravadas: já trazem a caixa, vão direto para a sala
-  GUIT=AC.createGain();GUIT.gain.value=G.gain;BODY=G.body.map(([type,f,q,db])=>{const n=AC.createBiquadFilter();n.type=type;n.frequency.value=f;n.Q.value=q;n.gain.value=db;return n;});
+  GSMP=AC.createGain();GSMP.gain.value=G.sgain*volG();GSMP.connect(ROOM.in); // amostras gravadas: já trazem a caixa, vão direto para a sala
+  GUIT=AC.createGain();GUIT.gain.value=G.gain*volG();BODY=G.body.map(([type,f,q,db])=>{const n=AC.createBiquadFilter();n.type=type;n.frequency.value=f;n.Q.value=q;n.gain.value=db;return n;});
   let node=GUIT;BODY.forEach(n=>{node.connect(n);node=n;});node.connect(ROOM.in);
 }
 /* ---------- amostras gravadas: uma nota a cada 3 semitons por tipo de violão (sons/<tipo>/<nota>.mp3) ---------- */
@@ -1037,10 +1044,10 @@ function choke(si,t,tc){const v=VOICE[si];if(!v)return;delete VOICE[si];try{v.g.
 function dampAll(t){for(let i=0;i<6;i++)choke(i,t,.012);}
 function drum(t,accent,vol,beat){ // bateria simples: bumbo, caixa e chimbal sintetizados; o papel de cada tempo depende do compasso do metrônomo
   const nb=(typeof M!=='undefined'&&M.beats)||4;
-  const hat=g=>{const s=AC.createBufferSource(),f=AC.createBiquadFilter(),e=AC.createGain();s.buffer=noiseBuf();f.type='highpass';f.frequency.value=7000;e.gain.setValueAtTime(g*vol,t);e.gain.exponentialRampToValueAtTime(.0001,t+.045);s.connect(f);f.connect(e);e.connect(OUT);s.start(t);s.stop(t+.06);};
-  const kick=g=>{const o=AC.createOscillator(),e=AC.createGain();o.type='sine';o.frequency.setValueAtTime(160,t);o.frequency.exponentialRampToValueAtTime(48,t+.11);e.gain.setValueAtTime(g*vol,t);e.gain.exponentialRampToValueAtTime(.0001,t+.24);o.connect(e);e.connect(OUT);o.start(t);o.stop(t+.26);};
-  const snare=g=>{const s=AC.createBufferSource(),f=AC.createBiquadFilter(),e=AC.createGain();s.buffer=noiseBuf();s.loop=true;f.type='bandpass';f.frequency.value=1900;f.Q.value=.7;e.gain.setValueAtTime(g*vol,t);e.gain.exponentialRampToValueAtTime(.0001,t+.15);s.connect(f);f.connect(e);e.connect(OUT);s.start(t);s.stop(t+.17);
-    const o=AC.createOscillator(),e2=AC.createGain();o.type='triangle';o.frequency.setValueAtTime(230,t);o.frequency.exponentialRampToValueAtTime(160,t+.06);e2.gain.setValueAtTime(g*.5*vol,t);e2.gain.exponentialRampToValueAtTime(.0001,t+.09);o.connect(e2);e2.connect(OUT);o.start(t);o.stop(t+.1);};
+  const hat=g=>{const s=AC.createBufferSource(),f=AC.createBiquadFilter(),e=AC.createGain();s.buffer=noiseBuf();f.type='highpass';f.frequency.value=7000;e.gain.setValueAtTime(g*vol,t);e.gain.exponentialRampToValueAtTime(.0001,t+.045);s.connect(f);f.connect(e);e.connect(CLK||OUT);s.start(t);s.stop(t+.06);};
+  const kick=g=>{const o=AC.createOscillator(),e=AC.createGain();o.type='sine';o.frequency.setValueAtTime(160,t);o.frequency.exponentialRampToValueAtTime(48,t+.11);e.gain.setValueAtTime(g*vol,t);e.gain.exponentialRampToValueAtTime(.0001,t+.24);o.connect(e);e.connect(CLK||OUT);o.start(t);o.stop(t+.26);};
+  const snare=g=>{const s=AC.createBufferSource(),f=AC.createBiquadFilter(),e=AC.createGain();s.buffer=noiseBuf();s.loop=true;f.type='bandpass';f.frequency.value=1900;f.Q.value=.7;e.gain.setValueAtTime(g*vol,t);e.gain.exponentialRampToValueAtTime(.0001,t+.15);s.connect(f);f.connect(e);e.connect(CLK||OUT);s.start(t);s.stop(t+.17);
+    const o=AC.createOscillator(),e2=AC.createGain();o.type='triangle';o.frequency.setValueAtTime(230,t);o.frequency.exponentialRampToValueAtTime(160,t+.06);e2.gain.setValueAtTime(g*.5*vol,t);e2.gain.exponentialRampToValueAtTime(.0001,t+.09);o.connect(e2);e2.connect(CLK||OUT);o.start(t);o.stop(t+.1);};
   if(accent===3){hat(.22);return;} // subdivisão: só o chimbal, mais baixo
   const k=beat==null?(accent===2?0:1):beat; // sem o tempo (tocar junto): bumbo no primeiro, caixa nos outros
   const role=nb===4?['k','s','k','s'][k]:nb===3?['k','h','h'][k]:nb===2?['k','s'][k]:nb===6?['k','h','h','s','h','h'][k]:(k===0?'k':k%2?'s':'k');
@@ -1059,7 +1066,7 @@ function pickAt(t,vol){ // o chiado curto da palheta passando pelas cordas
 const hum=(v,p)=>v*(1-p+Math.random()*2*p); // variação humana de volume ou de tempo
 const strum=(ms,gap)=>{const g=gap==null?.035:gap;ms.forEach((m,i)=>pluck(m,i*g+(gap==null?Math.random()*.004:0),hum(.34,.1)));};
 function tick(t,accent,vol,beat){vol=vol==null?1:vol;const kind=(typeof M!=='undefined'&&M.click)||'beep';if(kind==='bateria'){try{drum(t,accent,vol,beat);}catch(e){}return;} // accent: 2 primeiro tempo, 1 tempo forte, 0 tempo comum, 3 subdivisão (mais grave e mais baixa)
-  try{const g=AC.createGain();g.connect(OUT);
+  try{const g=AC.createGain();g.connect(CLK||OUT);
     if(kind==='madeira'){const s=AC.createBufferSource(),f=AC.createBiquadFilter();s.buffer=noiseBuf();f.type='bandpass';f.frequency.value=accent===2?2200:accent===1?1700:accent===3?900:1300;f.Q.value=6; // bloco de madeira: ruído curto e ressonante
       g.gain.setValueAtTime((accent===3?.6:accent?1.4:1)*vol,t);g.gain.exponentialRampToValueAtTime(.0001,t+(accent===3?.03:.05));s.connect(f);f.connect(g);s.start(t);s.stop(t+.08);return;}
     const o=AC.createOscillator();o.type=kind==='clave'?'sine':'triangle';o.frequency.value=kind==='clave'?(accent===2?3100:accent===1?2600:accent===3?1500:2200):(accent===2?1568:accent===1?1175:accent===3?784:988);
@@ -1902,7 +1909,7 @@ function perfilView(){
   h+='<section class="panel" id="pf-lembrete"><h2>Lembrete diário</h2>'+(NATIVE?'<p class="sub small">Uma notificação no horário escolhido, todo dia. Quem pratica sempre na mesma hora falta menos.</p><div class="chips" style="margin-top:12px"><button class="chip" data-act="remind" data-v="" aria-pressed="'+!S.remind+'">Desligado</button>'+REMIND_TIMES.map(t=>'<button class="chip" data-act="remind" data-v="'+t+'" aria-pressed="'+(S.remind===t)+'">'+t+'</button>').join('')+'</div>':'<p class="sub small">Os lembretes ficam disponíveis no app instalado pela loja ou pelo APK. No site, escolha um horário fixo e crie um lembrete no relógio do celular: quem pratica sempre na mesma hora falta menos.</p>')+'</section>';
   h+=installPanel()+aboutPanel()+sndPanel();
   h+='<section class="panel" id="pf-aparencia"><h2>Aparência</h2><p class="grp">Mão</p><div class="chips">'+[[0,'Destro'],[1,'Canhoto']].map(o=>'<button class="chip" data-act="lefty" data-v="'+o[0]+'" aria-pressed="'+(!!S.lefty===!!o[0])+'">'+o[1]+'</button>').join('')+'</div><p class="muted small" style="margin-top:6px">Canhoto espelha os desenhos de acordes e o braço: a 6ª corda fica à direita.</p><p class="grp">Tamanho da letra</p><div class="chips">'+[[0,'Normal'],[1,'Maior'],[2,'Bem maior']].map(o=>'<button class="chip" data-act="font" data-v="'+o[0]+'" aria-pressed="'+(S.font===o[0])+'">'+o[1]+'</button>').join('')+'</div><p class="grp">Tema</p><div class="chips">'+[['','Automático'],['light','Claro'],['dark','Escuro']].map(o=>'<button class="chip" data-act="theme" data-v="'+o[0]+'" aria-pressed="'+(S.theme===o[0])+'">'+o[1]+'</button>').join('')+'</div></section>';
-  h+='<section class="panel" id="pf-som"><h2>Violão do app</h2><p class="sub small">O timbre das notas e dos acordes em todo o app. Compare com o seu violão e escolha o mais parecido.</p><div class="chips" style="margin-top:12px">'+Object.keys(GUITARS).map(k=>'<button class="chip" data-act="guitar" data-v="'+k+'" aria-pressed="'+(S.guitar===k)+'">'+GUITARS[k].name+'</button>').join('')+'</div><p class="muted small" style="margin-top:8px">'+esc(guitar().desc)+' Lá de referência: '+S.a4+' Hz (muda no afinador).</p><p class="muted small" id="smp-state" style="margin-top:6px">'+esc(sampleStateTxt())+'</p><div class="acts"><button class="btn sm quiet" data-act="chord-play" data-c="G">Ouvir um G</button><button class="btn sm quiet" data-act="play-notes" data-m="40,45,50,55,59,64" data-g=".3">Cordas soltas</button></div></section>';
+  h+='<section class="panel" id="pf-som"><h2>Violão do app</h2><p class="sub small">O timbre das notas e dos acordes em todo o app. Compare com o seu violão e escolha o mais parecido.</p><div class="chips" style="margin-top:12px">'+Object.keys(GUITARS).map(k=>'<button class="chip" data-act="guitar" data-v="'+k+'" aria-pressed="'+(S.guitar===k)+'">'+GUITARS[k].name+'</button>').join('')+'</div><p class="muted small" style="margin-top:8px">'+esc(guitar().desc)+' Lá de referência: '+S.a4+' Hz (muda no afinador).</p><p class="muted small" id="smp-state" style="margin-top:6px">'+esc(sampleStateTxt())+'</p>'+volPanel()+'<div class="acts" style="margin-top:12px"><button class="btn sm quiet" data-act="chord-play" data-c="G">Ouvir um G</button><button class="btn sm quiet" data-act="play-notes" data-m="40,45,50,55,59,64" data-g=".3">Cordas soltas</button></div></section>';
   h+='<section class="panel" id="pf-dados"><h2>Perfis neste aparelho</h2><p class="sub small">Duas pessoas no mesmo celular, cada uma com o próprio nível, treino e progresso. Trocar de perfil recarrega o app.</p><div class="chips" style="margin-top:12px"><button class="chip" data-act="prof-use" data-id="" aria-pressed="'+!PROF.current+'">Principal</button>'+PROF.list.map(p=>'<button class="chip" data-act="prof-use" data-id="'+esc(p.id)+'" aria-pressed="'+(PROF.current===p.id)+'">'+esc(p.name)+'</button>').join('')+'</div>';
   h+='<div class="row" style="margin-top:12px"><input class="inp" id="prof-name" maxlength="20" placeholder="Nome do novo perfil" aria-label="Nome do novo perfil"><button class="btn sm" data-act="prof-add">Criar</button></div>';
   if(PROF.current)h+='<button class="btn block danger" style="margin-top:12px" data-act="prof-del">'+(profDelArmed?'Toque de novo para apagar este perfil':'Apagar este perfil')+'</button>';
@@ -1937,7 +1944,7 @@ function scheduleReminder(){
 }
 
 /* ---------- cifras: cifra com rolagem automática e sugestões de músicas ---------- */
-const SV={id:null,speed:0,big:false,edit:false,editId:null,cfg:null,stage:false,pre:null,pausedSpeed:0,delArmed:null,undo:null};let svTimer=null; // delArmed: id da música cujo Remover espera confirmação; undo: a última removida, para desfazer // pre: cifra recebida de outro app, esperando confirmação em Adicionar música
+const SV={id:null,speed:0,big:false,edit:false,editId:null,cfg:null,stage:false,pre:null,pausedSpeed:0,delArmed:null,undo:null,la:null,lb:null};let svTimer=null; // delArmed: id da música cujo Remover espera confirmação; undo: a última removida, para desfazer; la, lb: trecho em loop do tocar junto (índices na sequência de acordes; null é a música inteira)
 // Arranjos simplificados, em tons fáceis, só com os nomes dos acordes. Para o tom original, capotraste.
 const SONGBOOK=[
  ['Knockin\' on Heaven\'s Door','Bob Dylan',['G','D','Am','C']],['Stand by Me','Ben E. King',['G','Em','C','D']],['Let It Be','The Beatles',['C','G','Am','F']],
@@ -2012,19 +2019,23 @@ function songView(){
   const tk=songKey(s);if(tk&&!SV.stage)h+='<p class="muted small" style="margin-top:8px">Tom provável: <b>'+(tk.minorFirst?tk.minor:tk.major)+'</b> (ou '+(tk.minorFirst?tk.major:tk.minor)+'). Acordes do tom: '+esc(tk.chords.join(', '))+'.</p>';
   if(SV.edit||!s.cifra){h+='<textarea class="inp" id="sv-cifra" rows="12" maxlength="6000" placeholder="Cole a cifra: acordes em cima da letra, como nos sites de cifras." aria-label="Cifra" data-song-cifra="'+esc(s.id)+'">'+esc(s.cifra||'')+'</textarea><p class="muted small" style="margin-top:6px">Salva sozinho. Nas linhas de acordes, os que o app conhece viram botões: toque para ver o desenho e ouvir.</p>'+(s.cifra?'<button class="btn block line" style="margin-top:10px" data-act="song-edit">Pronto</button>':'');return h+'</section>';}
   const P=cifraParse(s.cifra,k),playing=svPlaying(),pid=PAT[s.pid]?s.pid:L.rhythm,bpm=s.bpm||PAT[pid].bpm,per=s.per||1,capo=capoSuggest(s);
+  const nseq=P.seq.length,la=SV.la==null?0:Math.min(SV.la,nseq-1),lb=SV.lb==null?nseq-1:Math.min(SV.lb,nseq-1),partial=nseq>0&&(SV.la!=null||SV.lb!=null); // trecho em loop
+  const html=partial?P.html.replace(/<button class="cif-ch" data-act="cif-ch" data-c="([^"]*)" data-i="(\d+)"/g,(m,c,i)=>+i>=la&&+i<=lb?m.replace('class="cif-ch"','class="cif-ch sel"'):m):P.html;
   if(SV.stage){ // modo palco: só a cifra, grande, sem barras; a tela fica acesa enquanto rola
-    return '<section class="panel stagebar"><div class="acts"><button class="btn sm" data-act="song-stage">Sair do palco</button><span class="muted small">Rolagem</span>'+[0,1,2,3].map(v=>'<button class="chip" data-act="song-speed" data-v="'+v+'" aria-pressed="'+(SV.speed===v)+'">'+(v===0?'parada':v)+'</button>').join('')+'<button class="chip" data-act="song-big" aria-pressed="'+SV.big+'">A+</button>'+(P.seq.length?'<button class="chip" data-act="song-playalong" data-id="'+esc(s.id)+'" aria-pressed="'+playing+'">'+(playing?'Parar':'Tocar junto')+'</button>':'')+'</div><h2 style="margin-top:10px">'+esc(s.title)+'</h2><pre class="cifra'+(SV.big?' big':'')+'" data-act="song-tap" title="Toque para pausar ou retomar a rolagem">'+P.html+'</pre><p class="muted small">Toque na cifra para pausar ou retomar a rolagem.</p></section>';}
+    return '<section class="panel stagebar"><div class="acts"><button class="btn sm" data-act="song-stage">Sair do palco</button><span class="muted small">Rolagem</span>'+[0,1,2,3].map(v=>'<button class="chip" data-act="song-speed" data-v="'+v+'" aria-pressed="'+(SV.speed===v)+'">'+(v===0?'parada':v)+'</button>').join('')+'<button class="chip" data-act="song-big" aria-pressed="'+SV.big+'">A+</button>'+(P.seq.length?'<button class="chip" data-act="song-playalong" data-id="'+esc(s.id)+'" aria-pressed="'+playing+'">'+(playing?'Parar':'Tocar junto')+'</button>':'')+'</div><h2 style="margin-top:10px">'+esc(s.title)+'</h2><pre class="cifra'+(SV.big?' big':'')+'" data-act="song-tap" title="Toque para pausar ou retomar a rolagem">'+html+'</pre><p class="muted small">Toque na cifra para pausar ou retomar a rolagem.</p></section>';}
   // tom e capotraste
   h+='<div class="svtom"><div class="acts"><span class="muted small">Tom</span><button class="chip" data-act="song-tr" data-id="'+esc(s.id)+'" data-d="-1" aria-label="Meio tom abaixo">−</button><b>'+(s.tr>0?'+':'')+(s.tr||0)+'</b><button class="chip" data-act="song-tr" data-id="'+esc(s.id)+'" data-d="1" aria-label="Meio tom acima">+</button><span class="muted small" style="margin-left:6px">Capotraste</span><select id="sv-capo" aria-label="Casa do capotraste">'+[0,1,2,3,4,5,6,7].map(c=>'<option value="'+c+'"'+(c===(s.capo||0)?' selected':'')+'>'+(c?'casa '+c:'sem')+'</option>').join('')+'</select></div>';
   h+='<p class="muted small" style="margin-top:6px">'+(!s.tr&&!s.capo?'Acordes como na cifra original.':(s.capo?'Capotraste na casa '+s.capo+': os desenhos mudam e o som '+(s.tr?'fica '+tomTxt(s.tr)+' do original':'fica no tom original')+'.':'Acordes '+tomTxt(s.tr)+' do original.'))+(capo?' <button class="link" style="padding:0;min-height:0" data-act="song-capo" data-id="'+esc(s.id)+'" data-v="'+capo+'">Capotraste na casa '+capo+' deixa todos os acordes sem pestana inteira.</button>':'')+'</p></div>';
   h+='<div class="acts" style="margin-top:10px"><span class="muted small">Rolagem</span>'+[0,1,2,3].map(v=>'<button class="chip" data-act="song-speed" data-v="'+v+'" aria-pressed="'+(SV.speed===v)+'">'+(v===0?'parada':v)+'</button>').join('')+'<button class="chip" data-act="song-big" aria-pressed="'+SV.big+'">A+</button><button class="link" data-act="song-edit">Editar</button><button class="link" data-act="song-train" data-id="'+esc(s.id)+'">Treinar as trocas</button><button class="link" data-act="song-share" data-id="'+esc(s.id)+'">Compartilhar</button><button class="link" data-act="song-stage">Modo palco</button></div>';
   // tocar junto: os acordes da cifra na ordem, com a batida escolhida
+  if(s.status!=='dominada'&&(s.plays||0)>=3)h+='<p class="muted small" style="margin-top:10px">Você já tocou junto esta música inteira '+s.plays+' vezes. <button class="link" style="padding:0;min-height:0" data-act="song-status" data-id="'+esc(s.id)+'" data-v="dominada">Marcar como dominada</button></p>';
   h+='<div class="svplay"><div class="between"><b>Tocar junto</b><span class="muted small">'+(P.seq.length?P.seq.length+(P.seq.length===1?' acorde':' acordes')+' na cifra':'')+'</span></div>';
   if(!P.seq.length)h+='<p class="muted small" style="margin-top:6px">Nenhum acorde que o app conheça nas linhas de acordes desta cifra.</p>';
   else{h+='<div class="acts" style="margin-top:8px"><select id="sv-pat" aria-label="Batida">'+PATTERNS.map(p=>'<option value="'+p.id+'"'+(p.id===pid?' selected':'')+'>'+esc(p.name)+'</option>').join('')+'</select>'+[[1,'1 por compasso'],[2,'2 por compasso']].map(o=>'<button class="chip" data-act="song-per" data-id="'+esc(s.id)+'" data-v="'+o[0]+'" aria-pressed="'+(per===o[0])+'">'+o[1]+'</button>').join('')+'</div>';
+    h+='<div class="acts" style="margin-top:8px"><span class="muted small">Trecho: do acorde</span><select id="sv-la" aria-label="Do acorde">'+P.seq.map((c,i)=>'<option value="'+i+'"'+(i===la?' selected':'')+'>'+(i+1)+'. '+esc(c)+'</option>').join('')+'</select><span class="muted small">ao</span><select id="sv-lb" aria-label="Até o acorde">'+P.seq.map((c,i)=>'<option value="'+i+'"'+(i===lb?' selected':'')+'>'+(i+1)+'. '+esc(c)+'</option>').join('')+'</select>'+(partial?'<button class="link" data-act="song-loop-all">Música inteira</button>':'')+'</div>'+(partial?'<p class="muted small" style="margin-top:4px">Só o trecho marcado toca, em loop, com a contagem antes: bom para a parte difícil.</p>':'');
     h+='<div class="bpmrow"><button data-act="song-bpm" data-id="'+esc(s.id)+'" data-d="-4" aria-label="Mais devagar">−</button><div style="text-align:center"><span class="num" id="gr-bpm">'+bpm+'</span> <span class="muted small">BPM</span></div><button data-act="song-bpm" data-id="'+esc(s.id)+'" data-d="4" aria-label="Mais rápido">+</button></div>'+rhythmHTML(PAT[pid],'gr-grid');
     h+='<p class="sub small" id="gr-status" style="margin:10px 0;min-height:1.4em" aria-live="polite">'+(playing?'Contagem':'Começa com um compasso de contagem. O acorde da vez fica marcado na cifra.')+'</p><button class="btn block" data-act="song-playalong" data-id="'+esc(s.id)+'">'+(playing?'Parar':'Tocar junto')+'</button>';}
-  h+='</div><pre class="cifra'+(SV.big?' big':'')+'">'+P.html+'</pre>';
+  h+='</div><pre class="cifra'+(SV.big?' big':'')+'">'+html+'</pre>';
   return h+'</section>';
 }
 function svSync(){const want=view==='evolucao'&&sub.evolucao==='musicas'&&SV.id&&SV.speed&&!SV.edit;if(want&&!svTimer){svTimer=setInterval(()=>window.scrollBy(0,[0,.5,1,1.8][SV.speed]),50);awakeSync();}else if(!want&&svTimer){clearInterval(svTimer);svTimer=null;awakeSync();}}
@@ -2529,6 +2540,7 @@ if(PWA.host){
 const TABS=[['hoje','Hoje','<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.8 2.8L16 9.5"/>'],['meu','Meu treino','<path d="M4 6h8M16 6h4M4 12h2M10 12h10M4 18h10M18 18h2"/><circle cx="14" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="18" r="2"/>'],['treinar','Treinar','<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/>'],['ferramentas','Ferramentas','<path d="M9 3h6l4 18H5L9 3zM12 17l4-11M7.2 13h9.6"/>'],['acordes','Acordes','<path d="M5 4v16M12 4v16M19 4v16M5 4h14M5 10h14M5 16h14"/><circle cx="12" cy="7" r="1.7" fill="currentColor"/>'],['evolucao','Evolução','<path d="M5 20V11M12 20V4M19 20v-6M2 20h20"/>'],['perfil','Perfil','<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>']];
 /* ---------- novidades de cada versão, mostradas uma vez ---------- */
 const NEWS=[
+ ['1.29.0',['Tocar junto com trecho em loop: escolha o acorde de início e o de fim e só aquela parte se repete.','Perfil, Som: volumes separados para o violão e para o clique ou bateria.','Botão Voltar do Android e tecla Esc fecham o que está aberto por cima (desenho do acorde, palco, música) antes de voltar para Hoje.','Depois de tocar junto uma música inteira três vezes, o app sugere marcá-la como dominada.']],
  ['1.28.0',['Acordes, Descobrir: marque as casas num diagrama e o app diz que acorde é, mostra as notas e toca; abaixo, as formas móveis de E e de A em qualquer casa.','Na cifra, o tom provável da música (com o relativo) e os acordes do tom.','Remover uma música pede confirmação e dá para desfazer.']],
  ['1.27.0',['Depois do nível 9, Hoje vira manutenção: cada dia revisita uma semana do roteiro, com os seus pares de troca mais lentos e as suas músicas.','Evolução, Números: minutos por semana nas últimas 12 semanas (com a meta semanal), melhor troca por minuto de cada semana e acertos do ouvido por modalidade.','Hoje, em Mais: “Praticar agora” liga um cronômetro que conta mesmo com a tela apagada e soma os minutos ao parar.','Site instalável com prévia das telas na instalação; testes de tela com auditoria de acessibilidade (axe-core).']],
  ['1.26.0',['Metrônomo com bateria simples (bumbo, caixa e chimbal), que segue o compasso e a subdivisão: quarta opção em Som do clique.','Sua batida: em Treinar, Batidas, monte uma batida própria; ela entra na lista, no tocar junto das músicas e em Meu treino.','No computador, atalhos de teclado: 1 a 7 trocam de aba, espaço liga e desliga o metrônomo ou o tocar junto, setas mudam o BPM e Esc sai do palco.','Afinador: Lá de referência ajustável (436 a 444 Hz); as notas do app acompanham.']],
@@ -2567,6 +2579,14 @@ function render(){
   catch(e){logErr('tela '+view+': '+(e&&e.message||e));$('#view').innerHTML='<section class="panel"><h2>Algo deu errado nesta tela</h2><p class="sub">'+esc(String(e&&e.message||e))+'</p><p class="sub small" style="margin-top:8px">Seu progresso está salvo. Volte para Hoje ou recarregue o app; se continuar, copie o diagnóstico em Perfil (na barra de baixo) e me mande.</p><div class="acts"><button class="btn sm" data-act="nav" data-v="hoje">Ir para Hoje</button><button class="btn sm line" data-act="pwa-reload">Recarregar</button></div></section>';}
   $('#tabs').innerHTML=TABS.map(t=>'<button data-act="nav" data-v="'+t[0]+'"'+(view===t[0]?' aria-current="page"':'')+'><svg viewBox="0 0 24 24" aria-hidden="true">'+t[2]+'</svg>'+t[1]+'</button>').join('');
   mPaint();awakeSync();svSync();freeSync();checkBadges();
+}
+function goBack(){ // botão Voltar do Android e tecla Esc: fecha o que estiver por cima, uma coisa de cada vez; no fim volta para Hoje (no app, depois minimiza)
+  const pop=$('#cifpop');if(pop){pop.remove();return true;}
+  if(T.phase==='count'||T.phase==='run'){T.phase='idle';render();return true;}
+  if(SV.stage){ACT['song-stage']();return true;}
+  if(view==='evolucao'&&sub.evolucao==='musicas'&&SV.id){ACT['song-close']();return true;}
+  if(view!=='hoje'){go('hoje');return true;}
+  return false;
 }
 function go(v){grStop(true);if(SG.on)sgStop(true);if(TM.timer)tmStop();if(!(v==='ferramentas'&&sub.ferramentas==='afinador')||(MIC&&MIC.mode==='count'))micStop();if(T.phase==='count'||T.phase==='run')T.phase='idle';resetArmed=false;ceDelArmed=false;SV.delArmed=null;SV.undo=null;view=v;render();window.scrollTo(0,0);}
 
@@ -2752,7 +2772,7 @@ const ACT={
 'song-tap':()=>{if(!SV.stage)return;if(SV.speed){SV.pausedSpeed=SV.speed;SV.speed=0;}else SV.speed=SV.pausedSpeed||1;svSync();document.querySelectorAll('[data-act="song-speed"]').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.v===SV.speed)));toast(SV.speed?'Rolagem '+SV.speed:'Rolagem parada');}, // palco: sem render, para a cifra não pular
   'song-del':el=>{const id=el.dataset.id;if(SV.delArmed!==id){SV.delArmed=id;render();return;}const i=S.songs.findIndex(s=>s.id===id);if(i<0)return;SV.undo={s:S.songs[i],i};S.songs.splice(i,1);SV.delArmed=null;if(SV.id===id)SV.id=null;save();render();toast('Música removida. “Desfazer” está no alto da lista.');},
   'song-sugg':el=>{if(S.songs.some(s=>s.title.toLowerCase()===el.dataset.t.toLowerCase()))return;S.songs.push({id:'s'+Date.now().toString(36),title:el.dataset.t,chords:el.dataset.c,cifra:'',status:'aprendendo'});save();render();toast('Adicionada: '+el.dataset.t);},
-  'song-play':el=>{const s=S.songs.find(x=>x.id===el.dataset.id);if(!s)return;if(svPlaying())grStop(true);SV.id=s.id;SV.edit=!s.cifra;SV.speed=0;render();window.scrollTo(0,0);},
+  'song-play':el=>{const s=S.songs.find(x=>x.id===el.dataset.id);if(!s)return;if(svPlaying())grStop(true);SV.id=s.id;SV.edit=!s.cifra;SV.speed=0;SV.la=null;SV.lb=null;render();window.scrollTo(0,0);},
   'cif-ch':el=>{const c=el.dataset.c;strum(chordMidis(c),.045);chordPop(c);},
   'pop-close':()=>{const p=$('#cifpop');if(p)p.remove();},
   'song-tr':el=>{const s=S.songs.find(x=>x.id===el.dataset.id);if(!s)return;s.tr=Math.max(-11,Math.min(11,(s.tr||0)+(+el.dataset.d)));if(svPlaying())grStop(true);save();checkProofs();render();},
@@ -2760,8 +2780,9 @@ const ACT={
   'song-per':el=>{const s=S.songs.find(x=>x.id===el.dataset.id);if(!s)return;s.per=+el.dataset.v===2?2:1;if(svPlaying())grStop(true);save();render();},
   'song-bpm':el=>{const s=S.songs.find(x=>x.id===el.dataset.id);if(!s)return;const pid=PAT[s.pid]?s.pid:LEVELS[S.level-1].rhythm;s.bpm=Math.max(40,Math.min(160,(s.bpm||PAT[pid].bpm)+(+el.dataset.d)));if(SV.cfg)SV.cfg.bpm=s.bpm;const n=$('#gr-bpm');if(n)n.textContent=s.bpm;save();},
   'song-playalong':el=>{if(svPlaying()){grStop();return;}const s=S.songs.find(x=>x.id===el.dataset.id);if(!s)return;const seq=cifraParse(s.cifra||'',svShift(s)).seq;if(!seq.length)return;const pid=PAT[s.pid]?s.pid:LEVELS[S.level-1].rhythm;
-    SV.cfg={pid,bpm:s.bpm||PAT[pid].bpm,prog:seq,click:true,guitar:true,perBar:s.per||1};
-    grStart(SV.cfg,ci=>{let cur=null;document.querySelectorAll('.cif-ch[data-i]').forEach(e=>{const on=+e.dataset.i===ci;e.classList.toggle('now',on);if(on)cur=e;});if(cur&&!SV.speed)cur.scrollIntoView({block:'center',behavior:'smooth'});});},
+    const a=SV.la==null?0:Math.max(0,Math.min(seq.length-1,SV.la)),b=SV.lb==null?seq.length-1:Math.max(a,Math.min(seq.length-1,SV.lb)),partial=SV.la!=null||SV.lb!=null; // trecho em loop
+    SV.cfg={pid,bpm:s.bpm||PAT[pid].bpm,prog:seq.slice(a,b+1),click:true,guitar:true,perBar:s.per||1,sid:s.id,part:partial,cells:PAT[pid].cells.length};
+    grStart(SV.cfg,ci=>{let cur=null;document.querySelectorAll('.cif-ch[data-i]').forEach(e=>{const on=+e.dataset.i===a+ci;e.classList.toggle('now',on);if(on)cur=e;});if(cur&&!SV.speed)cur.scrollIntoView({block:'center',behavior:'smooth'});});},
   'song-train':el=>{const s=S.songs.find(x=>x.id===el.dataset.id);if(!s)return;const names=songChords(s);if(names.length<2){toast('Cadastre pelo menos dois acordes da música, ou cole a cifra.');return;}const L=LEVELS[S.level-1];
     if(svPlaying())grStop(true);if(CS&&!CS.done)csSettle();CS=null;CHI=null;ceNew();CE.name=('Trocas: '+s.title).slice(0,40);CE.chords=names.slice(0,CT_MAX);CE.pats=[PAT[s.pid]?s.pid:L.rhythm];CE.bpm=s.bpm||L.bpm;go('meu');toast('Treino montado com os acordes da música. Ajuste e salve.');},
   easy:el=>{const c=el.dataset.c;if(S.easyOn[c])delete S.easyOn[c];else S.easyOn[c]=true;save();render();},
@@ -2778,6 +2799,8 @@ const ACT={
 'ms-form':el=>{MS.form=+el.dataset.v;render();},
 'ms-fret':el=>{MS.fret=Math.max(1,Math.min(12,MS.fret+ +el.dataset.d));render();},
 'ms-play':()=>{strum(chordMidis(movShape(MS.form,MS.fret)));},
+'song-loop-all':()=>{SV.la=null;SV.lb=null;const was=svPlaying();if(was)grStop(true);render();if(was)ACT['song-playalong']({dataset:{id:SV.id}});},
+'song-status':el=>{const s=S.songs.find(x=>x.id===el.dataset.id);if(!s)return;s.status=['aprendendo','devagar','dominada'].includes(el.dataset.v)?el.dataset.v:s.status;save();checkProofs();render();toast(s.status==='dominada'?'Marcada como dominada. Ela volta inteira nos treinos de manutenção.':'Situação atualizada.');},
 'song-undo':()=>{if(!SV.undo)return;S.songs.splice(Math.min(SV.undo.i,S.songs.length),0,SV.undo.s);SV.undo=null;save();render();toast('Música de volta.');},
 a4:el=>{S.a4=+el.dataset.v;save();render();},
 'mp-n':el=>{const n=+el.dataset.v;if(![6,8].includes(n))return;MP.n=n;MP.cells=MP.cells.slice(0,n);while(MP.cells.length<n)MP.cells.push('');render();},
@@ -2801,7 +2824,7 @@ document.addEventListener('keydown',e=>{ // atalhos no computador: 1 a 7 trocam 
   if(e.ctrlKey||e.metaKey||e.altKey||(e.repeat&&e.key===' '))return;const tg=e.target,tag=tg&&tg.tagName,k=e.key;
   if((k==='Enter'||k===' ')&&tg&&tg.getAttribute&&tg.getAttribute('role')==='button'){tg.click();e.preventDefault();return;}
   if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT'||(tg&&tg.isContentEditable))return;
-  if(k==='Escape'){if(SV.stage){ACT['song-stage']();e.preventDefault();}return;}
+  if(k==='Escape'){if(goBack())e.preventDefault();return;}
   if(!S.onboarded)return;
   if(/^[1-7]$/.test(k)&&TABS[+k-1]){go(TABS[+k-1][0]);e.preventDefault();return;}
   if(k===' '){const b=['m-toggle','gr-toggle','song-playalong','cs-toggle','cs-start','tm-start','warm-toggle','sg-toggle'].map(a=>$('#view [data-act="'+a+'"]')).find(Boolean);if(b){b.click();e.preventDefault();}return;}
@@ -2811,6 +2834,7 @@ document.addEventListener('keydown',e=>{ // atalhos no computador: 1 a 7 trocam 
 document.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if(!el||el.disabled)return;const a=el.dataset.act,fn=ACT[a];if(fn)fn(el);if(NOISY.test(a)){sndAsked=true;setTimeout(sndPaint,900);}});
 document.addEventListener('pointerdown',e=>{if(e.target.closest('[data-tm-tap]')){e.preventDefault();tmTap();return;}const el=e.target.closest('[data-tap]');if(!el||T.phase!=='run')return;e.preventDefault();T.count++;const n=$('#t-n');if(n)n.textContent=T.count;buzz(12);});
 document.addEventListener('input',e=>{const id=e.target.id;
+  if(id==='vol-guitar'||id==='vol-click'){const v=Math.max(0,Math.min(150,Math.round(+e.target.value)||0));if(id==='vol-guitar')S.volGuitar=v;else S.volClick=v;applyVolumes();const b=e.target.closest('label').querySelector('b');if(b)b.textContent=v+'%';return;}
   if(id==='m-slider')mSet(+e.target.value);
   else if(id==='r-step')M.ramp.step=Math.max(1,Math.min(20,+e.target.value||5));
   else if(id==='r-bars')M.ramp.bars=Math.max(1,Math.min(32,+e.target.value||4));
@@ -2820,6 +2844,8 @@ document.addEventListener('input',e=>{const id=e.target.id;
 document.addEventListener('toggle',e=>{const t=e.target;if(t&&t.id==='hoje-more'&&!REC.on){S.hojeMore=t.open;save();}},true); // lembra se a linha "Mais" de Hoje ficou aberta
 document.addEventListener('change',e=>{const t=e.target;
   if(t.id==='t-a'){T.a=t.value;render();}else if(t.id==='t-b'){T.b=t.value;render();}
+  else if(t.id==='vol-guitar'||t.id==='vol-click'){save();}
+  else if(t.id==='sv-la'||t.id==='sv-lb'){const v=+t.value;if(t.id==='sv-la'){SV.la=v;if(SV.lb!=null&&SV.lb<v)SV.lb=v;}else{SV.lb=v;if(SV.la!=null&&SV.la>v)SV.la=v;}const was=svPlaying();if(was)grStop(true);render();if(was)ACT['song-playalong']({dataset:{id:SV.id}});} // trecho em loop: muda na hora, mesmo tocando
   else if(t.id==='p-name'){S.name=t.value.trim().slice(0,30);save();}
   else if(t.id==='d-note'){day(today()).note=t.value.trim().slice(0,140);save();}
   else if(t.dataset&&t.dataset.songCifra){const s=S.songs.find(x=>x.id===t.dataset.songCifra);if(s){s.cifra=t.value.slice(0,6000);if(!s.chords){const ch=cifraChordsList(s.cifra);if(ch){s.chords=ch;toast('Acordes anotados a partir da cifra: '+ch);}}save();}}
@@ -2868,7 +2894,7 @@ window.addEventListener('online',()=>{const st=SMP[S.guitar];if(st&&st.state==='
 if(NATIVE){
   const on=(plugin,ev,fn)=>{try{PLUG[plugin]&&PLUG[plugin].addListener(ev,fn);}catch(e){}};
   // Botão voltar do Android: encerra a contagem de trocas, depois volta para Hoje e, em Hoje, minimiza o app.
-  on('App','backButton',()=>{if(T.phase==='count'||T.phase==='run'){T.phase='idle';render();}else if(view!=='hoje')go('hoje');else native('App','minimizeApp');});
+  on('App','backButton',()=>{if(!goBack())native('App','minimizeApp');});
   on('App','appStateChange',st=>{if(st&&st.isActive){onShow();checkNativeUpdate();}else onHide();});
   setTimeout(()=>checkNativeUpdate(),4000); // versão nova no GitHub, para quem instalou pelo APK
   // Atalhos do ícone (Android): abrem direto o afinador, o metrônomo ou as trocas, com o app fechado ou aberto.
