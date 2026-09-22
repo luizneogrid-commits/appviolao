@@ -8,6 +8,7 @@ Tudo o que a ficha do app pede, pronto para copiar.
 | `icone-512.png` | Ícone da loja, 512 x 512. |
 | `feature-graphic.png` | Imagem de destaque, 1024 x 500. |
 | `screenshots/` | Capturas de tela do celular, 1080 x 1920 (9:16), com dados de exemplo. |
+| `screenshots-tablet7/`, `screenshots-tablet10/` | As mesmas telas em tablet de 7 polegadas (1200 x 1920) e de 10 polegadas (1600 x 2560), para as seções de tablet da ficha. |
 
 ## Gerar de novo
 

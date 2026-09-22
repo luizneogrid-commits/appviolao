@@ -71,11 +71,17 @@ async function screenshots() {
     await browser.eval('document.fonts.ready.then(()=>new Promise(r=>setTimeout(r,800)))');
     // Os avisos de conquista do progresso de exemplo não entram na foto.
     await browser.eval('document.head.insertAdjacentHTML("beforeend","<style>#toast{display:none!important}</style>")');
-    for (const [name, script] of SHOTS) {
-      try { await browser.eval(`(()=>{${script};return 'ok';})()`); } catch (e) { console.warn(`${name}: ${e.message}`); continue; }
-      await sleep(450);
-      const { data } = await cdp.send('Page.captureScreenshot', { format: 'png' });
-      writeFileSync(join(out, 'screenshots', name + '.png'), Buffer.from(data, 'base64')); n++;
+    // celular (1080 x 1920) e tablets de 7 e 10 polegadas (1200 x 1920 e 1600 x 2560), que a ficha da loja também aceita
+    for (const [dir, width, height, scale] of [['screenshots', 360, 640, 3], ['screenshots-tablet7', 600, 960, 2], ['screenshots-tablet10', 800, 1280, 2]]) {
+      mkdirSync(join(out, dir), { recursive: true });
+      await cdp.send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: scale, mobile: true });
+      await sleep(300);
+      for (const [name, script] of SHOTS) {
+        try { await browser.eval(`(()=>{${script};return 'ok';})()`); } catch (e) { console.warn(`${dir}/${name}: ${e.message}`); continue; }
+        await sleep(450);
+        const { data } = await cdp.send('Page.captureScreenshot', { format: 'png' });
+        writeFileSync(join(out, dir, name + '.png'), Buffer.from(data, 'base64')); n++;
+      }
     }
   } finally { await browser.close(); srv.close(); }
   return n;
@@ -88,4 +94,4 @@ writeFileSync(join(out, 'icone-512.png'), render(full(512), 512).asPng());
 writeFileSync(join(out, 'feature-graphic.png'), render(featureSVG(family), 1024, fontOpts).asPng());
 console.log('store/icone-512.png e store/feature-graphic.png gerados' + (fonts.length ? ' com a fonte Archivo.' : ' com fonte do sistema.'));
 const shots = await screenshots();
-if (shots) console.log(`${shots} capturas de tela em store/screenshots/ (1080 x 1920).`);
+if (shots) console.log(`${shots} capturas de tela em store/screenshots/ (celular, 1080 x 1920), screenshots-tablet7/ (1200 x 1920) e screenshots-tablet10/ (1600 x 2560).`);

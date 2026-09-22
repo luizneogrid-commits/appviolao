@@ -121,7 +121,7 @@ No navegador, nada disso muda: o site continua igual.
 
 ## Testes
 
-`npm test` confere a sintaxe do `index.html`, os dados do app (acordes, batidas, roteiro, músicas, escalas) e, se houver Chrome ou Edge no computador, roda os testes de tela (`scripts/e2e.mjs`): abre o app escondido e percorre a primeira tela, o treino de Hoje, todas as abas, ouvido, metrônomo, todas as batidas, todos os acordes na teoria, escalas, músicas com cifra, Meu treino, perfil, exportar e importar e perfis. Sem navegador, os testes de tela são pulados com aviso. `npm run test:telas` mostra cada teste. O GitHub roda tudo antes de compilar o Android.
+`npm test` confere a sintaxe do `index.html`, os dados do app (acordes, batidas, roteiro, músicas, escalas) e, se houver Chrome ou Edge no computador, roda os testes de tela (`scripts/e2e.mjs`): abre o app escondido e percorre a primeira tela, o treino de Hoje, todas as abas, ouvido, metrônomo, todas as batidas, todos os acordes na teoria, escalas, músicas com cifra, Meu treino, perfil, exportar e importar e perfis. Os recursos de microfone (contar trocas, conferir pelo som, cantar a nota, gravar) são testados com um microfone sintético: osciladores no lugar do microfone. Uma passada de acessibilidade confere que todo botão tem nome, todo campo tem rótulo, todo desenho tem descrição e que as cores dos dois temas têm contraste de pelo menos 4,5. Sem navegador, os testes de tela são pulados com aviso. `npm run test:telas` mostra cada teste. O GitHub roda tudo antes de compilar o Android.
 
 ## Bom saber
 

@@ -53,6 +53,40 @@ try {
   await test('segundo perfil abre do zero; o principal continua salvo', `const t=__t;const reg=JSON.parse(localStorage.getItem('violao-diario-perfis'));const fresh=!!document.querySelector('[data-act="ob-go"]');const main=JSON.parse(localStorage.getItem('violao-diario-v1'));reg.current='';localStorage.setItem('violao-diario-perfis',JSON.stringify(reg));return reg.list.length===1&&fresh&&main&&main.onboarded===true;`);
   await browser.goto(srv.url); await browser.eval(HELPERS);
   await test('de volta ao principal, com o progresso e sem erros registrados', `const t=__t;return t.S().onboarded===true&&t.view()==='hoje'&&t.errs().length===0;`);
+
+  // Microfone sintético: osciladores no lugar do microfone, um por nota; cada getUserMedia recebe um stream novo
+  // (o app encerra as faixas ao desligar o microfone).
+  await browser.eval(`window.__mic={ctx:null,oscs:{},setup(){if(!this.ctx){this.ctx=new AudioContext();navigator.mediaDevices.getUserMedia=async()=>{const d=this.ctx.createMediaStreamDestination();this.dest=d;Object.values(this.oscs).forEach(x=>x.g.connect(d));return d.stream;};}return this;},
+    note(m,on){this.setup();if(on&&!this.oscs[m]){const o=this.ctx.createOscillator();o.frequency.value=440*Math.pow(2,(m-69)/12);const g=this.ctx.createGain();g.gain.value=.15;o.connect(g);if(this.dest)g.connect(this.dest);o.start();this.oscs[m]={o,g};}else if(!on&&this.oscs[m]){this.oscs[m].o.stop();delete this.oscs[m];}},
+    chord(ms){Object.keys(this.oscs).forEach(m=>this.note(+m,false));ms.forEach(m=>this.note(m,true));}};'ok'`);
+  await test('microfone: contar trocas pelo som (G e C)', `const t=__t,m=__mic.setup();t.click('[data-act="nav"][data-v="treinar"]');t.click('[data-act="sub"][data-g="treinar"][data-v="trocas"]');
+    for(const [id,v] of [['t-a','G'],['t-b','C']]){const s=document.querySelector('#'+id);s.value=v;s.dispatchEvent(new Event('change',{bubbles:true}));}
+    t.click('[data-act="t-mode"][data-v="mic"]');const real=Date.now;let off=0;Date.now=()=>real()+off;
+    m.chord([43,47,50,55,59,67]);t.click('[data-act="t-start"]');await t.wait(500);off+=3000;await t.wait(700);
+    for(let i=0;i<4;i++){m.chord(i%2?[43,47,50,55,59,67]:[48,52,55,60,64]);await t.wait(700);}
+    const count=+document.querySelector('#t-n').textContent;off+=61000;await t.wait(500);Date.now=real;m.chord([]);
+    const rec=t.S().changes['C|G'];if(!(count>=3&&rec&&rec.length===1&&rec[0].n===count))throw new Error('contou '+count+', registro '+JSON.stringify(rec));return count;`);
+  await test('microfone: conferir o acorde pelo som (Am)', `const t=__t,m=__mic.setup();m.chord([45,52,57,60,64]);t.click('[data-act="nav"][data-v="acordes"]');t.click('[data-act="sub"][data-g="acordes"][data-v="acordes"]');t.click('[data-act="sub"][data-g="filtro"][data-v="todos"]');
+    [...document.querySelectorAll('[data-act="chk-open"]')].find(x=>x.dataset.c==='Am').dispatchEvent(new MouseEvent('click',{bubbles:true}));await t.wait(1500);const ok=document.querySelector('#chk-msg').textContent;
+    m.note(60,false);await t.wait(1500);const miss=document.querySelector('#chk-msg').textContent;t.click('[data-act="chk-close"]');m.chord([]);
+    if(!/Soou como Am/.test(ok)||!/2ª corda/.test(miss))throw new Error(ok+' | '+miss);return true;`);
+  await test('microfone: cantar a nota', `const t=__t,m=__mic.setup();t.click('[data-act="nav"][data-v="treinar"]');t.click('[data-act="sub"][data-g="treinar"][data-v="ouvido"]');t.click('[data-act="sub"][data-g="ouvido"][data-v="sing"]');
+    t.click('[data-act="sing-mic"]');await t.wait(500);let hit=false;for(const p of [52,53,55,57,59,60,62]){m.chord([p]);await t.wait(900);if(/Certo/.test(document.querySelector('#sing-msg').textContent)){hit=true;break;}}
+    t.click('[data-act="sing-mic"]');m.chord([]);if(!hit)throw new Error('nenhuma nota reconhecida como certa');return t.S().ear.ok>=1;`);
+  await test('gravação de 30 segundos (gravar, guardar, listar)', `const t=__t,m=__mic.setup();m.chord([57]);t.click('[data-act="nav"][data-v="hoje"]');const d=document.querySelector('#hoje-more');if(d)d.open=true;
+    if(!document.querySelector('[data-act="rec-start"]'))return 'sem MediaRecorder';t.click('[data-act="rec-start"]');await t.wait(2600);t.click('[data-act="rec-stop"]');await t.wait(900);m.chord([]);
+    const recs=t.S().recs;if(recs.length!==1||recs[0].sec<2)throw new Error('gravações: '+JSON.stringify(recs));t.click('[data-act="open-recs"]');await t.wait(150);return !!document.querySelector('#rec-audio')&&document.querySelectorAll('[data-act="rec-play"]').length===1;`);
+  await test('acessibilidade: nomes, rótulos, descrições e contraste', `const t=__t,bad=[];
+    const chk=tag=>{document.querySelectorAll('#view button,#tabs button').forEach(b=>{if(!(b.textContent.trim()||b.getAttribute('aria-label')||b.title))bad.push(tag+': botão sem nome ('+(b.dataset.act||b.className)+')');});
+      document.querySelectorAll('#view input,#view select,#view textarea').forEach(i=>{if(!(i.getAttribute('aria-label')||(i.id&&document.querySelector('label[for="'+i.id+'"]'))))bad.push(tag+': campo sem rótulo ('+(i.id||i.className)+')');});
+      document.querySelectorAll('#view svg').forEach(s=>{if(!(s.getAttribute('aria-label')||s.getAttribute('aria-hidden')==='true'||s.closest('[aria-label]')||s.closest('button')))bad.push(tag+': desenho sem descrição');});
+      document.querySelectorAll('#view img').forEach(i=>{if(!i.hasAttribute('alt'))bad.push(tag+': imagem sem alt');});};
+    for(const [v,subs] of [['hoje',[]],['meu',[]],['treinar',['trocas','batidas','tempo','ouvido']],['ferramentas',['metronomo','afinador']],['acordes',['acordes','notas','teoria']],['evolucao',['numeros','roteiro','musicas','perfil']]]){t.click('[data-act="nav"][data-v="'+v+'"]');chk(v);for(const s of subs){t.click('[data-act="sub"][data-v="'+s+'"]');chk(v+'/'+s);}}
+    const lum=c=>{const k=c.match(/\\d+/g).map(Number),f=x=>{x/=255;return x<=.03928?x/12.92:Math.pow((x+.055)/1.055,2.4);};return .2126*f(k[0])+.7152*f(k[1])+.0722*f(k[2]);},ratio=(a,b)=>{const [x,y]=[lum(a),lum(b)].sort((p,q)=>q-p);return (x+.05)/(y+.05);};
+    const probe=document.createElement('div');document.body.appendChild(probe);const col=v=>{probe.style.color='var('+v+')';return getComputedStyle(probe).color;};
+    for(const theme of ['light','dark']){document.documentElement.dataset.theme=theme;[['--ink','--bg'],['--ink','--surface'],['--muted','--surface'],['--muted','--bg'],['--on-primary','--primary'],['--primary','--surface']].forEach(([f,b])=>{const r=ratio(col(f),col(b));if(r<4.5)bad.push('contraste '+theme+': '+f+' sobre '+b+' = '+r.toFixed(2));});}
+    delete document.documentElement.dataset.theme;probe.remove();t.click('[data-act="nav"][data-v="hoje"]');
+    if(bad.length)throw new Error([...new Set(bad)].slice(0,12).join('; '));return true;`);
 } finally {
   await browser.close(); srv.close();
 }
