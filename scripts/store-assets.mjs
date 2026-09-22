@@ -1,19 +1,16 @@
 // Gera o material da Play Store em store/: ícone de 512, imagem de destaque de 1024 x 500 e,
 // se houver Chrome ou Edge no computador, capturas de tela de 1080 x 1920 do app com um progresso de exemplo.
 // Uso: npm run loja
-import { spawn } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { createServer } from 'node:http';
-import { tmpdir } from 'node:os';
-import { dirname, extname, join, normalize } from 'node:path';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { C, art, full, render } from './make-icons.mjs';
+import { launch, serve, sleep } from './headless.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..'), out = join(root, 'store');
-const html = readFileSync(join(root, 'index.html'), 'utf8');
+const html = (await import('node:fs')).readFileSync(join(root, 'index.html'), 'utf8');
 const VER = (html.match(/<meta name="app-version" content="([^"]+)"/) || [])[1] || '';
 mkdirSync(join(out, 'screenshots'), { recursive: true });
-const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 /* ---------- fonte Archivo em TTF (o resvg não lê woff2): baixada uma vez do Google Fonts ---------- */
 async function archivoFonts() {
@@ -40,43 +37,7 @@ function featureSVG(family) {
     `<text x="66" y="392" ${f} font-weight="500" font-size="22" fill="${C.gold}">Metrônomo, afinador, acordes, batidas e teoria</text></svg>`;
 }
 
-/* ---------- capturas de tela: Chrome ou Edge escondido, controlado pelo protocolo do DevTools ---------- */
-function findBrowser() {
-  const pf = process.env['ProgramFiles'] || 'C:\\Program Files', pf86 = process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)', local = process.env.LOCALAPPDATA || '';
-  return [join(pf, 'Google/Chrome/Application/chrome.exe'), join(pf86, 'Google/Chrome/Application/chrome.exe'), join(local, 'Google/Chrome/Application/chrome.exe'),
-    join(pf86, 'Microsoft/Edge/Application/msedge.exe'), join(pf, 'Microsoft/Edge/Application/msedge.exe'),
-    '/usr/bin/google-chrome', '/usr/bin/chromium', '/usr/bin/chromium-browser', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge'].find(existsSync) || null;
-}
-function serve(dir) { // servidor estático mínimo numa porta livre
-  const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.png': 'image/png', '.svg': 'image/svg+xml' };
-  const srv = createServer((req, res) => {
-    try {
-      let p = decodeURIComponent(new URL(req.url, 'http://x').pathname); if (p.endsWith('/')) p += 'index.html';
-      const file = normalize(join(dir, p)); if (!file.startsWith(normalize(dir)) || !existsSync(file)) { res.writeHead(404); return res.end(); }
-      res.writeHead(200, { 'Content-Type': TYPES[extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-store' }); res.end(readFileSync(file));
-    } catch (e) { res.writeHead(500); res.end(); }
-  });
-  return new Promise(r => srv.listen(0, '127.0.0.1', () => r({ port: srv.address().port, close: () => srv.close() })));
-}
-async function getJson(url, tries = 1) {
-  for (let i = 0; ; i++) { try { return await (await fetch(url)).json(); } catch (e) { if (i >= tries) throw e; await sleep(300); } }
-}
-function connect(url) { // cliente do protocolo do DevTools sobre o WebSocket do Node
-  return new Promise((resolve, reject) => {
-    const ws = new WebSocket(url), pending = new Map(), waiters = []; let id = 0;
-    ws.onopen = () => resolve({
-      send: (method, params = {}) => new Promise((res, rej) => { const i = ++id; pending.set(i, { res, rej }); ws.send(JSON.stringify({ id: i, method, params })); }),
-      wait: event => new Promise(res => waiters.push({ event, res })),
-      close: () => ws.close()
-    });
-    ws.onmessage = e => {
-      const m = JSON.parse(String(e.data));
-      if (m.id && pending.has(m.id)) { const p = pending.get(m.id); pending.delete(m.id); m.error ? p.rej(new Error(m.error.message)) : p.res(m.result || {}); }
-      else if (m.method) for (let i = waiters.length - 1; i >= 0; i--) if (waiters[i].event === m.method) { waiters[i].res(m.params); waiters.splice(i, 1); }
-    };
-    ws.onerror = () => reject(new Error('não conectou ao navegador'));
-  });
-}
+/* ---------- capturas de tela: Chrome ou Edge escondido (scripts/headless.mjs) ---------- */
 // Progresso de exemplo: 40 dias com folgas, três pares de trocas medidos, duas músicas e um treino salvo. Nada de nome nem dados reais.
 const SEED = `(()=>{try{const d={},now=new Date(),key=t=>t.getFullYear()+'-'+('0'+(t.getMonth()+1)).slice(-2)+'-'+('0'+t.getDate()).slice(-2);
 for(let i=0;i<40;i++){if([3,10,17,24,31].includes(i))continue;d[key(new Date(now-i*864e5))]={min:[15,20,12,18,15,25][i%6],done:i?{warm:1,tech:1,rhy:1,chg:1,rep:1}:{warm:1}};}
@@ -99,34 +60,24 @@ const SHOTS = [
   ['08-evolucao', `${nav('evolucao')}${sub('evolucao', 'numeros')}window.scrollTo(0,0)`]
 ];
 async function screenshots() {
-  const exe = findBrowser();
-  if (!exe) { console.warn('Chrome ou Edge não encontrado: as capturas de tela não foram geradas (o resto sim).'); return 0; }
-  const srv = await serve(root), port = 9300 + Math.floor(Math.random() * 500), profile = join(tmpdir(), 'violao-diario-loja-' + process.pid);
-  const proc = spawn(exe, ['--headless=new', `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check', '--disable-gpu', '--hide-scrollbars', '--mute-audio', '--lang=pt-BR', '--window-size=360,640', 'about:blank'], { stdio: 'ignore' });
+  const browser = await launch({ width: 360, height: 640, scale: 3 });
+  if (!browser) { console.warn('Chrome ou Edge não encontrado: as capturas de tela não foram geradas (o resto sim).'); return 0; }
+  const srv = await serve(root), cdp = browser.cdp;
   let n = 0;
   try {
-    await getJson(`http://127.0.0.1:${port}/json/version`, 50);
-    const page = (await getJson(`http://127.0.0.1:${port}/json`, 10)).find(t => t.type === 'page');
-    const cdp = await connect(page.webSocketDebuggerUrl);
-    await cdp.send('Page.enable'); await cdp.send('Runtime.enable');
-    await cdp.send('Emulation.setDeviceMetricsOverride', { width: 360, height: 640, deviceScaleFactor: 3, mobile: true });
-    await cdp.send('Emulation.setUserAgentOverride', { userAgent: 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36', acceptLanguage: 'pt-BR' });
     await cdp.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'light' }] });
     await cdp.send('Page.addScriptToEvaluateOnNewDocument', { source: SEED });
-    const loaded = cdp.wait('Page.loadEventFired');
-    await cdp.send('Page.navigate', { url: `http://127.0.0.1:${srv.port}/` }); await loaded;
-    await cdp.send('Runtime.evaluate', { expression: 'document.fonts.ready.then(()=>new Promise(r=>setTimeout(r,800)))', awaitPromise: true });
+    await browser.goto(srv.url);
+    await browser.eval('document.fonts.ready.then(()=>new Promise(r=>setTimeout(r,800)))');
     // Os avisos de conquista do progresso de exemplo não entram na foto.
-    await cdp.send('Runtime.evaluate', { expression: 'document.head.insertAdjacentHTML("beforeend","<style>#toast{display:none!important}</style>")' });
+    await browser.eval('document.head.insertAdjacentHTML("beforeend","<style>#toast{display:none!important}</style>")');
     for (const [name, script] of SHOTS) {
-      const r = await cdp.send('Runtime.evaluate', { expression: `(()=>{${script};return 'ok';})()`, returnByValue: true });
-      if (r.exceptionDetails) { console.warn(`${name}: ${r.exceptionDetails.exception && r.exceptionDetails.exception.description || 'erro na tela'}`); continue; }
+      try { await browser.eval(`(()=>{${script};return 'ok';})()`); } catch (e) { console.warn(`${name}: ${e.message}`); continue; }
       await sleep(450);
       const { data } = await cdp.send('Page.captureScreenshot', { format: 'png' });
       writeFileSync(join(out, 'screenshots', name + '.png'), Buffer.from(data, 'base64')); n++;
     }
-    await cdp.send('Browser.close').catch(() => {}); cdp.close();
-  } finally { proc.kill(); srv.close(); await sleep(300); rmSync(profile, { recursive: true, force: true }); }
+  } finally { await browser.close(); srv.close(); }
   return n;
 }
 

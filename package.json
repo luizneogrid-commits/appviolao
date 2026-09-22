@@ -14,7 +14,8 @@
     "aab": "npm run sync && node scripts/android-build.mjs bundle",
     "chave": "node scripts/criar-chave.mjs",
     "loja": "node scripts/store-assets.mjs",
-    "test": "node scripts/check-syntax.mjs index.html && node scripts/check-data.mjs index.html"
+    "test": "node scripts/check-syntax.mjs index.html && node scripts/check-data.mjs index.html && node scripts/e2e.mjs",
+    "test:telas": "node scripts/e2e.mjs --verbose"
   },
   "dependencies": {
     "@capacitor-community/keep-awake": "^8.0.1",

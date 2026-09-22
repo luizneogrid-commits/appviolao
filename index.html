@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Violão Diário</title>
-<meta name="app-version" content="1.15.0">
+<meta name="app-version" content="1.16.0">
 <meta name="description" content="Treino diário de violão: plano por nível, metrônomo, afinador, batidas para tocar junto, acordes e notas.">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#F2EEF0" media="(prefers-color-scheme: light)">
@@ -110,7 +110,12 @@ h3{font-weight:700;font-size:1.02rem;line-height:1.25}
 .neck.ring .str{animation:pluck .5s ease-out 2;transform-box:fill-box}
 .neck.ring .str:nth-of-type(2){animation-delay:.04s}.neck.ring .str:nth-of-type(3){animation-delay:.08s}
 .neck.ring .str:nth-of-type(4){animation-delay:.12s}.neck.ring .str:nth-of-type(5){animation-delay:.16s}.neck.ring .str:nth-of-type(6){animation-delay:.2s}
-@media (prefers-reduced-motion: reduce){.neck.ring .str{animation:none}.btn:active{transform:none}}
+@media (prefers-reduced-motion: reduce){.neck.ring .str{animation:none}.btn:active{transform:none}.toast{transition:none}.lvl i{transition:none}html{scroll-behavior:auto}}
+/* telas largas (tablet, computador): a mesma coluna, um pouco mais larga, e grades com mais colunas */
+@media (min-width:700px){.app{max-width:760px}.cgrid{grid-template-columns:repeat(3,1fr)}.stats{grid-template-columns:repeat(4,1fr)}.thdiag{max-width:420px}.pair{max-width:320px}.tabs button{font-size:.82rem;font-stretch:90%}}
+@media (min-width:1000px){.app{max-width:880px}.cgrid{grid-template-columns:repeat(4,1fr)}}
+/* impressão: os acordes viram uma folha para a parede; barras, botões e avisos somem */
+@media print{body{background:#fff;color:#000}body::before,.tabs,.pill,.toast,#cifpop,.seg,.filters,.acts,.link,.btn,.st,.chips,.why,.streak,.neck,.fbinfo{display:none!important}.app{max-width:none;padding:0}.panel,.ctile{border:1px solid #bbb;break-inside:avoid;page-break-inside:avoid;box-shadow:none}.cgrid{grid-template-columns:repeat(4,1fr)}.ctile .name{font-size:1.4rem}.chord .fd{fill:#333}.chord .ft{fill:#fff}.chord .nutc{fill:#000}}
 
 /* plan */
 .blocks{list-style:none;counter-reset:b}
@@ -175,7 +180,7 @@ h3{font-weight:700;font-size:1.02rem;line-height:1.25}
 .ctile{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:12px 12px 10px;display:flex;flex-direction:column;gap:6px}
 .ctile .play{background:none;border:0;text-align:left;border-radius:12px}
 .ctile .name{font-stretch:75%;font-weight:800;font-size:1.9rem;line-height:1}
-.st{border:0;border-radius:10px;min-height:38px;font-weight:700;font-size:.85rem;background:var(--surface-2);color:var(--muted)}
+.st{border:0;border-radius:10px;min-height:44px;font-weight:700;font-size:.85rem;background:var(--surface-2);color:var(--muted)}
 .st[data-s="aprendendo"]{background:var(--brass-soft);color:var(--ink)}
 .st[data-s="dominado"]{background:var(--ok);color:var(--surface)}
 .pair{display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:260px}
@@ -385,7 +390,7 @@ span.chip{display:inline-flex;align-items:center;gap:4px}
 .tcard p+p{margin-top:8px}
 .tcard .acts{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center}
 .tcard .kv{align-items:center}
-.ctile .thlink{padding:0;min-height:30px;font-size:.85rem;text-align:center}
+.ctile .thlink{padding:0;min-height:36px;font-size:.85rem;text-align:center}
 
 /* meu treino */
 .seq{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 4px;min-height:42px;align-items:center}
@@ -428,7 +433,7 @@ span.chip{display:inline-flex;align-items:center;gap:4px}
 .road-list li+li{margin-top:4px}
 .road-list b{color:var(--ink);font-weight:700}
 .road-ch{margin-top:10px}
-.road-ch .chip{min-height:34px;padding:0 10px;font-size:.85rem}
+.road-ch .chip{min-height:40px;padding:0 10px;font-size:.85rem}
 .road-wk .acts{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center}
 .choices{display:grid;gap:8px;margin-top:12px}
 
@@ -476,7 +481,12 @@ function native(plugin,method,opts){try{const p=PLUG[plugin],f=p&&p[method];if(!
 const buzz=ms=>{if(NATIVE){if(ms<30)native('Haptics','impact',{style:'LIGHT'});else native('Haptics','notification',{type:'SUCCESS'});return;}try{navigator.vibrate&&navigator.vibrate(ms);}catch(e){}};
 
 /* ---------- state ---------- */
-const KEY='violao-diario-v1';
+// Perfis no mesmo aparelho: o principal usa a chave de sempre; os outros, a chave com o sufixo do perfil.
+// O registro (lista e perfil atual) fica fora do progresso; trocar de perfil recarrega o app.
+const KEY_BASE='violao-diario-v1',PROF=(()=>{try{const p=JSON.parse(localStorage.getItem('violao-diario-perfis')||'null');if(p&&Array.isArray(p.list))return {list:p.list.filter(x=>x&&x.id&&x.name),current:typeof p.current==='string'?p.current:''};}catch(e){}return {list:[],current:''};})();
+if(PROF.current&&!PROF.list.some(p=>p.id===PROF.current))PROF.current='';
+function profSave(){try{localStorage.setItem('violao-diario-perfis',JSON.stringify(PROF));}catch(e){}}
+const KEY=KEY_BASE+(PROF.current?'-p-'+PROF.current:'');
 const DEF={v:1,onboarded:false,name:'',level:1,levelSince:'',goal:15,cntMode:'tap',skills:{},days:{},changes:{},chords:{},songs:[],custom:[],ctLog:{},stats:{tuned:0,play:{},prog4:false},proven:{},badges:{},rest:0,startLevel:0,lastWeekSeen:'',rev:{},adj:null,quick:'',remind:'',bpmLog:{},font:0,theme:'',seenVer:'',msub:1,macc:'first',mgap:0,mvib:false,tuning:'padrao',tuneMode:'cordas',lastExport:'',backupAsk:'',recs:[],lefty:false,easyOn:{},ear:{ok:0,total:0},maxBpm:0,bpm:70,beats:4,altOut:false,installDismissed:false};
 let S,hadLocal=false;
 function adopt(o){
@@ -958,7 +968,15 @@ function grStep(step,t){
 // CE: treino sendo montado ou editado. CS: treino tocando ou pausado. CHI: treino com o histórico aberto.
 // O tempo tocado vai para S.ctLog[id][dia] = {s: segundos, n: vezes} e, em minutos inteiros, para o dia.
 const CT_MAX=8,CT_MINS=[5,10,15,20,30];
-let CE=null,CS=null,CHI=null,ceDelArmed=false,ctMsg='';
+let CE=null,CS=null,CHI=null,ceDelArmed=false,profDelArmed=false,ctMsg='';
+// Compartilhar um treino: o treino vira um código (base64 de um JSON curto) num link do site; quem abre o link recebe o treino.
+const SITE_URL='https://luizneogrid-commits.github.io/appviolao/';
+const b64u=s=>btoa(String.fromCharCode(...new TextEncoder().encode(s))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+const unb64u=s=>new TextDecoder().decode(Uint8Array.from(atob(s.replace(/-/g,'+').replace(/_/g,'/')),c=>c.charCodeAt(0)));
+function trainCode(t){t=ctClean(t);return b64u(JSON.stringify({n:t.name,c:t.chords,p:t.pats,b:t.bpm,m:t.min,r:t.ramp?1:0}));}
+function trainLink(t){return (NATIVE||!/^https?:$/.test(location.protocol)?SITE_URL:location.origin+location.pathname)+'#treino='+trainCode(t);}
+function parseTrain(str){const m=/treino=([A-Za-z0-9_-]+)/.exec(str||''),code=m?m[1]:String(str||'').trim();
+  try{const o=JSON.parse(unb64u(code));if(!o||!Array.isArray(o.c)||!Array.isArray(o.p))return null;const t=ctClean({id:'t'+Date.now().toString(36),name:String(o.n||'').slice(0,40),chords:o.c,pats:o.p,bpm:o.b,min:o.m,ramp:!!o.r});return t.chords.length&&t.pats.length?t:null;}catch(e){return null;}}
 const ctName=t=>t.name||t.chords.join(' ');
 const chordBox=c=>'<strong>'+esc(c)+'</strong>'+chordSVG(c);
 function ctClean(t){return {id:t.id,name:String(t.name||'').slice(0,40),chords:t.chords.filter(c=>CH[c]).slice(0,CT_MAX),pats:t.pats.filter(p=>PAT[p]),bpm:Math.max(40,Math.min(160,Math.round(+t.bpm)||70)),min:CT_MINS.includes(+t.min)?+t.min:10,ramp:!!t.ramp};}
@@ -1028,8 +1046,9 @@ function ctList(){
   return '<section class="panel ct"><h2>Seus treinos</h2>'+ctNote()+'<div style="margin-top:4px">'+S.custom.map(t=>{t=ctClean(t);const st=ctStats(t.id);
     return '<div class="song"><div class="between"><h3>'+esc(ctName(t))+'</h3><span class="muted small">'+t.min+' min</span></div>'+(t.name?'<p class="cif">'+esc(t.chords.join(' '))+'</p>':'')+'<p class="muted small">'+esc(t.pats.map(p=>PAT[p].name).join(', '))+', '+t.bpm+' BPM</p>'+
       '<p class="small" style="margin-top:6px">'+(st.s?'Praticado: <b>'+durTxt(st.s)+'</b> em '+st.ks.length+(st.ks.length===1?' dia':' dias')+', o último '+esc(dayTxt(st.ks[st.ks.length-1]))+'.':'<span class="muted">Ainda não praticado.</span>')+'</p>'+
-      '<div class="acts"><button class="btn sm" data-act="cs-start" data-id="'+esc(t.id)+'">Começar</button><button class="link" data-act="ct-hist" data-id="'+esc(t.id)+'">Histórico</button><button class="link" data-act="ce-edit" data-id="'+esc(t.id)+'">Editar</button></div></div>';}).join('')+
-    '</div></section><button class="btn block quiet" style="margin-top:14px" data-act="ce-new">Montar outro treino</button>';
+      '<div class="acts"><button class="btn sm" data-act="cs-start" data-id="'+esc(t.id)+'">Começar</button><button class="link" data-act="ct-hist" data-id="'+esc(t.id)+'">Histórico</button><button class="link" data-act="ce-edit" data-id="'+esc(t.id)+'">Editar</button><button class="link" data-act="ct-share" data-id="'+esc(t.id)+'">Compartilhar</button></div></div>';}).join('')+
+    '</div></section><button class="btn block quiet" style="margin-top:14px" data-act="ce-new">Montar outro treino</button>'+
+    '<section class="panel ct" style="margin-top:14px"><details class="tcard"><summary>Receber um treino por link ou código</summary><div><p>Quem montou o treino toca em “Compartilhar” e manda o link. Cole o link (ou só o código) aqui. Serve para professor e aluno.</p><textarea class="inp" id="ct-code" rows="3" placeholder="Cole aqui o link ou o código do treino" aria-label="Link ou código do treino" style="margin-top:8px"></textarea><button class="btn block line" style="margin-top:8px" data-act="ct-import">Adicionar aos meus treinos</button></div></details></section>';
 }
 function ctHist(){
   const t=ctClean(S.custom.find(x=>x.id===CHI)),st=ctStats(t.id),days=[];for(let i=13;i>=0;i--)days.push(addDays(new Date(),-i));
@@ -1306,7 +1325,7 @@ function earPlay(){if(!E.q)earNew();if(E.q.names)strumSeq(E.q.names,.85);else st
 function chordSVG(n,hl,ids){ // hl: índices das cordas a destacar (as que mudam numa comparação); ids: um círculo escondido por corda, para o conferir pelo som
   const c=shape(n);if(!c)return '';
   const pos=c.f.filter(f=>f>0),mx=Math.max.apply(null,pos.concat([0])),base=mx<=4?1:Math.min.apply(null,pos);
-  const x=i=>20+(S.lefty?5-i:i)*16,top=28,fh=24;let s='<svg viewBox="0 0 120 132" role="img" aria-label="Diagrama do acorde '+esc(n)+'">'; // canhoto: espelhado, a 6ª corda à direita
+  const x=i=>20+(S.lefty?5-i:i)*16,top=28,fh=24;let s='<svg viewBox="0 0 120 132" role="img" aria-label="Diagrama do acorde '+esc(n)+'"><title>'+esc(n)+': '+c.f.map((f,i)=>(6-i)+'ª '+(f>0?'casa '+f+(c.d[i]?', dedo '+c.d[i]:''):f===0?'solta':'não toca')).join('; ')+'</title>'; // canhoto: espelhado, a 6ª corda à direita; o título descreve o desenho para o leitor de tela
   for(let i=0;i<6;i++)s+='<line class="g" x1="'+x(i)+'" y1="'+top+'" x2="'+x(i)+'" y2="'+(top+fh*4)+'"/>';
   for(let j=0;j<=4;j++)s+='<line class="g" x1="20" y1="'+(top+fh*j)+'" x2="100" y2="'+(top+fh*j)+'"/>';
   if(base===1)s+='<rect class="nutc" x="19" y="'+(top-5)+'" width="82" height="5" rx="1"/>';
@@ -1665,6 +1684,10 @@ function perfilView(){
   h+='<section class="panel"><h2>Lembrete diário</h2>'+(NATIVE?'<p class="sub small">Uma notificação no horário escolhido, todo dia. Quem pratica sempre na mesma hora falta menos.</p><div class="chips" style="margin-top:12px"><button class="chip" data-act="remind" data-v="" aria-pressed="'+!S.remind+'">Desligado</button>'+REMIND_TIMES.map(t=>'<button class="chip" data-act="remind" data-v="'+t+'" aria-pressed="'+(S.remind===t)+'">'+t+'</button>').join('')+'</div>':'<p class="sub small">Os lembretes ficam disponíveis no app instalado pela loja ou pelo APK. No site, escolha um horário fixo e crie um lembrete no relógio do celular: quem pratica sempre na mesma hora falta menos.</p>')+'</section>';
   h+=installPanel()+sndPanel();
   h+='<section class="panel"><h2>Aparência</h2><p class="grp">Mão</p><div class="chips">'+[[0,'Destro'],[1,'Canhoto']].map(o=>'<button class="chip" data-act="lefty" data-v="'+o[0]+'" aria-pressed="'+(!!S.lefty===!!o[0])+'">'+o[1]+'</button>').join('')+'</div><p class="muted small" style="margin-top:6px">Canhoto espelha os desenhos de acordes e o braço: a 6ª corda fica à direita.</p><p class="grp">Tamanho da letra</p><div class="chips">'+[[0,'Normal'],[1,'Maior'],[2,'Bem maior']].map(o=>'<button class="chip" data-act="font" data-v="'+o[0]+'" aria-pressed="'+(S.font===o[0])+'">'+o[1]+'</button>').join('')+'</div><p class="grp">Tema</p><div class="chips">'+[['','Automático'],['light','Claro'],['dark','Escuro']].map(o=>'<button class="chip" data-act="theme" data-v="'+o[0]+'" aria-pressed="'+(S.theme===o[0])+'">'+o[1]+'</button>').join('')+'</div></section>';
+  h+='<section class="panel"><h2>Perfis neste aparelho</h2><p class="sub small">Duas pessoas no mesmo celular, cada uma com o próprio nível, treino e progresso. Trocar de perfil recarrega o app.</p><div class="chips" style="margin-top:12px"><button class="chip" data-act="prof-use" data-id="" aria-pressed="'+!PROF.current+'">Principal</button>'+PROF.list.map(p=>'<button class="chip" data-act="prof-use" data-id="'+esc(p.id)+'" aria-pressed="'+(PROF.current===p.id)+'">'+esc(p.name)+'</button>').join('')+'</div>';
+  h+='<div class="row" style="margin-top:12px"><input class="inp" id="prof-name" maxlength="20" placeholder="Nome do novo perfil" aria-label="Nome do novo perfil"><button class="btn sm" data-act="prof-add">Criar</button></div>';
+  if(PROF.current)h+='<button class="btn block danger" style="margin-top:12px" data-act="prof-del">'+(profDelArmed?'Toque de novo para apagar este perfil':'Apagar este perfil')+'</button>';
+  h+='</section>';
   h+='<section class="panel"><h2>Seus dados</h2><p class="sub">'+(NATIVE?'Seu progresso fica salvo neste aparelho, dentro do app.':'Seu progresso fica salvo neste aparelho, neste navegador. Cada pessoa que abrir o link tem o próprio progresso, separado do seu.')+' É a única cópia: exporte de tempos em tempos, e antes de trocar de celular.</p>';
   h+='<div class="acts" style="margin-top:12px"><button class="btn sm" data-act="export">Exportar progresso</button><label class="btn sm line" for="imp-file">Importar progresso</label><input type="file" id="imp-file" accept=".json,application/json,text/plain" style="display:none"></div>';
   if(IMP.text)h+='<div class="snd" style="margin-top:14px"><p>Não consegui gerar o arquivo aqui. Copie o texto abaixo e guarde num lugar seguro (um e-mail para você mesmo serve).</p><textarea class="inp" rows="4" readonly aria-label="Progresso exportado">'+esc(IMP.text)+'</textarea><div class="acts"><button class="btn sm" data-act="exp-copy">Copiar</button><button class="link" data-act="exp-close">Fechar</button></div></div>';
@@ -2057,7 +2080,7 @@ V.acordes=function(){
     const f=sub.filtro,list=CHORDS.filter(c=>f==='todos'||c.g===f||(f==='nivel'&&earPool().includes(c.n)));
     const lbl={aprendendo:'Aprendendo',dominado:'Dominado'};
     h+=checkPanel();
-    h+='<p class="sub" style="margin:-4px 0 14px">Toque no diagrama para ouvir. Os números são os dedos: 1 indicador, 2 médio, 3 anelar, 4 mindinho. × não toca, ○ corda solta.</p><div class="filters">'+[['todos','Todos'],['nivel','Do meu nível'],['abertos','Abertos'],['setima','Com sétima'],['pestana','Pestana'],['sus','Sus e add9'],['baixo','Com baixo']].map(o=>'<button class="chip" data-act="sub" data-g="filtro" data-v="'+o[0]+'" aria-pressed="'+(f===o[0])+'">'+o[1]+'</button>').join('')+'</div><div class="cgrid">'+list.map(c=>{const st=S.chords[c.n];return '<div class="ctile"><button class="play chord" data-act="chord-play" data-c="'+esc(c.n)+'" aria-label="Ouvir '+esc(c.n)+'"><span class="name">'+esc(c.n)+(S.easyOn[c.n]?' <span class="tag">fácil</span>':'')+'</span>'+chordSVG(c.n)+'</button><button class="st" data-act="chord-st" data-c="'+esc(c.n)+'" data-s="'+(st||'')+'">'+(st?lbl[st]:'Marcar')+'</button>'+(c.easy?'<button class="link thlink" data-act="easy" data-c="'+esc(c.n)+'" aria-pressed="'+!!S.easyOn[c.n]+'">'+(S.easyOn[c.n]?'Voltar à versão completa':'Versão fácil')+'</button>':'')+'<button class="link thlink" data-act="th-open" data-c="'+esc(c.n)+'">Como se forma</button><button class="link thlink" data-act="chk-open" data-c="'+esc(c.n)+'">Conferir pelo som</button></div>';}).join('')+'</div>';
+    h+='<p class="sub" style="margin:-4px 0 14px">Toque no diagrama para ouvir. Os números são os dedos: 1 indicador, 2 médio, 3 anelar, 4 mindinho. × não toca, ○ corda solta. <button class="link" style="padding:0;min-height:0" data-act="print">Imprimir esta lista</button></p><div class="filters">'+[['todos','Todos'],['nivel','Do meu nível'],['abertos','Abertos'],['setima','Com sétima'],['pestana','Pestana'],['sus','Sus e add9'],['baixo','Com baixo']].map(o=>'<button class="chip" data-act="sub" data-g="filtro" data-v="'+o[0]+'" aria-pressed="'+(f===o[0])+'">'+o[1]+'</button>').join('')+'</div><div class="cgrid">'+list.map(c=>{const st=S.chords[c.n];return '<div class="ctile"><button class="play chord" data-act="chord-play" data-c="'+esc(c.n)+'" aria-label="Ouvir '+esc(c.n)+'"><span class="name">'+esc(c.n)+(S.easyOn[c.n]?' <span class="tag">fácil</span>':'')+'</span>'+chordSVG(c.n)+'</button><button class="st" data-act="chord-st" data-c="'+esc(c.n)+'" data-s="'+(st||'')+'">'+(st?lbl[st]:'Marcar')+'</button>'+(c.easy?'<button class="link thlink" data-act="easy" data-c="'+esc(c.n)+'" aria-pressed="'+!!S.easyOn[c.n]+'">'+(S.easyOn[c.n]?'Voltar à versão completa':'Versão fácil')+'</button>':'')+'<button class="link thlink" data-act="th-open" data-c="'+esc(c.n)+'">Como se forma</button><button class="link thlink" data-act="chk-open" data-c="'+esc(c.n)+'">Conferir pelo som</button></div>';}).join('')+'</div>';
   }else{
     h+='<section class="panel"><h2>As sete notas</h2><p class="sub">Na cifra, cada letra é uma nota: C é Dó, D é Ré, e assim por diante. Toque para ouvir e veja onde fica no violão.</p><div class="scale" style="margin-top:14px">'+SCALE.map((p,k)=>{const m=OPEN[p[0]]+p[1],pc=m%12;return '<button data-act="note" data-si="'+p[0]+'" data-f="'+p[1]+'" data-k="'+k+'" aria-label="'+NPT[pc]+'"><b>'+NL[pc]+'</b><span>'+NPT[pc]+'</span><small>'+(6-p[0])+'ª corda, '+(p[1]?'casa '+p[1]:'solta')+'</small></button>';}).join('')+'</div><button class="btn block quiet" style="margin-top:14px" data-act="scale-play">Ouvir a escala de Dó</button></section>';
     let g='<div class="hd"></div>';for(let f=0;f<=12;f++)g+='<div class="hd'+([3,5,7,9,12].includes(f)?' mk':'')+'">'+(f===0?'solta':f+([3,5,7,9,12].includes(f)?' •':''))+'</div>';
@@ -2152,6 +2175,7 @@ if(PWA.host){
 const TABS=[['hoje','Hoje','<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.8 2.8L16 9.5"/>'],['meu','Meu treino','<path d="M4 6h8M16 6h4M4 12h2M10 12h10M4 18h10M18 18h2"/><circle cx="14" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="18" r="2"/>'],['treinar','Treinar','<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/>'],['ferramentas','Ferramentas','<path d="M9 3h6l4 18H5L9 3zM12 17l4-11M7.2 13h9.6"/>'],['acordes','Acordes','<path d="M5 4v16M12 4v16M19 4v16M5 4h14M5 10h14M5 16h14"/><circle cx="12" cy="7" r="1.7" fill="currentColor"/>'],['evolucao','Evolução','<path d="M5 20V11M12 20V4M19 20v-6M2 20h20"/>']];
 /* ---------- novidades de cada versão, mostradas uma vez ---------- */
 const NEWS=[
+ ['1.16.0',['Perfis no mesmo aparelho (Perfil): cada pessoa com o próprio progresso.','Compartilhar um treino de Meu treino por link; quem abre recebe pronto.','Telas largas com mais colunas, folha de acordes para imprimir e ajustes de acessibilidade.']],
  ['1.15.0',['Lembrete que diz o treino da semana e some no dia em que a meta já foi batida; aviso de cópia de segurança a cada 30 dias.','Bloco de ritmo já começa com o metrônomo; “Desfazer” num bloco concluído sem querer.','Afinador: meio tom abaixo, Drop D e modo cromático com cents.','Gravação de 30 segundos em Hoje, para ouvir a evolução (fica só no aparelho).','Site instalado com atalhos e fonte embutida; metrônomo por vibração.']],
  ['1.14.0',['Batidas brasileiras: bossa nova, samba, xote e baião.','Metrônomo com compasso mudo, para treinar o pulso interno.','Escalas: tocar junto nota por nota, com a posição marcada no braço.','Revisão rápida: montar o acorde no diagrama.','Ouvido: cante a nota, com o microfone dizendo se chegou.']],
  ['1.13.0',['Cifra: toque num acorde para ver o desenho; mude o tom e o capotraste, com sugestão de casa.','Tocar junto com a cifra: o app toca os acordes da música com a batida escolhida e marca o acorde da vez.','“Treinar as trocas” monta um treino com os acordes da música.','Acordes com baixo (D/F#, C/G, G/B, Am/G, E/G#) e versões fáceis de F, Bm, F#m e Bb.']],
@@ -2276,6 +2300,14 @@ const ACT={
   'sing-mic':()=>{if(MIC&&MIC.mode==='sing'){micStop();render();}else{if(MIC)micStop();micStart('sing');}},
   'sing-skip':()=>{if(!E.q||E.ans)return;E.ans='skip';E.total++;S.ear.total++;save();render();},
   font:el=>{S.font=+el.dataset.v||0;save();applyLook();render();},
+  'prof-use':el=>{const id=el.dataset.id||'';if(id===PROF.current)return;PROF.current=id;profSave();location.reload();},
+  'prof-add':()=>{const name=(($('#prof-name')||{}).value||'').trim().slice(0,20);if(!name){const i=$('#prof-name');if(i)i.focus();return;}const id='p'+Date.now().toString(36);PROF.list.push({id,name});PROF.current=id;profSave();location.reload();},
+  'prof-del':()=>{if(!PROF.current)return;if(!profDelArmed){profDelArmed=true;render();return;}const id=PROF.current,k=KEY_BASE+'-p-'+id;[k,k+'-anterior',k+'-erros'].forEach(x=>{try{localStorage.removeItem(x);}catch(e){}});if(NATIVE)native('Preferences','remove',{key:k});PROF.list=PROF.list.filter(p=>p.id!==id);PROF.current='';profSave();location.reload();},
+  'ct-share':el=>{const t=S.custom.find(x=>x.id===el.dataset.id);if(!t)return;const url=trainLink(t),txt='Treino do Violão Diário: '+ctName(ctClean(t))+'. Abra o link para receber.';
+    if(navigator.share){navigator.share({title:'Treino do Violão Diário',text:txt,url}).catch(()=>{});return;}
+    const p=navigator.clipboard&&navigator.clipboard.writeText(url);if(p&&p.then)p.then(()=>toast('Link copiado. Mande para quem quiser.'),()=>{ctMsg='Copie o link: '+url;render();});else{ctMsg='Copie o link: '+url;render();}},
+  'ct-import':()=>{const t=parseTrain(($('#ct-code')||{value:''}).value);if(!t){toast('Não reconheci esse código ou link de treino.');return;}S.custom.push(t);save();ctMsg='Treino recebido: '+ctName(t)+'.';render();window.scrollTo(0,0);},
+  print:()=>{try{window.print();}catch(e){}},
   lefty:el=>{S.lefty=el.dataset.v==='1';save();render();},
   'chk-open':el=>{CHK.c=el.dataset.c;chkReset();sub.acordes='acordes';if(view!=='acordes')go('acordes');else{render();window.scrollTo(0,0);}if(!(MIC&&MIC.mode==='check'))micStart('check');},
   'chk-close':()=>{if(MIC&&MIC.mode==='check')micStop();CHK.c=null;render();},
@@ -2388,6 +2420,8 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden)onHide();el
 
 render();updPaint();
 {const ir=new URLSearchParams(location.search).get('ir');if(ir){openDeepLink('app://'+ir);try{history.replaceState(null,'',location.pathname);}catch(e){}}} // atalhos do site instalado (manifest.webmanifest)
+{const hs=location.hash;if(/#treino=/.test(hs)){const t=parseTrain(hs);try{history.replaceState(null,'',location.pathname);}catch(e){} // link de treino compartilhado
+  if(t){if(!S.custom.some(x=>trainCode(x)===trainCode(t))){S.custom.push(t);save();}ctMsg='Treino recebido: '+ctName(t)+'. Já está nos seus treinos.';if(S.onboarded)go('meu');else toast('Treino recebido. Monte seu perfil e ele estará em Meu treino.');}else toast('O link de treino veio incompleto.');}}
 
 if(NATIVE){
   const on=(plugin,ev,fn)=>{try{PLUG[plugin]&&PLUG[plugin].addListener(ev,fn);}catch(e){}};

@@ -17,7 +17,7 @@ O mesmo `index.html` vira três coisas:
 | `android/` | Projeto do app Android (ícones, tela de abertura, permissão do microfone). |
 | `ios/` | Projeto do app iPhone (Xcode). |
 | `capacitor.config.json`, `package.json` | Configuração do Capacitor, a ponte entre o `index.html` e os apps nativos. |
-| `scripts/` | Montagem do app (`build-www`), ícones (`make-icons`), compilação Android (`android-build`), chave de assinatura (`criar-chave`), material da loja (`store-assets`) e verificações (`check-syntax`, `check-data`, rodadas por `npm test` e pelo GitHub antes de compilar). |
+| `scripts/` | Montagem do app (`build-www`), ícones (`make-icons`), compilação Android (`android-build`), chave de assinatura (`criar-chave`), material da loja (`store-assets`) e verificações (`check-syntax`, `check-data` e os testes de tela `e2e`, rodados por `npm test` e pelo GitHub antes de compilar). |
 | `store/` | Textos, ícone, imagem de destaque e capturas de tela para a Play Store (`npm run loja` refaz as imagens). |
 | `privacidade.html` | Política de privacidade, publicada junto com o site; as lojas pedem o link. |
 | `.github/workflows/android.yml` | Gera o APK na nuvem a cada envio para a branch `main`. |
@@ -119,7 +119,14 @@ O `index.html` percebe que está dentro do app (Capacitor) e:
 
 No navegador, nada disso muda: o site continua igual.
 
+## Testes
+
+`npm test` confere a sintaxe do `index.html`, os dados do app (acordes, batidas, roteiro, músicas, escalas) e, se houver Chrome ou Edge no computador, roda os testes de tela (`scripts/e2e.mjs`): abre o app escondido e percorre a primeira tela, o treino de Hoje, todas as abas, ouvido, metrônomo, todas as batidas, todos os acordes na teoria, escalas, músicas com cifra, Meu treino, perfil, exportar e importar e perfis. Sem navegador, os testes de tela são pulados com aviso. `npm run test:telas` mostra cada teste. O GitHub roda tudo antes de compilar o Android.
+
 ## Bom saber
+
+- Perfis: em Evolução, Perfil, "Perfis neste aparelho" cria um progresso separado para outra pessoa no mesmo celular. O principal é o de sempre; os outros ficam em chaves próprias (`violao-diario-v1-p-...`). O lembrete diário é do aparelho: vale o último perfil que o configurou.
+- Compartilhar um treino: em Meu treino, "Compartilhar" manda um link do site com o treino embutido (`#treino=...`). Quem abre recebe o treino; no app, cole o link em "Receber um treino por link ou código".
 
 - O progresso fica salvo no aparelho de cada pessoa. O app Android, o site instalado e o link do Claude guardam progressos separados. Para mover de um para o outro, ou antes de trocar de celular, use Exportar e Importar em Evolução, Perfil, Seus dados.
 - No iPhone, o site instalado e o Safari também guardam dados separados. Peça para a pessoa instalar primeiro e começar a usar depois.
