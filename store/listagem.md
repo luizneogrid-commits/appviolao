@@ -15,7 +15,7 @@ Um treino curto por dia: metrônomo, afinador, acordes, batidas e teoria.
 Quinze minutos por dia rendem mais que duas horas no sábado. O Violão Diário monta um treino curto para o seu nível, todos os dias, e mostra sua evolução em números.
 
 COMO FUNCIONA
-Você diz onde está (nunca toquei, sei um ou dois acordes, quero vencer a pestana, quero dedilhar, quero escalas e solos) e quanto tempo tem por dia. O app monta um roteiro de 6 níveis com 4 semanas cada, e todo dia entrega um treino com aquecimento, técnica, ritmo, trocas de acorde e repertório. Cada bloco tem um cronômetro e explica por que existe.
+Você diz onde está (nunca toquei, sei um ou dois acordes, quero vencer a pestana, quero dedilhar, quero escalas e solos) e quanto tempo tem por dia. O app monta um roteiro de 9 níveis com 4 semanas cada, e todo dia entrega um treino com aquecimento, técnica, ritmo, trocas de acorde e repertório. Cada bloco tem um cronômetro e explica por que existe.
 
 O QUE VEM DENTRO
 • Metrônomo com subir aos poucos, subdivisão em colcheias ou tercinas e acento no 2 e no 4.
@@ -23,7 +23,9 @@ O QUE VEM DENTRO
 • Batidas e dedilhados para tocar junto, com contagem e som de violão: quatro para baixo, desce e sobe, pop, reggae, valsa, P-I-M-A, baixo alternado e mais.
 • Contador de trocas de acorde por minuto, tocando na tela ou pelo microfone.
 • Conferir um acorde pelo som: o app diz que corda não soou ou que dedo parece fora do lugar.
-• 32 acordes com diagramas, dedos e som, incluindo pestanas, sétimas, suspensos e add9.
+• Som de violão de verdade: notas gravadas de violão de nylon, de aço e de guitarra limpa, à sua escolha.
+• 42 acordes com diagramas, dedos e som, incluindo pestanas, sétimas, suspensos, add9, com baixo e power chords, com versões fáceis para começar.
+• Guia do iniciante: como segurar o violão, ler o diagrama, palheta ou dedos, dor nos dedos e cordas.
 • Teoria que explica: por que cada corda é apertada onde é, o que é terça, quinta, sétima, escalas (maior, menor natural, harmônica, melódica e pentatônica), ciclo das quintas e quartas.
 • Treino de ouvido: maior ou menor, qual acorde, intervalos e progressões.
 • Exercício de tempo: o app mede se você adianta ou atrasa.
@@ -32,8 +34,8 @@ O QUE VEM DENTRO
 • Revisão rápida: perguntas curtas na hora certa de rever, com repetição espaçada.
 • Evolução: sequência de dias, minutos por dia, calendário do ano, diário, conquistas e metas comprovadas pelos seus registros.
 • Lembrete diário no horário que você escolher.
-• Letra maior, tema claro ou escuro e modo canhoto.
-• Exportar e importar o progresso para trocar de celular.
+• Letra maior, tema claro ou escuro, modo canhoto e perfis para mais de uma pessoa no mesmo celular.
+• Cópias automáticas do progresso e exportar e importar para trocar de celular.
 
 SEM CONTA, SEM ANÚNCIOS
 Não pede cadastro, não tem anúncios e não manda seus dados para lugar nenhum: tudo fica no seu aparelho. O microfone é usado só enquanto o afinador, a contagem de trocas, o conferir pelo som ou o cantar a nota estão ligados, sem gravar nada. A única gravação é a de 30 segundos que você mesmo faz, quando quiser, e ela fica só no seu celular.

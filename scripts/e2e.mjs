@@ -21,7 +21,7 @@ async function test(name, expression) {
   } catch (e) { failed++; results.push({ name, ok: false, e: e.message }); console.error('ERRO ' + name + ': ' + e.message); }
 }
 // Ajudas que ficam na página: clique por seletor (funciona em SVG também), espera, e leitura do estado salvo.
-const HELPERS = `window.__t={click:s=>{const e=document.querySelector(s);if(!e)throw new Error('sem '+s);e.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}));return e;},
+const HELPERS = `window.__t={click:s=>{const e=document.querySelector(s);if(!e)throw new Error('sem '+s+' (tela: '+((document.querySelector('#view h1')||{}).textContent||'?')+')');e.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}));return e;},
  wait:ms=>new Promise(r=>setTimeout(r,ms)),S:()=>JSON.parse(localStorage.getItem('violao-diario-v1')||'null'),
  view:()=>(document.querySelector('#tabs [aria-current]')||{dataset:{}}).dataset.v,text:()=>document.querySelector('#view').innerText,
  broken:()=>/Algo deu errado nesta tela/.test(document.querySelector('#view').innerText),errs:()=>JSON.parse(localStorage.getItem('violao-diario-v1-erros')||'[]'),
@@ -62,10 +62,17 @@ try {
     let txt='';for(let i=0;i<40;i++){txt=document.querySelector('#smp-state').textContent;if(/prontas/.test(txt))break;await t.wait(250);}if(!/prontas/.test(txt))throw new Error('estado: '+txt);
     const P=(window.AudioContext||window.webkitAudioContext).prototype,ob=P.createBiquadFilter;let filt=0;P.createBiquadFilter=function(){filt++;return ob.call(this);};t.click('[data-act="play-notes"][data-m="40,45,50,55,59,64"]');P.createBiquadFilter=ob;
     return 'duração '+buf.duration.toFixed(2)+' s, notas suaves com filtro: '+filt;`);
-  await test('exportar e importar o progresso', `const t=__t;let blob=null;const oc=URL.createObjectURL;URL.createObjectURL=b=>{blob=b;return 'blob:x';};const ok=HTMLAnchorElement.prototype.click;HTMLAnchorElement.prototype.click=function(){if(!this.download)ok.call(this);};t.click('[data-act="export"]');URL.createObjectURL=oc;HTMLAnchorElement.prototype.click=ok;const txt=await blob.text();const before=t.S().level;t.click('[data-act="set-level"][data-l="3"]');document.querySelector('details.tcard summary').click();document.querySelector('#imp-text').value=txt;t.click('[data-act="imp-paste"]');t.click('[data-act="imp-go"]');await t.wait(100);return JSON.parse(txt).app==='violao-diario'&&t.S().level===before;`);
+  await test('cópias automáticas: a de hoje existe e restaurar volta o nível', `const t=__t;let list=[];for(let i=0;i<30;i++){t.perfil();list=[...document.querySelectorAll('[data-act="bak-restore"]')];if(list.length)break;await t.wait(300);t.click('[data-act="nav"][data-v="hoje"]');}
+    if(list.length!==1)throw new Error('cópias: '+list.length);const before=t.S().level;t.click('[data-act="set-level"][data-l="3"]');if(t.S().level!==3)throw new Error('nível não mudou');
+    t.click('[data-act="bak-restore"]');t.click('[data-act="bak-restore"]');await t.wait(400);if(t.S().level!==before)throw new Error('restaurou nível '+t.S().level);return true;`);
+  await test('cartão de progresso: gera uma imagem PNG', `const t=__t;t.click('[data-act="nav"][data-v="hoje"]');t.click('[data-act="free-add"][data-v="5"]');t.click('[data-act="nav"][data-v="evolucao"]');t.click('[data-act="sub"][data-g="evolucao"][data-v="numeros"]');let blob=null;const oc=URL.createObjectURL,ok=HTMLAnchorElement.prototype.click,sh=navigator.share;
+    try{URL.createObjectURL=b=>{blob=b;return 'blob:x';};HTMLAnchorElement.prototype.click=function(){if(!this.download)ok.call(this);};navigator.share=undefined;t.click('[data-act="share-card"]');for(let i=0;i<20&&!blob;i++)await t.wait(150);}
+    finally{URL.createObjectURL=oc;HTMLAnchorElement.prototype.click=ok;navigator.share=sh;}
+    if(!blob||blob.type!=='image/png'||blob.size<5000)throw new Error('imagem: '+(blob&&blob.type)+' '+(blob&&blob.size));return Math.round(blob.size/1024)+' KB';`);
+  await test('exportar e importar o progresso', `const t=__t;let blob=null;const oc=URL.createObjectURL;URL.createObjectURL=b=>{blob=b;return 'blob:x';};const ok=HTMLAnchorElement.prototype.click;HTMLAnchorElement.prototype.click=function(){if(!this.download)ok.call(this);};t.perfil();t.click('[data-act="export"]');URL.createObjectURL=oc;HTMLAnchorElement.prototype.click=ok;const txt=await blob.text();const before=t.S().level;t.click('[data-act="set-level"][data-l="3"]');document.querySelector('details.tcard summary').click();document.querySelector('#imp-text').value=txt;t.click('[data-act="imp-paste"]');t.click('[data-act="imp-go"]');await t.wait(100);return JSON.parse(txt).app==='violao-diario'&&t.S().level===before;`);
   // criar um perfil recarrega a página: o clique é agendado e o teste seguinte espera a página voltar
   const reloaded = browser.cdp.wait('Page.loadEventFired');
-  await test('perfis: criar um segundo perfil', `const t=__t;document.querySelector('#prof-name').value='Teste';setTimeout(()=>t.click('[data-act="prof-add"]'),50);return true;`);
+  await test('perfis: criar um segundo perfil', `const t=__t;t.perfil();document.querySelector('#prof-name').value='Teste';setTimeout(()=>t.click('[data-act="prof-add"]'),50);return true;`);
   await reloaded; await browser.eval(HELPERS);
   await test('segundo perfil abre do zero; o principal continua salvo', `const t=__t;const reg=JSON.parse(localStorage.getItem('violao-diario-perfis'));const fresh=!!document.querySelector('[data-act="ob-go"]');const main=JSON.parse(localStorage.getItem('violao-diario-v1'));reg.current='';localStorage.setItem('violao-diario-perfis',JSON.stringify(reg));return reg.list.length===1&&fresh&&main&&main.onboarded===true;`);
   await browser.goto(srv.url); await browser.eval(HELPERS);

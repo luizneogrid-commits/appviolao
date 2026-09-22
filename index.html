@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Violão Diário</title>
-<meta name="app-version" content="1.22.0">
+<meta name="app-version" content="1.23.0">
 <meta name="description" content="Treino diário de violão: plano por nível, metrônomo, afinador, batidas para tocar junto, acordes e notas.">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#F2EEF0" media="(prefers-color-scheme: light)">
@@ -506,7 +506,7 @@ const GUITARS={
   aco:{name:'Aço (folk)',desc:'Cordas de aço, mais brilho e sustentação: o violão folk.',exc:.35,pick:.13,w:.5,dark:0,decay:.9982,body:[['peaking',100,4,4],['peaking',235,5,3],['highshelf',3500,0,2]],gain:.7,detune:.0018,room:.12,sgain:.9},
   eletrico:{name:'Elétrico limpo',desc:'Guitarra com som limpo: palheta perto do cavalete e sustentação longa.',exc:.2,pick:.08,w:.7,dark:0,decay:.9992,body:[['lowpass',4200,.7,0],['peaking',2400,1.2,2]],gain:.85,detune:0,room:.1,sgain:.9}
 }; // room: quanto de sala (reverberação curta) nas vozes de violão; sgain: volume das amostras gravadas
-const DEF={v:1,onboarded:false,name:'',level:1,levelSince:'',goal:15,cntMode:'tap',skills:{},days:{},changes:{},chords:{},songs:[],custom:[],ctLog:{},stats:{tuned:0,play:{},prog4:false},proven:{},badges:{},rest:0,startLevel:0,lastWeekSeen:'',rev:{},adj:null,quick:'',remind:'',bpmLog:{},font:0,theme:'',seenVer:'',msub:1,macc:'first',mgap:0,mvib:false,tuning:'padrao',tuneMode:'cordas',lastExport:'',backupAsk:'',recs:[],hojeMore:false,guitar:'nylon',welcomed:false,wgoal:0,mclick:'beep',mflash:false,lefty:false,easyOn:{},ear:{ok:0,total:0},maxBpm:0,bpm:70,beats:4,altOut:false,installDismissed:false};
+const DEF={v:1,onboarded:false,name:'',level:1,levelSince:'',goal:15,cntMode:'tap',skills:{},days:{},changes:{},chords:{},songs:[],custom:[],ctLog:{},stats:{tuned:0,play:{},prog4:false},proven:{},badges:{},rest:0,startLevel:0,lastWeekSeen:'',rev:{},adj:null,quick:'',remind:'',bpmLog:{},font:0,theme:'',seenVer:'',msub:1,macc:'first',mgap:0,mvib:false,tuning:'padrao',tuneMode:'cordas',lastExport:'',backupAsk:'',recs:[],hojeMore:false,guitar:'nylon',welcomed:false,wgoal:0,mclick:'beep',mflash:false,updSeen:'',lefty:false,easyOn:{},ear:{ok:0,total:0},maxBpm:0,bpm:70,beats:4,altOut:false,installDismissed:false};
 let S,hadLocal=false;
 function adopt(o){
   S=Object.assign(JSON.parse(JSON.stringify(DEF)),o&&typeof o==='object'?o:{});
@@ -526,7 +526,7 @@ function adopt(o){
   S.msub=[1,2,3].includes(+S.msub)?+S.msub:1;S.macc=['first','none','back'].includes(S.macc)?S.macc:'first';S.mgap=[0,2,4].includes(+S.mgap)?+S.mgap:0;S.mvib=!!S.mvib;S.lefty=!!S.lefty;
   S.tuning=['padrao','meio','dropd'].includes(S.tuning)?S.tuning:'padrao';S.tuneMode=S.tuneMode==='crom'?'crom':'cordas';S.hojeMore=!!S.hojeMore;S.guitar=GUITARS[S.guitar]?S.guitar:'nylon';
   S.welcomed=!!S.welcomed;if(S.onboarded&&!(o&&'welcomed' in o))S.welcomed=true; // quem já usava o app não vê as boas-vindas
-  S.wgoal=[0,3,4,5,6,7].includes(+S.wgoal)?+S.wgoal:0;S.mclick=['beep','madeira','clave'].includes(S.mclick)?S.mclick:'beep';S.mflash=!!S.mflash;
+  S.wgoal=[0,3,4,5,6,7].includes(+S.wgoal)?+S.wgoal:0;S.mclick=['beep','madeira','clave'].includes(S.mclick)?S.mclick:'beep';S.mflash=!!S.mflash;S.updSeen=typeof S.updSeen==='string'?S.updSeen:'';
   S.lastExport=typeof S.lastExport==='string'?S.lastExport:'';S.backupAsk=typeof S.backupAsk==='string'?S.backupAsk:'';S.recs=Array.isArray(S.recs)?S.recs.filter(r=>r&&typeof r==='object'&&r.id&&r.d):[];
   if(typeof S.seenVer!=='string')S.seenVer='';if(!S.seenVer&&S.onboarded&&!(o&&'seenVer' in o))S.seenVer='1.6.1'; // quem já usava o app antes deste recurso vê as novidades desde então
   S.level=Math.max(1,Math.min(9,Math.round(+S.level)||1)); // 9 = quantidade de níveis em LEVELS (definido mais abaixo)
@@ -1833,6 +1833,7 @@ function perfilView(){
   h+='</section>';
   h+='<section class="panel"><h2>Seus dados</h2><p class="sub">'+(NATIVE?'Seu progresso fica salvo neste aparelho, dentro do app.':'Seu progresso fica salvo neste aparelho, neste navegador. Cada pessoa que abrir o link tem o próprio progresso, separado do seu.')+' É a única cópia: exporte de tempos em tempos, e antes de trocar de celular.</p>';
   h+='<div class="acts" style="margin-top:12px"><button class="btn sm" data-act="export">Exportar progresso</button><label class="btn sm line" for="imp-file">Importar progresso</label><input type="file" id="imp-file" accept=".json,application/json,text/plain" style="display:none"></div>';
+  h+='<details class="tcard" style="margin-top:8px"><summary>Cópias automáticas dos últimos dias</summary><div><p>O app guarda uma cópia do progresso por dia, as últimas sete, neste aparelho. Restaurar substitui o progresso atual (dá para desfazer logo em seguida).</p>'+(BAK.list.length?'<ul class="hist" style="margin-top:8px">'+BAK.list.map(b=>'<li><div><b>'+esc(dayTxt(b.d))+'</b><div class="muted small">'+Math.max(1,Math.round(b.size/1024))+' KB</div></div><button class="btn sm quiet" data-act="bak-restore" data-id="'+esc(b.id)+'">'+(bakArmed===b.id?'Toque de novo para restaurar':'Restaurar')+'</button></li>').join('')+'</ul>':'<p class="muted small">Nenhuma cópia ainda: a primeira é feita ao abrir o app.</p>')+'</div></details>';
   if(IMP.text)h+='<div class="snd" style="margin-top:14px"><p>Não consegui gerar o arquivo aqui. Copie o texto abaixo e guarde num lugar seguro (um e-mail para você mesmo serve).</p><textarea class="inp" rows="4" readonly aria-label="Progresso exportado">'+esc(IMP.text)+'</textarea><div class="acts"><button class="btn sm" data-act="exp-copy">Copiar</button><button class="link" data-act="exp-close">Fechar</button></div></div>';
   if(IMP.data)h+='<div class="snd" style="margin-top:14px"><p><b>Arquivo lido.</b> '+esc(IMP.summary)+'</p><p class="small" style="margin-bottom:10px">Importar substitui tudo o que está neste aparelho. O estado atual fica guardado para desfazer.</p><div class="acts"><button class="btn sm" data-act="imp-go">Substituir e importar</button><button class="link" data-act="imp-cancel">Cancelar</button></div></div>';
   else if(localStorage.getItem(KEY+'-anterior'))h+='<button class="link" data-act="imp-undo">Desfazer a última importação</button>';
@@ -2038,7 +2039,7 @@ V.hoje=function(){
   const dateStr=new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'}),hr=new Date().getHours();
   const hello=S.name?(hr<12?'Bom dia':hr<18?'Boa tarde':'Boa noite')+', '+esc(S.name)+'. ':'';
   let h=topBar('<h1>Hoje</h1><p class="sub">'+hello+esc(hello?dateStr.charAt(0).toUpperCase()+dateStr.slice(1):dateStr)+'</p>','<div class="streak" aria-label="'+st+' dias seguidos"><span class="num">'+st+'</span><span class="lbl">'+(st===1?'dia<br>seguido':'dias<br>seguidos')+'</span></div>');
-  h+=installBanner()+newsPanel()+(S.welcomed?'':welcomePanel());
+  h+=installBanner()+updatePanel()+newsPanel()+(S.welcomed?'':welcomePanel());
   if(new Date().getDay()===1&&S.lastWeekSeen!==wkKey(new Date())&&weekStats(1).min>0){const a=weekStats(1),b=weekStats(2); // segunda-feira: resumo da semana passada
     h+='<section class="panel"><div class="between"><h3>Sua semana passada</h3><button class="link" style="padding:0;min-height:0" data-act="week-seen">Fechar</button></div><p class="sub">'+a.min+' min em '+a.days+(a.days===1?' dia':' dias')+(b.min?' ('+(a.min>=b.min?'+':'')+(a.min-b.min)+' min em relação à anterior)':'')+'. '+(a.days>=5?'Ritmo ótimo: cinco dias ou mais.':a.days>=3?'Bom ritmo. Tente cinco dias esta semana.':'Semana curta. Dez minutos por dia já mantêm a sequência.')+(S.wgoal?' Meta da semana: '+a.days+' de '+S.wgoal+' dias'+(a.days>=S.wgoal?', batida.':'.'):'')+'</p></section>';}
   h+='<section class="neck">'+neckSVG()+'</section>';
@@ -2085,6 +2086,36 @@ V.hoje=function(){
   h+=backupPanel();
   return h;
 };
+/* ---------- versão nova para quem instalou pelo APK: o app compara com o último Release do GitHub ---------- */
+const UPD={ver:'',checked:0},APK_URL='https://github.com/luizneogrid-commits/appviolao/releases/latest/download/violao-diario.apk';
+function checkNativeUpdate(force){
+  if(!NATIVE||!VER||!window.fetch)return;const now=Date.now();if(!force&&now-UPD.checked<6*36e5)return;UPD.checked=now;
+  fetch('https://api.github.com/repos/luizneogrid-commits/appviolao/releases/latest',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(j=>{const v=j&&String(j.tag_name||'').replace(/^v/,'');if(v&&verCmp(v,VER)>0&&UPD.ver!==v){UPD.ver=v;render();}}).catch(()=>{});
+}
+function updatePanel(){
+  if(!UPD.ver||S.updSeen===UPD.ver)return '';
+  return '<section class="panel"><div class="between"><h3>Versão '+esc(UPD.ver)+' disponível</h3><button class="link" style="padding:0;min-height:0" data-act="upd-later">Depois</button></div><p class="sub small">Você está na '+esc(VER)+'. Se instalou pela Play Store, atualize pela loja. Se instalou pelo APK, baixe o novo: ele instala por cima, sem perder o progresso.</p><div class="acts"><a class="btn sm" href="'+APK_URL+'" target="_blank" rel="noopener">Baixar o APK novo</a></div></section>';
+}
+/* ---------- cartão de progresso: imagem para compartilhar ---------- */
+function progressCard(){
+  const c=document.createElement('canvas');c.width=1080;c.height=1080;const x=c.getContext('2d');
+  x.fillStyle='#7A2E4D';x.fillRect(0,0,1080,1080);
+  const cx=830,cy=300,k=1.05; // a rosácea do ícone
+  [[185.5,'#C98A1B'],[172.5,'#24161D'],[163.5,'#F3E3C2'],[155.5,'#24161D'],[148.5,'#C98A1B'],[135.5,'#1A0E14']].forEach(([r,col])=>{x.beginPath();x.arc(cx,cy,r*k,0,Math.PI*2);x.fillStyle=col;x.fill();});
+  [[-76.7,7,'#DFB766'],[-46.1,6,'#DFB766'],[-15.5,5,'#DFB766'],[15.1,4.4,'#F4E6C6'],[45.7,3.6,'#F4E6C6'],[76.3,3,'#F4E6C6']].forEach(([sx,w,col])=>{x.fillStyle=col;x.fillRect(cx+sx*k-w*k/2,0,w*k,600);});
+  const st=streak(),ks=Object.keys(S.days).filter(practiced),tot=ks.reduce((a,k2)=>a+S.days[k2].min,0);
+  x.fillStyle='#F3E3C2';x.font='800 64px Archivo, Arial, sans-serif';x.fillText('Violão Diário',80,140);
+  x.font='800 220px Archivo, Arial, sans-serif';x.fillText(String(st),80,520);x.font='600 48px Archivo, Arial, sans-serif';x.fillText(st===1?'dia seguido':'dias seguidos',80,590);
+  x.font='500 44px Archivo, Arial, sans-serif';x.fillText(tot+' minutos em '+ks.length+(ks.length===1?' dia':' dias'),80,700);x.fillText('Nível '+S.level+': '+LEVELS[S.level-1].name,80,770);
+  x.fillStyle='#DFB766';x.font='500 34px Archivo, Arial, sans-serif';x.fillText(new Date().toLocaleDateString('pt-BR',{day:'numeric',month:'long',year:'numeric'}),80,980);x.fillText('luizneogrid-commits.github.io/appviolao',80,1030);
+  return c;
+}
+async function shareCard(){
+  try{await document.fonts.ready;}catch(e){}
+  progressCard().toBlob(blob=>{if(!blob){toast('Não consegui gerar a imagem.');return;}const name='violao-diario-'+today()+'.png';let file=null;try{file=new File([blob],name,{type:'image/png'});}catch(e){}
+    if(file&&navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){navigator.share({files:[file],title:'Meu progresso no Violão Diário'}).catch(()=>{});return;}
+    const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},1000);toast('Imagem '+name+' gerada.');},'image/png');
+}
 function welcomePanel(){ // uma vez, logo depois do cadastro: o mapa do app em três passos
   return '<section class="panel"><div class="between"><h3>Bem-vindo ao seu treino</h3><button class="link" style="padding:0;min-height:0" data-act="welcome-done">Fechar</button></div><ol class="steps muted small"><li><b>Hoje</b> é o treino do dia, montado para o seu nível. Toque em "Iniciar" no primeiro bloco, siga o texto, conclua. Quinze minutos bastam.</li><li><b>Treinar</b> mede o que você faz: trocas por minuto, tocar junto com batidas, tempo e ouvido.</li><li><b>Perfil</b>, na barra de baixo, tem nível, lembrete, aparência e o som do violão.</li></ol><p class="sub small" style="margin-top:8px">Nunca tocou? Comece pelo <button class="link" style="padding:0;min-height:0" data-act="open-guia">guia do iniciante</button>: como segurar, ler o diagrama, palheta ou dedos.</p></section>';
 }
@@ -2096,7 +2127,16 @@ function backupPanel(){ // o progresso só existe no aparelho: a cada 30 dias, u
 
 /* ---------- gravação de 30 segundos: o áudio fica no aparelho (IndexedDB); só a lista (dia, duração) vai no progresso ---------- */
 const REC={on:false,mr:null,chunks:[],left:30,timer:null,t0:0,url:null};
-function recDB(){return new Promise((res,rej)=>{try{const r=indexedDB.open('violao-diario-rec',1);r.onupgradeneeded=()=>{r.result.createObjectStore('rec',{keyPath:'id'});};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);}catch(e){rej(e);}});}
+function recDB(){return new Promise((res,rej)=>{try{const r=indexedDB.open('violao-diario-rec',2);r.onupgradeneeded=()=>{const db=r.result;if(!db.objectStoreNames.contains('rec'))db.createObjectStore('rec',{keyPath:'id'});if(!db.objectStoreNames.contains('bak'))db.createObjectStore('bak',{keyPath:'id'});};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);}catch(e){rej(e);}});} // rec: gravações; bak: cópias automáticas do progresso
+/* ---------- cópias automáticas: uma por dia, as últimas 7, por perfil; "Restaurar" em Perfil, Seus dados ---------- */
+const BAK={list:[]};let bakArmed='';
+function bakAll(){return recDB().then(db=>new Promise((res,rej)=>{const r=db.transaction('bak').objectStore('bak').getAll();r.onsuccess=()=>res((r.result||[]).filter(b=>b.k===KEY).sort((a,b)=>a.id<b.id?1:-1));r.onerror=()=>rej(r.error);}));}
+function bakSnapshot(){
+  if(!S.onboarded||!window.indexedDB)return;const id=KEY+'|'+today();
+  bakAll().then(list=>{if(list.some(b=>b.id===id)){BAK.list=list;return;}const json=JSON.stringify(S);
+    return recDB().then(db=>new Promise((res,rej)=>{const t=db.transaction('bak','readwrite'),st=t.objectStore('bak');st.put({id,k:KEY,d:today(),t:Date.now(),json,size:json.length});list.slice(6).forEach(b=>st.delete(b.id));t.oncomplete=res;t.onerror=()=>rej(t.error);})).then(bakAll).then(l=>{BAK.list=l;if(view==='perfil')render();});}).catch(()=>{});
+}
+function bakGet(id){return recDB().then(db=>new Promise((res,rej)=>{const r=db.transaction('bak').objectStore('bak').get(id);r.onsuccess=()=>res(r.result||null);r.onerror=()=>rej(r.error);}));}
 function recPut(o){return recDB().then(db=>new Promise((res,rej)=>{const t=db.transaction('rec','readwrite');t.objectStore('rec').put(o);t.oncomplete=res;t.onerror=()=>rej(t.error);}));}
 function recGet(id){return recDB().then(db=>new Promise((res,rej)=>{const r=db.transaction('rec').objectStore('rec').get(id);r.onsuccess=()=>res(r.result||null);r.onerror=()=>rej(r.error);}));}
 function recRemove(id){return recDB().then(db=>new Promise((res,rej)=>{const t=db.transaction('rec','readwrite');t.objectStore('rec').delete(id);t.oncomplete=res;t.onerror=()=>rej(t.error);}));}
@@ -2263,6 +2303,7 @@ V.evolucao=function(){
   if(sub.evolucao==='numeros'){
     const ks=Object.keys(S.days).filter(practiced),tot=ks.reduce((a,k)=>a+S.days[k].min,0);
     h+='<div class="stats"><div><b class="num">'+streak()+'</b><span>dias seguidos</span></div><div><b class="num">'+bestStreak()+'</b><span>maior sequência</span></div><div><b class="num">'+tot+'</b><span>minutos tocados</span></div><div><b class="num">'+ks.length+'</b><span>dias praticados</span></div></div>';
+    if(ks.length)h+='<div class="acts" style="margin-top:10px"><button class="btn sm quiet" data-act="share-card">Compartilhar meu progresso</button><span class="muted small">uma imagem com a sequência, os minutos e o nível</span></div>';
     const days=[];for(let i=13;i>=0;i--)days.push(addDays(new Date(),-i));
     const vals=days.map(d=>(S.days[dkey(d)]||{}).min||0);
     h+='<section class="panel chart" style="margin-top:14px"><div class="between"><h2>Últimos 14 dias</h2><span class="muted small">linha: meta de '+S.goal+' min</span></div><div style="margin-top:14px">'+dayBars(days,vals,S.goal)+'</div></section>';
@@ -2308,7 +2349,7 @@ function installSteps(){
 }
 function aboutPanel(){ // Sobre e ajuda: como usar, privacidade, versão e onde pedir ajuda
   const card=(t,b)=>'<details class="tcard"><summary>'+t+'</summary><div>'+b+'</div></details>';
-  return '<section class="panel" id="pf-ajuda"><h2>Sobre e ajuda</h2><div class="kv" style="margin-top:6px"><span>Versão</span><b>'+esc(VER||'sem número')+'</b></div><div style="margin-top:8px">'+
+  return '<section class="panel" id="pf-ajuda"><h2>Sobre e ajuda</h2><div class="kv" style="margin-top:6px"><span>Versão</span><b>'+esc(VER||'sem número')+'</b></div>'+(UPD.ver&&verCmp(UPD.ver,VER)>0?'<p class="sub small" style="margin-top:6px">Versão '+esc(UPD.ver)+' disponível. <a class="link" style="padding:0;min-height:0" href="'+APK_URL+'" target="_blank" rel="noopener">Baixar o APK novo</a> (pela Play Store, atualize pela loja).</p>':'')+'<div style="margin-top:8px">'+
     card('Como usar em um minuto','<ol class="steps"><li><b>Hoje</b> monta o treino do dia para o seu nível: aquecimento, técnica, ritmo, trocas e repertório. Inicie um bloco, toque, conclua.</li><li><b>Treinar</b> mede: trocas por minuto, tocar junto com batidas, tempo e ouvido.</li><li><b>Ferramentas</b>: metrônomo e afinador.</li><li><b>Acordes</b>: a biblioteca, as notas no braço e a teoria que explica cada acorde.</li><li><b>Evolução</b>: números, roteiro e músicas com cifra.</li><li><b>Perfil</b>, na barra de baixo: nível, lembrete, aparência, som, seus dados e ajuda.</li></ol><p>Quinze minutos por dia rendem mais que duas horas no sábado. O app cuida do resto.</p>')+
     card('Sem som ou microfone?','<p>O som do app depende do celular liberar o áudio: toque em qualquer botão de som uma vez. O microfone pede permissão na primeira vez; se não chegar som, use “Religar o microfone”.</p><button class="link" data-act="open-som">Abrir o diagnóstico de som</button>')+
     card('Privacidade','<p>Nada sai do aparelho: não há conta, anúncios nem rastreamento. O microfone é analisado na hora, sem gravar; a única gravação é a que você mesmo faz em Hoje, e ela fica no celular.</p><a class="link" href="'+SITE_URL+'privacidade.html" target="_blank" rel="noopener">Política de privacidade</a>')+
@@ -2351,6 +2392,7 @@ if(PWA.host){
 const TABS=[['hoje','Hoje','<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.8 2.8L16 9.5"/>'],['meu','Meu treino','<path d="M4 6h8M16 6h4M4 12h2M10 12h10M4 18h10M18 18h2"/><circle cx="14" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="18" r="2"/>'],['treinar','Treinar','<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/>'],['ferramentas','Ferramentas','<path d="M9 3h6l4 18H5L9 3zM12 17l4-11M7.2 13h9.6"/>'],['acordes','Acordes','<path d="M5 4v16M12 4v16M19 4v16M5 4h14M5 10h14M5 16h14"/><circle cx="12" cy="7" r="1.7" fill="currentColor"/>'],['evolucao','Evolução','<path d="M5 20V11M12 20V4M19 20v-6M2 20h20"/>'],['perfil','Perfil','<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>']];
 /* ---------- novidades de cada versão, mostradas uma vez ---------- */
 const NEWS=[
+ ['1.23.0',['Cópias automáticas do progresso dos últimos sete dias, com “Restaurar” em Perfil, Seus dados.','No app Android instalado pelo APK, aviso de versão nova com o link para baixar.','Evolução, Números: compartilhar uma imagem com sua sequência, minutos e nível.']],
  ['1.22.0',['Guia do iniciante em Teoria: segurar o violão, ler o diagrama, palheta ou dedos, dor nos dedos, cordas.','Cifra com os desenhos dos acordes da música no alto; músicas podem ser reordenadas.','Meta de dias por semana (Perfil), com o andamento em Hoje e uma conquista.','Metrônomo: som do clique (bipe, madeira, clave) e piscar a tela no tempo.']],
  ['1.21.0',['Perfil na barra de baixo, com aba própria: nível, lembrete, aparência, som, seus dados e ajuda, e um índice para pular direto à seção.']],
  ['1.20.0',['Som de violão de verdade: notas gravadas de nylon, aço e guitarra limpa, com batida mais humana e um pouco de sala. O som sintetizado fica de reserva.']],
@@ -2479,6 +2521,11 @@ const ACT={
   'imp-paste':()=>{importParse(($('#imp-text')||{value:''}).value);},
   'imp-cancel':()=>{IMP.data=null;render();},
   'imp-go':()=>{if(!IMP.data)return;try{localStorage.setItem(KEY+'-anterior',JSON.stringify(S));}catch(e){}adopt(IMP.data);IMP.data=null;B=null;CE=null;CS=null;CHI=null;RV.on=false;mSync();save();applyLook();render();window.scrollTo(0,0);toast('Progresso importado.');},
+  'bak-restore':el=>{const id=el.dataset.id;if(bakArmed!==id){bakArmed=id;render();return;}bakArmed='';
+    bakGet(id).then(b=>{if(!b||!b.json){toast('Cópia não encontrada.');render();return;}const o=JSON.parse(b.json);try{localStorage.setItem(KEY+'-anterior',JSON.stringify(S));}catch(e){}
+      adopt(o);B=null;CE=null;CS=null;CHI=null;RV.on=false;mSync();save();applyLook();render();window.scrollTo(0,0);toast('Progresso de '+dayTxt(b.d)+' restaurado. Se não era isso, use “Desfazer a última importação”.');},()=>toast('Não consegui ler a cópia.'));},
+  'upd-later':()=>{S.updSeen=UPD.ver;save();render();},
+  'share-card':()=>{shareCard();},
   'imp-undo':()=>{const raw=localStorage.getItem(KEY+'-anterior');if(!raw)return;try{adopt(JSON.parse(raw));localStorage.removeItem(KEY+'-anterior');B=null;CE=null;CS=null;mSync();save();applyLook();render();toast('Importação desfeita.');}catch(e){toast('Não consegui desfazer.');}},
   'road-scale':el=>{const pc=+el.dataset.pc,sc=el.dataset.sc,c=NL[pc]+(sc==='maior'?'':'m');TH.sr=pc;TH.sc=sc;TH.pos=el.dataset.pos!=null&&el.dataset.pos!==''?+el.dataset.pos:null;if(CH[c])TH.c=c;sub.acordes='teoria';go('acordes');setTimeout(()=>{const e=$('#escalas');if(e)e.scrollIntoView({block:'start'});},60);},
   'm-sub':el=>{M.sub=+el.dataset.v||1;S.msub=M.sub;save();render();},
@@ -2621,6 +2668,7 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden)onHide();el
 
 render();updPaint();
 setTimeout(()=>{if(navigator.onLine!==false||NATIVE)loadSamples(S.guitar);},1200); // as notas gravadas do violão escolhido, antes do primeiro som
+setTimeout(bakSnapshot,3000); // cópia automática do dia
 window.addEventListener('online',()=>{const st=SMP[S.guitar];if(st&&st.state==='failed')st.tries=0;loadSamples(S.guitar);});
 {const ir=new URLSearchParams(location.search).get('ir');if(ir){openDeepLink('app://'+ir);try{history.replaceState(null,'',location.pathname);}catch(e){}}} // atalhos do site instalado (manifest.webmanifest)
 {const hs=location.hash;if(/#treino=/.test(hs)){try{history.replaceState(null,'',location.pathname);}catch(e){}if(parseTrain(hs))openDeepLink(hs);else toast('O link de treino veio incompleto.');}} // link de treino compartilhado, aberto no site
@@ -2629,7 +2677,8 @@ if(NATIVE){
   const on=(plugin,ev,fn)=>{try{PLUG[plugin]&&PLUG[plugin].addListener(ev,fn);}catch(e){}};
   // Botão voltar do Android: encerra a contagem de trocas, depois volta para Hoje e, em Hoje, minimiza o app.
   on('App','backButton',()=>{if(T.phase==='count'||T.phase==='run'){T.phase='idle';render();}else if(view!=='hoje')go('hoje');else native('App','minimizeApp');});
-  on('App','appStateChange',st=>{if(st&&st.isActive)onShow();else onHide();});
+  on('App','appStateChange',st=>{if(st&&st.isActive){onShow();checkNativeUpdate();}else onHide();});
+  setTimeout(()=>checkNativeUpdate(),4000); // versão nova no GitHub, para quem instalou pelo APK
   // Atalhos do ícone (Android): abrem direto o afinador, o metrônomo ou as trocas, com o app fechado ou aberto.
   on('App','appUrlOpen',d=>{if(d&&d.url)openDeepLink(d.url);});
   const lu=native('App','getLaunchUrl');if(lu&&lu.then)lu.then(r=>{if(r&&r.url)openDeepLink(r.url);},()=>{});
