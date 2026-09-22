@@ -4,4 +4,11 @@
     <string name="title_activity_main">Violão Diário</string>
     <string name="package_name">app.violaodiario</string>
     <string name="custom_url_scheme">app.violaodiario</string>
+    <!-- Atalhos do ícone (res/xml/shortcuts.xml) -->
+    <string name="atalho_afinador">Afinador</string>
+    <string name="atalho_afinador_longo">Afinar o violão</string>
+    <string name="atalho_metronomo">Metrônomo</string>
+    <string name="atalho_metronomo_longo">Abrir o metrônomo</string>
+    <string name="atalho_trocas">Trocas</string>
+    <string name="atalho_trocas_longo">Contar trocas de acorde</string>
 </resources>

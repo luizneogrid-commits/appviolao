@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Atalhos do ícone do app (segurar o ícone na tela inicial). Cada um abre o app com um endereço
+     app.violaodiario://... que o index.html lê (openDeepLink) para ir direto à tela certa. -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="afinador"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_afinador"
+        android:shortcutShortLabel="@string/atalho_afinador"
+        android:shortcutLongLabel="@string/atalho_afinador_longo">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="app.violaodiario"
+            android:targetClass="app.violaodiario.MainActivity"
+            android:data="app.violaodiario://afinador" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="metronomo"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_metronomo"
+        android:shortcutShortLabel="@string/atalho_metronomo"
+        android:shortcutLongLabel="@string/atalho_metronomo_longo">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="app.violaodiario"
+            android:targetClass="app.violaodiario.MainActivity"
+            android:data="app.violaodiario://metronomo" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="trocas"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_trocas"
+        android:shortcutShortLabel="@string/atalho_trocas"
+        android:shortcutLongLabel="@string/atalho_trocas_longo">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="app.violaodiario"
+            android:targetClass="app.violaodiario.MainActivity"
+            android:data="app.violaodiario://trocas" />
+    </shortcut>
+</shortcuts>

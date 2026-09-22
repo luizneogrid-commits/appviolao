@@ -111,7 +111,8 @@ O `index.html` percebe que está dentro do app (Capacitor) e:
 - no Android, o botão voltar leva para Hoje e, em Hoje, minimiza o app;
 - guarda o progresso também no armazenamento do aparelho, que o sistema não apaga sozinho;
 - pede o microfone pelo sistema na primeira vez que o afinador é ligado;
-- manda um lembrete diário no horário escolhido em Evolução, Perfil (notificação local; no Android 13 ou mais novo o sistema pede permissão na primeira vez).
+- manda um lembrete diário no horário escolhido em Evolução, Perfil (notificação local; no Android 13 ou mais novo o sistema pede permissão na primeira vez);
+- no Android, segurar o ícone do app mostra atalhos para o afinador, o metrônomo e as trocas (`android/app/src/main/res/xml/shortcuts.xml`; cada atalho abre o app com um endereço `app.violaodiario://...` que o `index.html` lê).
 
 No navegador, nada disso muda: o site continua igual.
 
@@ -120,6 +121,8 @@ No navegador, nada disso muda: o site continua igual.
 - O progresso fica salvo no aparelho de cada pessoa. O app Android, o site instalado e o link do Claude guardam progressos separados. Para mover de um para o outro, ou antes de trocar de celular, use Exportar e Importar em Evolução, Perfil, Seus dados.
 - No iPhone, o site instalado e o Safari também guardam dados separados. Peça para a pessoa instalar primeiro e começar a usar depois.
 - Som e microfone funcionam melhor no app ou no site instalado do que dentro de outros aplicativos.
-- No iPhone, o microfone (afinador e contagem de trocas) exige iOS 13.4 ou mais novo. Se ele ligar mas não chegar som, o app mostra o nível do microfone e o botão "Religar o microfone"; feche outros apps que usem o microfone antes.
+- "Conferir pelo som" (Acordes, e no treino de Hoje) ouve o acorde e diz que corda não soou ou que dedo parece uma casa fora do lugar. É uma ajuda, não um juiz: funciona melhor em lugar silencioso e não enxerga tudo (uma corda grave que não devia tocar, por exemplo, nem sempre é notada).
+- Canhoto: em Evolução, Perfil, Aparência, "Canhoto" espelha os desenhos de acordes e o braço.
+- No iPhone, o microfone (afinador, contagem de trocas e conferir pelo som) exige iOS 13.4 ou mais novo. Se ele ligar mas não chegar som, o app mostra o nível do microfone e o botão "Religar o microfone"; feche outros apps que usem o microfone antes.
 - A instalação do site exige `https://`. Em `http://` ou abrindo o arquivo direto do disco, o app funciona, mas sem instalação e sem uso offline.
 - Os ícones dos apps saem de `scripts/make-icons.mjs`. Se mudar o desenho ou as cores, rode `npm run icons`.

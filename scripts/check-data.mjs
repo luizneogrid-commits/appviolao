@@ -27,8 +27,9 @@ const D = runInNewContext(names.map(grab).join('\n') + '\n({' + names.join(',') 
 const CH = new Set(D.CHORDS.map(c => c.n)), PT = new Set(D.PATTERNS.map(p => p.id)), errors = [];
 const err = m => errors.push(m);
 
-// acordes: 6 casas e 6 dedos, pestana coerente
+// acordes: nome que a teoria sabe ler, 6 casas e 6 dedos, pestana coerente
 D.CHORDS.forEach(c => {
+  if (!/^([A-G])([#b]?)(m(?!aj))?(maj7|7)?(sus2|sus4|add9)?$/.test(c.n)) err(`acorde ${c.n}: nome fora do padrão que a teoria explica`);
   if (c.f.length !== 6 || c.d.length !== 6) err(`acorde ${c.n}: precisa de 6 casas e 6 dedos`);
   c.f.forEach((f, i) => { if (f > 0 && !c.d[i]) err(`acorde ${c.n}: corda ${6 - i} apertada sem dedo`); if (f <= 0 && c.d[i]) err(`acorde ${c.n}: corda ${6 - i} solta com dedo`); });
   if (c.barre && !c.f.some((f, i) => f === c.barre.fret && i >= c.barre.from && i <= c.barre.to)) err(`acorde ${c.n}: pestana sem cordas na casa`);
