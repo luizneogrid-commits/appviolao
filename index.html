@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Violão Diário</title>
-<meta name="app-version" content="1.7.0">
+<meta name="app-version" content="1.8.0">
 <meta name="description" content="Treino diário de violão: plano por nível, metrônomo, afinador, batidas para tocar junto, acordes e notas.">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#F2EEF0" media="(prefers-color-scheme: light)">
@@ -234,6 +234,10 @@ select{min-height:46px;border-radius:12px;border:1.5px solid var(--line);backgro
 .opt{min-height:58px;border-radius:16px;border:1.5px solid var(--line);background:var(--surface);font-weight:750;font-size:1.1rem}
 .opt.right{background:var(--ok);border-color:var(--ok);color:var(--surface)}
 .opt.wrong{border-color:var(--warn);color:var(--warn)}
+.opt.small{font-size:.92rem;padding:6px 8px}
+.opt:disabled{cursor:default}
+.blk .fb{gap:6px 10px}
+.blk .fb .chip{min-height:36px;padding:0 12px;font-size:.85rem}
 
 /* stats */
 .stats{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:20px;overflow:hidden}
@@ -449,7 +453,7 @@ const buzz=ms=>{if(NATIVE){if(ms<30)native('Haptics','impact',{style:'LIGHT'});e
 
 /* ---------- state ---------- */
 const KEY='violao-diario-v1';
-const DEF={v:1,onboarded:false,name:'',level:1,levelSince:'',goal:15,cntMode:'tap',skills:{},days:{},changes:{},chords:{},songs:[],custom:[],ctLog:{},stats:{tuned:0,play:{},prog4:false},proven:{},badges:{},rest:0,startLevel:0,lastWeekSeen:'',ear:{ok:0,total:0},maxBpm:0,bpm:70,beats:4,altOut:false,installDismissed:false};
+const DEF={v:1,onboarded:false,name:'',level:1,levelSince:'',goal:15,cntMode:'tap',skills:{},days:{},changes:{},chords:{},songs:[],custom:[],ctLog:{},stats:{tuned:0,play:{},prog4:false},proven:{},badges:{},rest:0,startLevel:0,lastWeekSeen:'',rev:{},adj:null,quick:'',ear:{ok:0,total:0},maxBpm:0,bpm:70,beats:4,altOut:false,installDismissed:false};
 let S,hadLocal=false;
 function adopt(o){
   S=Object.assign(JSON.parse(JSON.stringify(DEF)),o&&typeof o==='object'?o:{});
@@ -461,6 +465,7 @@ function adopt(o){
   if(!S.stats||typeof S.stats!=='object')S.stats={};S.stats.tuned=+S.stats.tuned||0;if(!S.stats.play||typeof S.stats.play!=='object')S.stats.play={};S.stats.prog4=!!S.stats.prog4;
   ['proven','badges'].forEach(k=>{if(!S[k]||typeof S[k]!=='object'||Array.isArray(S[k]))S[k]={};});
   S.rest=S.rest?1:0;S.startLevel=Math.round(+S.startLevel)||0;S.lastWeekSeen=typeof S.lastWeekSeen==='string'?S.lastWeekSeen:'';
+  if(!S.rev||typeof S.rev!=='object'||Array.isArray(S.rev))S.rev={};if(!S.adj||typeof S.adj!=='object')S.adj=null;S.quick=typeof S.quick==='string'?S.quick:'';
   S.level=Math.max(1,Math.min(6,Math.round(+S.level)||1)); // 6 = quantidade de níveis em LEVELS (definido mais abaixo)
   if(!S.ear||typeof S.ear!=='object')S.ear={ok:0,total:0};
 }
@@ -649,13 +654,15 @@ function roadEstimate(level,goal,done){ // semanas que faltam, ajustadas pelo te
 
 function planFor(k){
   const L=LEVELS[S.level-1],W=ROAD[S.level-1][weekOf(S.level)],p=k.split('-').map(Number),seed=Math.round(Date.UTC(p[0],p[1]-1,p[2])/864e5);
-  const pick=(a,o=0)=>a[(seed+o)%a.length],mins=SPLITS[S.goal]||SPLITS[15],five=mins.length===5;
-  const pair=pick(W.pairs),out=[];
-  const tech={id:'tech',title:'Técnica',text:pick(W.tech)};
-  const P=PAT[W.pat];
-  const rhy={id:'rhy',title:'Ritmo',text:P.arp?'Monte um acorde do seu nível e toque o “'+P.name+'” bem devagar. Depois ouça o exemplo e toque junto.':'Toque a batida “'+P.name+'” primeiro com as cordas abafadas, contando em voz alta. Depois ouça o exemplo e toque junto.',rhythm:P,bpm:W.bpm};
+  const quick=S.quick===k,mins=quick?[1,2,2]:SPLITS[S.goal]||SPLITS[15],five=mins.length===5,pick=(a,o=0)=>a[(seed+o)%a.length];
+  const adj=(S.adj&&S.adj.week===S.level+'.'+weekOf(S.level))?S.adj:{bpm:0}; // ajustes vindos do "Como foi?" de ontem, só dentro da mesma semana do roteiro
+  const pair=adj.pair&&adj.pair.every(c=>CH[c])?adj.pair:pick(W.pairs),out=[];
+  const tech={id:'tech',title:'Técnica',text:adj.tech&&W.tech.includes(adj.tech)?adj.tech:pick(W.tech)};
+  const P=PAT[W.pat],bpm=Math.max(40,Math.min(160,W.bpm+(adj.bpm||0)));
+  const rhy={id:'rhy',title:'Ritmo',text:P.arp?'Monte um acorde do seu nível e toque o “'+P.name+'” bem devagar. Depois ouça o exemplo e toque junto.':'Toque a batida “'+P.name+'” primeiro com as cordas abafadas, contando em voz alta. Depois ouça o exemplo e toque junto.',rhythm:P,bpm};
   out.push({id:'warm',title:'Aquecimento',text:pick(WARM)});
   if(five){out.push(tech,rhy);}else{out.push(seed%2?rhy:tech);}
+  if(quick){const tip=anchorTip(pair[0],pair[1]);out.push({id:'chg',title:'Trocas de acorde',text:'Troque entre '+pair[0]+' e '+pair[1]+', devagar, até o acorde novo soar limpo.'+(tip?' '+tip:''),pair});out.forEach((b,i)=>b.min=mins[i]);return out;}
   const tip=anchorTip(pair[0],pair[1]);
   out.push({id:'chg',title:'Trocas de acorde',text:'Troque entre '+pair[0]+' e '+pair[1]+'. Devagar primeiro: o que conta é o acorde novo soar limpo.'+(tip?' '+tip:'')+' Depois faça 1 minuto contando as trocas.',pair});
   const open=S.songs.filter(s=>s.status!=='dominada');
@@ -1417,6 +1424,67 @@ function perfilView(){
   return h;
 }
 
+/* ---------- "Como foi?": o treino de amanhã reage ao de hoje ---------- */
+function applyFeedback(id,v){
+  const wk=S.level+'.'+weekOf(S.level);if(!S.adj||S.adj.week!==wk)S.adj={week:wk,bpm:0};
+  const b=planFor(today()).find(x=>x.id===id);
+  if(id==='rhy')S.adj.bpm=Math.max(-12,Math.min(12,(S.adj.bpm||0)+(v==='hard'?-4:v==='easy'?4:0)));
+  if(id==='chg')S.adj.pair=v==='hard'&&b?b.pair:null;
+  if(id==='tech')S.adj.tech=v==='hard'&&b?b.text:null;
+}
+function fbLabel(id,v){
+  if(v==='ok')return 'Ok. Amanhã segue o roteiro.';
+  if(id==='rhy')return v==='hard'?'Foi difícil: amanhã a batida vem 4 BPM mais devagar.':'Foi fácil: amanhã a batida sobe 4 BPM.';
+  if(id==='chg')return v==='hard'?'Foi difícil: amanhã repete a mesma dupla de acordes.':'Foi fácil: amanhã vem outra dupla.';
+  return v==='hard'?'Foi difícil: amanhã repete o mesmo exercício.':'Foi fácil: amanhã vem o próximo exercício.';
+}
+
+/* ---------- revisão rápida: perguntas em intervalos crescentes, para não esquecer ---------- */
+// S.rev[chave] = {s: acertos seguidos, d: data da próxima revisão, n, ok}. Intervalos: 1, 3, 7, 14, 30 e 60 dias.
+const RV={on:false,items:[],i:0,ans:null,ok:0,q:null},REV_STEPS=[1,3,7,14,30,60];
+function revValid(k){const [t,a]=k.split(':');if(/^(diag|notes|ear|th3)$/.test(t))return !!(CH[a]&&chordInfo(a));if(t==='sig')return CF[+a]!=null;if(t==='ivl')return /^(3m|3M|5J|7m|7M|8J)$/.test(a);return t==='mm';}
+function revCandidates(){ // ordem de entrada: acordes do nível atual primeiro, depois os anteriores, depois teoria
+  const out=[];LEVELS.slice(0,S.level).reverse().forEach(L=>L.chords.forEach(c=>{if(CH[c]&&chordInfo(c))out.push('diag:'+c,'notes:'+c,'ear:'+c,'th3:'+c);}));
+  out.push('mm:1','ivl:3M','ivl:3m','ivl:5J','mm:2');
+  if(S.level>=2)[0,1,2,3,4,11].forEach(k=>out.push('sig:'+k));
+  if(S.level>=3)out.push('ivl:7m');if(S.level>=4){out.push('ivl:7M','ivl:8J');[5,6,7,8,9,10].forEach(k=>out.push('sig:'+k));}
+  return out;}
+function revQueue(){ // até 6 perguntas: as vencidas primeiro, depois no máximo 3 novas por dia
+  const t=today(),due=Object.keys(S.rev).filter(k=>S.rev[k].d<=t&&revValid(k)).sort((a,b)=>S.rev[a].d<S.rev[b].d?-1:1).slice(0,6);
+  const fresh=revCandidates().filter(k=>!S.rev[k]).slice(0,Math.min(3,6-due.length));
+  return due.concat(fresh);}
+function revQuestion(k){
+  const [t,a]=k.split(':'),pool=earPool(),others=n=>shuffle(pool.filter(c=>c!==a&&chordInfo(c))).slice(0,n),notesTxt=c=>chordInfo(c).tones.map(x=>x.pt).join(', ');
+  if(t==='diag')return {prompt:'Que acorde é este?',svg:chordSVG(a),options:shuffle([{t:a,ok:true}].concat(others(3).map(c=>({t:c})))),explain:'É o '+a+': '+notesTxt(a)+'.'};
+  if(t==='notes')return {prompt:'Quais notas formam o '+a+'?',small:true,options:shuffle([{t:notesTxt(a),ok:true}].concat(others(3).map(c=>({t:notesTxt(c)})))),explain:a+' = '+notesTxt(a)+'.'};
+  if(t==='ear')return {prompt:'Qual acorde você ouviu?',midis:chordMidis(a),options:shuffle([{t:a,ok:true}].concat(others(3).map(c=>({t:c})))),explain:'Era o '+a+'.'};
+  if(t==='mm'){const r=[45,47,48,50,52,53,55][Math.floor(Math.random()*7)],minor=Math.random()<.5;return {prompt:'O acorde é maior ou menor?',midis:[r,r+7,r+12,r+12+(minor?3:4),r+19],options:[{t:'Maior',ok:!minor},{t:'Menor',ok:minor}],explain:minor?'Menor: a terça fica 3 semitons acima da tônica.':'Maior: a terça fica 4 semitons acima da tônica.'};}
+  if(t==='th3'){const ci=chordInfo(a),th=ci.tones[1],wrong=shuffle(NPT.filter(n=>n!==th.pt)).slice(0,3);return {prompt:'Qual é a terça do '+a+' ('+ci.qual+')?',options:shuffle([{t:th.pt,ok:true}].concat(wrong.map(n=>({t:n})))),explain:'A terça do '+a+' é '+th.pt+', '+th.semis+' semitons acima de '+ci.tones[0].pt+'.'};}
+  if(t==='sig'){const p=+a,maj=CF[p],right=p===0?0:p<6?p:-(12-p),txt=x=>x===0?'nenhum acidente':x>0?x+(x===1?' sustenido':' sustenidos'):(-x)+(x===-1?' bemol':' bemóis');const wrongs=shuffle([1,2,3,4,5,-1,-2,-3,-4,0].filter(x=>x!==right)).slice(0,3);
+    return {prompt:'Quantos acidentes tem a escala de '+maj+' maior?',small:true,options:shuffle([{t:txt(right),ok:true}].concat(wrongs.map(x=>({t:txt(x)})))),explain:maj+' maior: '+txt(right)+(right>0?' ('+SHARPS.slice(0,right).join(', ')+')':right<0?' ('+FLATS.slice(0,-right).join(', ')+')':'')+'.'};}
+  if(t==='ivl'){const IV={'3m':['terça menor',3],'3M':['terça maior',4],'5J':['quinta justa',7],'7m':['sétima menor',10],'7M':['sétima maior',11],'8J':['oitava',12]},iv=IV[a],wrongs=shuffle([2,3,4,5,6,7,8,9,10,11,12].filter(x=>x!==iv[1])).slice(0,3);
+    return {prompt:'Quantos semitons tem uma '+iv[0]+'?',options:shuffle([{t:String(iv[1]),ok:true}].concat(wrongs.map(x=>({t:String(x)})))),explain:'Uma '+iv[0]+' tem '+iv[1]+' semitons.'};}
+  return null;}
+function revGrade(k,correct){const r=S.rev[k]||(S.rev[k]={s:0,n:0,ok:0});r.n++;if(correct){r.ok++;r.s=Math.min(REV_STEPS.length-1,(r.s||0)+1);}else r.s=0;r.d=dkey(addDays(new Date(),REV_STEPS[r.s]));}
+function revStart(){const items=revQueue();if(!items.length)return;Object.assign(RV,{on:true,items,i:0,ans:null,ok:0,q:null});revShow();}
+function revShow(){const q=RV.q=revQuestion(RV.items[RV.i]);if(q&&q.midis)strum(q.midis,.03);render();}
+function revPanel(d){
+  if(RV.on)return revQuiz();
+  if(d.rev)return '<section class="panel"><div class="between"><h3>Revisão rápida</h3><span class="muted small">feita: '+d.rev.ok+' de '+d.rev.n+'</span></div><p class="sub small">Volta amanhã com o que estiver na hora de rever.</p></section>';
+  const n=revQueue().length;if(!n)return '';
+  return '<section class="panel"><div class="between"><h3>Revisão rápida</h3><span class="muted small">'+n+(n===1?' pergunta':' perguntas')+', uns 2 min</span></div><p class="sub small">Acordes e teoria na hora certa de rever, para não esquecer. Cada acerto adia a próxima pergunta; cada erro traz de volta amanhã.</p><div class="acts"><button class="btn sm" data-act="rv-start">Começar revisão</button></div></section>';
+}
+function revQuiz(){
+  const q=RV.q,n=RV.items.length;if(!q)return '';
+  let h='<section class="panel"><div class="between"><h3>Revisão rápida</h3><span class="muted small">'+(RV.i+1)+' de '+n+'</span></div>';
+  if(q.svg)h+='<div class="chord" style="max-width:150px;margin:8px auto 0">'+q.svg+'</div>';
+  h+='<p style="margin-top:10px"><b>'+esc(q.prompt)+'</b></p>';
+  if(q.midis)h+='<button class="btn block quiet" style="margin:12px 0" data-act="rv-play">Ouvir de novo</button>';
+  h+='<div class="opts" style="margin-top:12px">'+q.options.map((o,i)=>{let c='opt'+(q.small?' small':'');if(RV.ans!=null){if(o.ok)c+=' right';else if(i===RV.ans)c+=' wrong';}return '<button class="'+c+'" data-act="rv-ans" data-i="'+i+'"'+(RV.ans!=null?' disabled':'')+'>'+esc(o.t)+'</button>';}).join('')+'</div>';
+  if(RV.ans!=null)h+='<p style="margin:14px 0"><b>'+(q.options[RV.ans].ok?'Certo.':'Não.')+'</b> '+esc(q.explain)+'</p><button class="btn block" data-act="rv-next">'+(RV.i+1<n?'Próxima':'Terminar')+'</button>';
+  return h+'<button class="link" data-act="rv-close">Deixar para depois</button></section>';
+}
+
 V.hoje=function(){
   if(!S.onboarded){
     const OL=LEVELS[ob.level-1],OW=ROAD[ob.level-1];
@@ -1435,13 +1503,16 @@ V.hoje=function(){
   if(new Date().getDay()===1&&S.lastWeekSeen!==wkKey(new Date())&&weekStats(1).min>0){const a=weekStats(1),b=weekStats(2); // segunda-feira: resumo da semana passada
     h+='<section class="panel"><div class="between"><h3>Sua semana passada</h3><button class="link" style="padding:0;min-height:0" data-act="week-seen">Fechar</button></div><p class="sub">'+a.min+' min em '+a.days+(a.days===1?' dia':' dias')+(b.min?' ('+(a.min>=b.min?'+':'')+(a.min-b.min)+' min em relação à anterior)':'')+'. '+(a.days>=5?'Ritmo ótimo: cinco dias ou mais.':a.days>=3?'Bom ritmo. Tente cinco dias esta semana.':'Semana curta. Dez minutos por dia já mantêm a sequência.')+'</p></section>';}
   h+='<section class="neck">'+neckSVG()+'</section>';
-  h+='<section class="panel"><div class="between"><h2>Treino de '+S.goal+' minutos</h2><span class="muted small">'+d.min+' min hoje</span></div><p class="sub small">Nível '+S.level+', '+esc(L.name)+'</p><ol class="blocks" style="margin-top:10px">';
+  const quick=S.quick===k;
+  h+='<section class="panel"><div class="between"><h2>Treino de '+(quick?5:S.goal)+' minutos</h2><span class="muted small">'+d.min+' min hoje</span></div><p class="sub small">Nível '+S.level+', '+esc(L.name)+(quick?'. Versão curta de hoje':'')+'</p>'+(all?'':quick?'<button class="link" style="padding:4px 0;min-height:0" data-act="quick-off">Voltar ao treino de '+S.goal+' min</button>':'<button class="link" style="padding:4px 0;min-height:0" data-act="quick">Dia corrido? Só 5 minutos hoje</button>')+'<ol class="blocks" style="margin-top:10px">';
   plan.forEach(b=>{
     const done=!!d.done[b.id],act=B&&B.id===b.id;
     h+='<li class="blk'+(done?' done':'')+(act?' active':'')+'"><div><div class="between"><h3>'+b.title+'</h3><span class="mins">'+(done?'Feito':b.min+' min')+'</span></div><p>'+esc(b.text)+'</p>';
     if(b.rhythm)h+='<div class="extra">'+rhythmHTML(b.rhythm)+'</div>';
     if(b.pair)h+='<div class="extra pair">'+b.pair.map(c=>'<div class="chord"><strong>'+esc(c)+'</strong>'+chordSVG(c)+'</div>').join('')+'</div>';
     if(b.song&&b.song.chords)h+='<p class="extra small">Acordes: '+esc(b.song.chords)+'</p>';
+    if(done&&/^(tech|rhy|chg)$/.test(b.id)){const v=(d.fb||{})[b.id]; // "Como foi?": ajusta o treino de amanhã
+      h+=v?'<div class="acts fb"><span class="muted small">'+esc(fbLabel(b.id,v))+'</span></div>':'<div class="acts fb"><span class="muted small">Como foi?</span>'+[['easy','Fácil'],['ok','Ok'],['hard','Difícil']].map(o=>'<button class="chip" data-act="fb" data-id="'+b.id+'" data-v="'+o[0]+'">'+o[1]+'</button>').join('')+'</div>';}
     if(!done){
       if(act)h+='<div class="timer num" id="blk-time" aria-live="off">'+mmss(B.left)+'</div><div class="acts"><button class="btn sm quiet" data-act="blk-pause">'+(B.running?'Pausar':'Continuar')+'</button><button class="btn sm" data-act="blk-done" data-id="'+b.id+'">Concluir bloco</button></div>';
       else{h+='<div class="acts"><button class="btn sm" data-act="blk-start" data-id="'+b.id+'" data-min="'+b.min+'">Iniciar '+b.min+' min</button>';
@@ -1453,12 +1524,13 @@ V.hoje=function(){
     h+='</div></li>';
   });
   h+='</ol></section>';
+  h+=revPanel(d);
   h+=roadNow();
   if(S.custom.length)h+='<section class="panel ct"><div class="between"><h2>Seus treinos</h2><button class="link" style="padding:0;min-height:0" data-act="open-meu">Ver todos</button></div>'+S.custom.slice(-3).reverse().map(t=>{t=ctClean(t);
     return '<div class="between" style="margin-top:12px;align-items:center"><div><b>'+esc(ctName(t))+'</b><div class="muted small">'+t.min+' min, '+t.bpm+' BPM</div></div><button class="btn sm" data-act="cs-start" data-id="'+esc(t.id)+'">Começar</button></div>';}).join('')+'</section>';
   if(all){ // resumo da sessão: o que aconteceu hoje e o que vem amanhã
     const provenToday=Object.keys(S.proven).filter(x=>S.proven[x]===k).map(x=>{const p=x.split('.');return LEVELS[p[0]-1].skills[p[1]];}),recs=Object.keys(S.changes).filter(x=>{const a=S.changes[x];return a.length&&a[a.length-1].d===k&&a[a.length-1].n===bestOf(x)&&a[a.length-1].n>0;}),badgesToday=BADGES.filter(b=>S.badges[b[0]]===k).map(b=>b[1]),w=weekOf(S.level),W=ROAD[S.level-1][w];
-    h+='<section class="panel"><h3>Treino de hoje concluído.</h3><div style="margin-top:6px"><div class="kv"><span>Minutos hoje</span><b>'+d.min+'</b></div><div class="kv"><span>Blocos</span><b>'+plan.length+' de '+plan.length+'</b></div>'+(recs.length?'<div class="kv"><span>Recorde de trocas</span><b>'+esc(recs.map(x=>x.replace('|',' e ')+': '+bestOf(x)).join('; '))+'</b></div>':'')+(provenToday.length?'<div class="kv"><span>Meta comprovada</span><b>'+esc(provenToday.join('; '))+'</b></div>':'')+(badgesToday.length?'<div class="kv"><span>Conquista</span><b>'+esc(badgesToday.join('; '))+'</b></div>':'')+'</div><p class="sub small" style="margin-top:10px">Amanhã: '+(levelDone(S.level)?(S.level<LEVELS.length?'subir para o nível '+(S.level+1):'continuar com Meu treino e suas músicas'):'semana '+(w+1)+', '+esc(W.t))+'. Volte para manter a sequência.</p>';
+    h+='<section class="panel"><h3>Treino de hoje concluído.</h3><div style="margin-top:6px"><div class="kv"><span>Minutos hoje</span><b>'+d.min+'</b></div><div class="kv"><span>Blocos</span><b>'+plan.length+' de '+plan.length+'</b></div>'+(recs.length?'<div class="kv"><span>Recorde de trocas</span><b>'+esc(recs.map(x=>x.replace('|',' e ')+': '+bestOf(x)).join('; '))+'</b></div>':'')+(provenToday.length?'<div class="kv"><span>Meta comprovada</span><b>'+esc(provenToday.join('; '))+'</b></div>':'')+(badgesToday.length?'<div class="kv"><span>Conquista</span><b>'+esc(badgesToday.join('; '))+'</b></div>':'')+(d.rev?'<div class="kv"><span>Revisão rápida</span><b>'+d.rev.ok+' de '+d.rev.n+'</b></div>':'')+'</div><p class="sub small" style="margin-top:10px">Amanhã: '+(levelDone(S.level)?(S.level<LEVELS.length?'subir para o nível '+(S.level+1):'continuar com Meu treino e suas músicas'):'semana '+(w+1)+', '+esc(W.t))+'. Volte para manter a sequência.</p>';
   }else h+='<section class="panel"><h3>Tocou fora do treino?</h3><p class="sub">Prática livre também conta para a sequência.</p>';
   h+='<div class="acts" style="margin-top:12px"><button class="btn sm line" data-act="free-add" data-v="5">Somar 5 min</button> <button class="btn sm line" data-act="free-add" data-v="15">Somar 15 min</button></div>'+(S.custom.length?'':'<button class="link" style="margin-top:4px" data-act="open-meu">Montar um treino com os seus acordes e batidas</button>')+'</section>';
   return h;
@@ -1559,7 +1631,7 @@ V.evolucao=function(){
     const wa=weekStats(0),wb=weekStats(1);
     h+='<section class="panel"><h2>Esta semana</h2><div style="margin-top:6px"><div class="kv"><span>Minutos</span><b>'+wa.min+(wb.min?' <small class="muted">(semana passada: '+wb.min+')</small>':'')+'</b></div><div class="kv"><span>Dias praticados</span><b>'+wa.days+' de 7'+(wb.min?' <small class="muted">(passada: '+wb.days+')</small>':'')+'</b></div></div></section>';
     h+='<section class="panel"><h2>Conquistas</h2><p class="sub small">'+Object.keys(S.badges).length+' de '+BADGES.length+'</p><div class="badges">'+BADGES.map(b=>{const got=S.badges[b[0]];return '<div class="badge'+(got?' got':'')+'"><b>'+esc(b[1])+'</b><span>'+esc(b[2])+'</span>'+(got?'<small>'+esc(dayTxt(got))+'</small>':'')+'</div>';}).join('')+'</div></section>';
-    h+='<section class="panel"><h2>Marcas</h2><div style="margin-top:6px"><div class="kv"><span>Acordes dominados</span><b>'+dom+' de '+CHORDS.length+'</b></div><div class="kv"><span>Melhor troca em 1 minuto</span><b>'+(pk?bestOf(pk)+' ('+esc(pk.replace('|',' e '))+')':'ainda sem medição')+'</b></div><div class="kv"><span>Metrônomo mais rápido por 1 minuto</span><b>'+(S.maxBpm?S.maxBpm+' BPM':'ainda sem registro')+'</b></div><div class="kv"><span>Acertos no treino de ouvido</span><b>'+(S.ear.total?Math.round(S.ear.ok/S.ear.total*100)+'% de '+S.ear.total:'ainda sem respostas')+'</b></div></div></section>';
+    h+='<section class="panel"><h2>Marcas</h2><div style="margin-top:6px"><div class="kv"><span>Acordes dominados</span><b>'+dom+' de '+CHORDS.length+'</b></div><div class="kv"><span>Melhor troca em 1 minuto</span><b>'+(pk?bestOf(pk)+' ('+esc(pk.replace('|',' e '))+')':'ainda sem medição')+'</b></div><div class="kv"><span>Metrônomo mais rápido por 1 minuto</span><b>'+(S.maxBpm?S.maxBpm+' BPM':'ainda sem registro')+'</b></div><div class="kv"><span>Acertos no treino de ouvido</span><b>'+(S.ear.total?Math.round(S.ear.ok/S.ear.total*100)+'% de '+S.ear.total:'ainda sem respostas')+'</b></div><div class="kv"><span>Revisão rápida: itens firmes</span><b>'+Object.keys(S.rev).filter(x=>S.rev[x].s>=3).length+' de '+Object.keys(S.rev).length+'</b></div></div></section>';
   }else if(sub.evolucao==='roteiro'){
     h+=roadView();
   }else if(sub.evolucao==='musicas'){
@@ -1639,6 +1711,15 @@ const ACT={
   'blk-start':el=>{audio();B={id:el.dataset.id,total:+el.dataset.min,left:+el.dataset.min*60,running:true,last:Date.now()};render();},
   'blk-pause':()=>{if(!B)return;B.running=!B.running;B.last=Date.now();render();},
   'blk-done':el=>{if(!B)return;const used=Math.max(1,Math.round((B.total*60-B.left)/60));blockDone(el.dataset.id,Math.min(B.total,used));},
+  fb:el=>{const d=day(today());d.fb=d.fb||{};d.fb[el.dataset.id]=el.dataset.v;applyFeedback(el.dataset.id,el.dataset.v);save();render();},
+  quick:()=>{S.quick=today();B=null;save();render();},
+  'quick-off':()=>{S.quick='';B=null;save();render();},
+  'rv-start':()=>{audio();revStart();},
+  'rv-play':()=>{if(RV.q&&RV.q.midis)strum(RV.q.midis,.03);},
+  'rv-ans':el=>{if(!RV.on||RV.ans!=null)return;RV.ans=+el.dataset.i;const ok=!!RV.q.options[RV.ans].ok;if(ok)RV.ok++;revGrade(RV.items[RV.i],ok);save();render();},
+  'rv-next':()=>{if(!RV.on)return;RV.i++;RV.ans=null;if(RV.i<RV.items.length){revShow();return;}
+    const d=day(today());d.done.rev=true;d.rev={ok:RV.ok,n:RV.items.length};RV.on=false;addMinutes(2);render();toast('Revisão feita: '+d.rev.ok+' de '+d.rev.n);},
+  'rv-close':()=>{RV.on=false;render();},
   'free-add':el=>{addMinutes(+el.dataset.v);render();},
   'open-metro':el=>{mSet(+el.dataset.bpm);sub.ferramentas='metronomo';go('ferramentas');},
   'open-trocas':el=>{T.a=el.dataset.a;T.b=el.dataset.b;sub.treinar='trocas';go('treinar');},
