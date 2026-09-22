@@ -30,11 +30,11 @@ npm run ios
 - Microfone: o afinador, a contagem de trocas e o "Conferir pelo som" devem pedir a permissão uma vez (texto em `App/App/Info.plist`, chave `NSMicrophoneUsageDescription`) e funcionar depois. O app usa a sessão de áudio `playAndRecord` com saída no alto-falante (`App/App/AppDelegate.swift`).
 - Tela acesa durante o metrônomo e os treinos (plugin keep-awake).
 - Vibração nos toques e nas trocas (plugin haptics).
-- Lembrete diário: escolha um horário em Evolução, Perfil, e veja se a notificação chega com o app fechado.
+- Lembrete diário: escolha um horário em Perfil (na barra de baixo), e veja se a notificação chega com o app fechado.
 - Progresso guardado depois de fechar e reabrir o app (plugin preferences).
 - Tela de abertura e ícone (gerados por `npm run icons`; o ícone de 1024 px está em `App/App/Assets.xcassets/AppIcon.appiconset`).
 
-Se algo do microfone falhar, o `index.html` tem o painel "Diagnóstico" em Evolução, Perfil, com o botão "Copiar diagnóstico".
+Se algo do microfone falhar, o `index.html` tem o painel "Diagnóstico" em Perfil (na barra de baixo), com o botão "Copiar diagnóstico".
 
 ## Publicar (TestFlight e App Store)
 

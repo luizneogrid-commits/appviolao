@@ -115,7 +115,7 @@ O `index.html` percebe que está dentro do app (Capacitor) e:
 - no Android, o botão voltar leva para Hoje e, em Hoje, minimiza o app;
 - guarda o progresso também no armazenamento do aparelho, que o sistema não apaga sozinho;
 - pede o microfone pelo sistema na primeira vez que o afinador é ligado;
-- manda um lembrete diário no horário escolhido em Evolução, Perfil (notificação local; no Android 13 ou mais novo o sistema pede permissão na primeira vez);
+- manda um lembrete diário no horário escolhido em Perfil (na barra de baixo) (notificação local; no Android 13 ou mais novo o sistema pede permissão na primeira vez);
 - no Android, segurar o ícone do app mostra atalhos para o afinador, o metrônomo e as trocas (`android/app/src/main/res/xml/shortcuts.xml`; cada atalho abre o app com um endereço `app.violaodiario://...` que o `index.html` lê).
 
 No navegador, nada disso muda: o site continua igual.
@@ -126,16 +126,16 @@ No navegador, nada disso muda: o site continua igual.
 
 ## Bom saber
 
-- O som das notas e dos acordes vem de notas gravadas de violão (pasta `sons/`: nylon, aço e guitarra limpa, uma nota a cada 3 semitons, do soundfont FluidR3_GM de Frank Wen via midi-js-soundfonts, licença CC BY 3.0, com crédito em "Sobre e ajuda"). No site, só o tipo escolhido é baixado, na primeira vez que o som é usado; no app vão embutidas. Enquanto carregam, ou sem os arquivos, toca a corda sintetizada (Karplus-Strong). Lá de referência em 440 Hz, temperamento igual. Em Evolução, Perfil, "Violão do app" escolhe o timbre; os parâmetros da corda sintetizada, da "caixa" e da sala ficam em `GUITARS`, no começo do script do `index.html`. `node scripts/baixar-sons.mjs --forcar` baixa os arquivos de novo.
-- Perfis: em Evolução, Perfil, "Perfis neste aparelho" cria um progresso separado para outra pessoa no mesmo celular. O principal é o de sempre; os outros ficam em chaves próprias (`violao-diario-v1-p-...`). O lembrete diário é do aparelho: vale o último perfil que o configurou.
+- O som das notas e dos acordes vem de notas gravadas de violão (pasta `sons/`: nylon, aço e guitarra limpa, uma nota a cada 3 semitons, do soundfont FluidR3_GM de Frank Wen via midi-js-soundfonts, licença CC BY 3.0, com crédito em "Sobre e ajuda"). No site, só o tipo escolhido é baixado, na primeira vez que o som é usado; no app vão embutidas. Enquanto carregam, ou sem os arquivos, toca a corda sintetizada (Karplus-Strong). Lá de referência em 440 Hz, temperamento igual. Em Perfil (na barra de baixo), "Violão do app" escolhe o timbre; os parâmetros da corda sintetizada, da "caixa" e da sala ficam em `GUITARS`, no começo do script do `index.html`. `node scripts/baixar-sons.mjs --forcar` baixa os arquivos de novo.
+- Perfis: em Perfil (na barra de baixo), "Perfis neste aparelho" cria um progresso separado para outra pessoa no mesmo celular. O principal é o de sempre; os outros ficam em chaves próprias (`violao-diario-v1-p-...`). O lembrete diário é do aparelho: vale o último perfil que o configurou.
 - Compartilhar um treino: em Meu treino, "Compartilhar" manda um link do site com o treino embutido (`#treino=...`). Quem abre recebe o treino; no app, cole o link em "Receber um treino por link ou código".
 - Links que abrem no app (Android App Links): o manifesto declara os endereços `https://luizneogrid-commits.github.io/appviolao/...` e o site publica `.well-known/assetlinks.json` com a impressão digital SHA-256 do certificado do app. Com isso, um link de treino ou um atalho `?ir=afinador` abre direto no app instalado. Depois de publicar na Play Store, o Google passa a assinar o app com a chave dele: pegue a impressão digital em Play Console, Configuração do app, Integridade do app, "Certificado da chave de assinatura do app", e acrescente à lista `sha256_cert_fingerprints` (mantendo a atual, que é a da chave de upload e serve para o APK do GitHub).
 
-- O progresso fica salvo no aparelho de cada pessoa. O app Android, o site instalado e o link do Claude guardam progressos separados. Para mover de um para o outro, ou antes de trocar de celular, use Exportar e Importar em Evolução, Perfil, Seus dados.
+- O progresso fica salvo no aparelho de cada pessoa. O app Android, o site instalado e o link do Claude guardam progressos separados. Para mover de um para o outro, ou antes de trocar de celular, use Exportar e Importar em Perfil (na barra de baixo), Seus dados.
 - No iPhone, o site instalado e o Safari também guardam dados separados. Peça para a pessoa instalar primeiro e começar a usar depois.
 - Som e microfone funcionam melhor no app ou no site instalado do que dentro de outros aplicativos.
 - "Conferir pelo som" (Acordes, e no treino de Hoje) ouve o acorde e diz que corda não soou ou que dedo parece uma casa fora do lugar. É uma ajuda, não um juiz: funciona melhor em lugar silencioso e não enxerga tudo (uma corda grave que não devia tocar, por exemplo, nem sempre é notada).
-- Canhoto: em Evolução, Perfil, Aparência, "Canhoto" espelha os desenhos de acordes e o braço.
+- Canhoto: em Perfil (na barra de baixo), Aparência, "Canhoto" espelha os desenhos de acordes e o braço.
 - No iPhone, o microfone (afinador, contagem de trocas e conferir pelo som) exige iOS 13.4 ou mais novo. Se ele ligar mas não chegar som, o app mostra o nível do microfone e o botão "Religar o microfone"; feche outros apps que usem o microfone antes.
 - A instalação do site exige `https://`. Em `http://` ou abrindo o arquivo direto do disco, o app funciona, mas sem instalação e sem uso offline.
 - Os ícones dos apps saem de `scripts/make-icons.mjs`. Se mudar o desenho ou as cores, rode `npm run icons`.
