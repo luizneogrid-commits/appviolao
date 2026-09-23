@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Violão Diário</title>
-<meta name="app-version" content="1.40.0">
+<meta name="app-version" content="1.40.1">
 <meta name="description" content="Treino diário de violão: plano por nível, metrônomo, afinador, batidas para tocar junto, acordes e notas.">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#F2EEF0" media="(prefers-color-scheme: light)">
@@ -1504,7 +1504,7 @@ setInterval(()=>{
 function afterPractice(){if(NATIVE&&S.remind&&(goalMet(today())||(S.remindLate&&practiced(today())))&&remindDoneDay!==today()){remindDoneDay=today();scheduleReminder();}} // meta batida: o lembrete de hoje sai da fila
 function blockDone(id,credit){
   const d=day(today());if(!d.done[id]){d.done[id]=credit;d.min+=credit;} // guarda os minutos creditados, para o "Desfazer"
-  if(B&&B.bpm&&M.on)mStop();B=null;if(planFor(today()).every(b=>d.done[b.id]))d.full=true;save();afterPractice();
+  if(B&&B.bpm&&M.on)mStop();if(SG.on)sgStop(true);B=null;if(planFor(today()).every(b=>d.done[b.id]))d.full=true;save();afterPractice(); // concluir o bloco também para o aquecimento ou a escala que estiver tocando
   strum(chordMidis('G'));buzz(60);render();
   const nk=$('.neck');if(nk){nk.classList.add('ring');setTimeout(()=>nk.classList.remove('ring'),1300);}
 }
@@ -2689,6 +2689,7 @@ if(PWA.host){
 const TABS=[['hoje','Hoje','<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.8 2.8L16 9.5"/>'],['meu','Meu treino','<path d="M4 6h8M16 6h4M4 12h2M10 12h10M4 18h10M18 18h2"/><circle cx="14" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="18" r="2"/>'],['treinar','Treinar','<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/>'],['ferramentas','Ferramentas','<path d="M9 3h6l4 18H5L9 3zM12 17l4-11M7.2 13h9.6"/>'],['acordes','Acordes','<path d="M5 4v16M12 4v16M19 4v16M5 4h14M5 10h14M5 16h14"/><circle cx="12" cy="7" r="1.7" fill="currentColor"/>'],['evolucao','Evolução','<path d="M5 20V11M12 20V4M19 20v-6M2 20h20"/>'],['perfil','Perfil','<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>']];
 /* ---------- novidades de cada versão, mostradas uma vez ---------- */
 const NEWS=[
+ ['1.40.1',['Concluir o bloco de aquecimento (ou a escala tocada junto) para o som na hora; antes ele seguia até trocar de tela.']],
  ['1.40.0',['No treino, além da batida e do nome do acorde, o desenho no braço: em Treinar, Batidas, no bloco de ritmo de Hoje (com os acordes do nível) e em Meu treino.']],
  ['1.39.0',['Tema escuro: os campos de texto ficam com a cor certa (a cifra colada aparecia preta sobre fundo escuro).','Ajuda atualizada com as telas novas e uma seção com os atalhos do computador.','Testes de tela também em largura de tablet e auditoria de acessibilidade nos dois temas.']],
  ['1.38.0',['Evolução, Números: “Onde vai o tempo”, os minutos por tipo de bloco (aquecimento, técnica, ritmo, trocas, repertório, prática livre).','Desafio da semana em Hoje: um objetivo tirado dos seus dados (dias, minutos, trocas, uma música inteira ou acertos seguidos no ouvido), com a contagem em Evolução.','Gravação de 30 ou 60 segundos.','No cadastro, “Não sei meu nível”: três perguntas rápidas sugerem o nível inicial.']],
