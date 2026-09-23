@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Violão Diário</title>
-<meta name="app-version" content="1.40.1">
+<meta name="app-version" content="1.40.2">
 <meta name="description" content="Treino diário de violão: plano por nível, metrônomo, afinador, batidas para tocar junto, acordes e notas.">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#F2EEF0" media="(prefers-color-scheme: light)">
@@ -465,6 +465,7 @@ body.flash::after{content:"";position:fixed;inset:0;background:var(--brass);opac
 .cif-sec{display:inline-block;font-weight:800;color:var(--primary);margin-top:6px} /* seções da cifra */
 #view h1[tabindex]:focus:not(:focus-visible),#view h2[tabindex]:focus:not(:focus-visible){outline:none} /* foco programático no título: sem anel para quem usa o toque ou o mouse */
 .tbar{display:block;height:8px;border-radius:4px;background:var(--primary);margin-top:4px} /* onde vai o tempo */
+.panel.chal{cursor:pointer}.panel.chal:active{background:var(--surface-2)} /* o painel do desafio é um atalho */
 .tguide ol{list-style:none;padding:0;margin:8px 0 0;display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.tguide li{border:1.5px solid var(--line);border-radius:10px;padding:8px 4px;text-align:center;font-size:.9rem}.tguide li.now{border-color:var(--brass);background:var(--brass-soft)}.tguide li.ok{border-color:var(--ok);background:var(--ok-soft)} /* afinação guiada */
 .fb button.right i{background:var(--ok);border-color:var(--ok);color:#fff}.fb button.wrong i{border-color:var(--warn);color:var(--warn)} /* ouvido, Braço: posições certas e a errada */
 .tabs button{font-size:.76rem;font-stretch:75%;padding-left:0;padding-right:0} /* nomes maiores: medidos com a fonte Archivo, o nome mais longo (Ferramentas) cabe na coluna com folga em cada faixa de largura */
@@ -640,7 +641,8 @@ function chalText(c){return CHAL_TXT[c.kind].replace('{t}',c.target).replace('{r
 function chalSync(){if(!S.onboarded)return;const wk=wkKey(new Date());if(!S.chal||S.chal.wk!==wk){S.chal=chalNew(wk);save();}
   if(!S.chal.done&&chalProgress()>=S.chal.target){S.chal.done=true;S.chalLog[wk]=S.chal.kind;save();toast('Desafio da semana cumprido: '+chalText(S.chal)+'.');}}
 function chalEar(ok){const c=S.chal;if(!c||c.kind!=='ouvido'||c.done)return;c.streak=ok?(c.streak||0)+1:0;c.n=Math.max(c.n||0,c.streak);}
-function chalPanel(){chalSync();const c=S.chal;if(!c)return '';const p=Math.min(c.target,chalProgress());return '<section class="panel"><div class="between"><h3>Desafio da semana</h3><span class="tag">'+(c.done?'cumprido':p+' de '+c.target)+'</span></div><p class="sub">'+esc(chalText(c))+'.'+(c.done?' Feito. O próximo vem na segunda.':'')+'</p></section>';}
+const CHAL_GO={dias:'Toque para ir ao treino de hoje',minutos:'Toque para ir ao treino de hoje',trocas:'Toque para abrir as trocas com esse par',musica:'Toque para abrir a música',ouvido:'Toque para abrir o treino de ouvido'};
+function chalPanel(){chalSync();const c=S.chal;if(!c)return '';const p=Math.min(c.target,chalProgress());return '<section class="panel chal" data-act="chal-go" role="button" tabindex="0" aria-label="Desafio da semana: '+esc(chalText(c))+'. '+(c.done?'Cumprido.':CHAL_GO[c.kind])+'"><div class="between"><h3>Desafio da semana</h3><span class="tag">'+(c.done?'cumprido':p+' de '+c.target)+'</span></div><p class="sub">'+esc(chalText(c))+'.'+(c.done?' Feito. O próximo vem na segunda.':'')+'</p>'+(c.done?'':'<p class="muted small" style="margin-top:6px">'+CHAL_GO[c.kind]+' ›</p>')+'</section>';}
 const FREE={timer:null}; // cronômetro de prática livre: conta por carimbo de hora (S.freeStart), então segue mesmo com a tela apagada ou o app fechado
 function freeTxt(){const s=Math.max(0,Math.round((Date.now()-S.freeStart)/1000));return Math.floor(s/60)+' min '+String(s%60).padStart(2,'0')+' s';}
 function freePanel(){
@@ -2689,6 +2691,7 @@ if(PWA.host){
 const TABS=[['hoje','Hoje','<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.8 2.8L16 9.5"/>'],['meu','Meu treino','<path d="M4 6h8M16 6h4M4 12h2M10 12h10M4 18h10M18 18h2"/><circle cx="14" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="18" r="2"/>'],['treinar','Treinar','<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/>'],['ferramentas','Ferramentas','<path d="M9 3h6l4 18H5L9 3zM12 17l4-11M7.2 13h9.6"/>'],['acordes','Acordes','<path d="M5 4v16M12 4v16M19 4v16M5 4h14M5 10h14M5 16h14"/><circle cx="12" cy="7" r="1.7" fill="currentColor"/>'],['evolucao','Evolução','<path d="M5 20V11M12 20V4M19 20v-6M2 20h20"/>'],['perfil','Perfil','<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>']];
 /* ---------- novidades de cada versão, mostradas uma vez ---------- */
 const NEWS=[
+ ['1.40.2',['O painel do desafio da semana, em Hoje, agora é um atalho: toque nele para ir às trocas com o par do desafio, à música, ao treino de ouvido ou ao treino de hoje.']],
  ['1.40.1',['Concluir o bloco de aquecimento (ou a escala tocada junto) para o som na hora; antes ele seguia até trocar de tela.']],
  ['1.40.0',['No treino, além da batida e do nome do acorde, o desenho no braço: em Treinar, Batidas, no bloco de ritmo de Hoje (com os acordes do nível) e em Meu treino.']],
  ['1.39.0',['Tema escuro: os campos de texto ficam com a cor certa (a cifra colada aparecia preta sobre fundo escuro).','Ajuda atualizada com as telas novas e uma seção com os atalhos do computador.','Testes de tela também em largura de tablet e auditoria de acessibilidade nos dois temas.']],
@@ -2788,6 +2791,11 @@ const ACT={
     const d=day(today());d.done.rev=true;d.rev={ok:RV.ok,n:RV.items.length};RV.on=false;addMinutes(2);render();toast('Revisão feita: '+d.rev.ok+' de '+d.rev.n);},
   'rv-close':()=>{RV.on=false;render();},
   'blk-alt':()=>{const n=S.level,w=weekOf(n),W=ROAD[n-1][w],wk=n+'.'+w,cur=planFor(today()).find(b=>b.id==='tech');if(!cur||!W.tech||W.tech.length<2)return;const alt=W.tech[(W.tech.indexOf(cur.text)+1)%W.tech.length];if(!S.adj||S.adj.week!==wk)S.adj={week:wk,bpm:0};S.adj.tech=alt;save();render();toast('Outro exercício de técnica para hoje.');},
+'chal-go':()=>{const c=S.chal;if(!c)return;if(c.done){toast('Desafio cumprido. O próximo vem na segunda.');return;} // o painel do desafio leva ao lugar onde ele se cumpre
+  if(c.kind==='trocas'){const p=c.ref.split('|');ACT['open-trocas']({dataset:{a:p[0],b:p[1]}});return;}
+  if(c.kind==='ouvido'){sub.treinar='ouvido';go('treinar');return;}
+  if(c.kind==='musica'){const s=S.songs.find(x=>x.id===c.ref);if(!s){toast('A música desse desafio não está mais na lista.');return;}sub.evolucao='musicas';go('evolucao');ACT['song-play']({dataset:{id:s.id}});return;}
+  const bl=$('.blocks');if(bl){bl.closest('section').scrollIntoView({block:'start',behavior:'smooth'});setTimeout(()=>window.scrollBy(0,-12),350);}toast(c.kind==='dias'?'Cada dia com treino conta. O de hoje está logo abaixo.':'Os minutos do treino de hoje contam para o desafio.');},
 'free-add':el=>{addMinutes(+el.dataset.v);render();},
 'free-start':()=>{S.freeStart=Date.now();S.hojeMore=true;save();render();toast('Cronômetro ligado. Toque o quanto quiser e depois “Parar e somar”.');},
 'free-stop':()=>{if(!S.freeStart)return;const min=Math.round((Date.now()-S.freeStart)/60000);S.freeStart=0;save();if(min>0){addMinutes(min);toast(min+' min somados ao dia de hoje.');}else toast('Menos de um minuto: nada somado.');render();},
