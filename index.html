@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Violão Diário</title>
-<meta name="app-version" content="1.39.0">
+<meta name="app-version" content="1.40.0">
 <meta name="description" content="Treino diário de violão: plano por nível, metrônomo, afinador, batidas para tocar junto, acordes e notas.">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#F2EEF0" media="(prefers-color-scheme: light)">
@@ -136,9 +136,10 @@ h3{font-weight:700;font-size:1.02rem;line-height:1.25}
 .rhy div.now{background:var(--brass-soft);box-shadow:inset 0 0 0 2px var(--brass)}
 .rhy div.good{background:var(--ok-soft)}.rhy div.mid{background:var(--brass-soft)}.rhy div.bad{background:var(--primary-soft);box-shadow:inset 0 0 0 2px var(--warn)}.rhy div.miss{opacity:.5} /* resultado do "bater a batida" */
 .chips{display:flex;flex-wrap:wrap;gap:8px}
-.progrow{display:flex;gap:6px;margin-top:14px}
-.progrow span{flex:1;text-align:center;border-radius:12px;background:var(--surface-2);padding:10px 0;font-stretch:75%;font-weight:800;font-size:1.5rem;line-height:1}
-.progrow span.now{background:var(--primary);color:var(--on-primary)}
+.progrow{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+.progrow>span{flex:1 1 60px;min-width:60px;text-align:center;border-radius:12px;background:var(--surface-2);padding:10px 4px;font-stretch:75%;font-weight:800;font-size:1.5rem;line-height:1}
+.progrow>span.now{background:var(--brass-soft);color:var(--primary);box-shadow:inset 0 0 0 3px var(--primary)}
+.progrow>span .chord{display:block;margin-top:6px}.progrow>span .chord svg{width:100%;max-width:96px;height:auto;margin:0 auto;display:block} /* desenho do acorde embaixo do nome */
 .bpmrow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:16px}
 .bpmrow .num{font-size:2.6rem}
 .bpmrow button{width:56px;min-height:46px;border-radius:12px;border:1.5px solid var(--line);background:transparent;font-weight:750}
@@ -1317,7 +1318,7 @@ function ctRun(){
   const s=CS,G=s.cfg,P=PAT[G.pid],n=s.t.pats.length,on=csOn(),p=G.prog,ci=s.ci%p.length;
   let h='<section class="panel ct"><div class="between"><h2>'+esc(ctName(s.t))+'</h2><span class="num" style="font-size:1.8rem" id="cs-time">'+mmss(s.left)+'</span></div><div class="bar" style="margin:10px 0 12px"><i id="cs-bar" style="width:'+Math.max(0,s.left/s.total*100)+'%"></i></div>';
   h+='<h3>'+(n>1?'Batida '+(s.pi+1)+' de '+n+': ':'')+esc(P.name)+'</h3><p class="sub small">'+esc(P.tip)+'</p><div style="margin-top:12px">'+rhythmHTML(P,'gr-grid')+'</div>';
-  h+='<div class="progrow" id="gr-prog">'+p.map((c,k)=>'<span'+(on&&k===ci?' class="now"':'')+'>'+esc(c)+'</span>').join('')+'</div>';
+  h+='<div class="progrow" id="gr-prog">'+p.map((c,k)=>'<span'+(on&&k===ci?' class="now"':'')+'>'+(p.length<=4?'<b>'+esc(c)+'</b><span class="chord">'+chordSVG(c)+'</span>':esc(c))+'</span>').join('')+'</div>';
   h+='<div class="pair cs-pair"><div class="chord"><span class="muted small">Agora</span><div id="cs-now">'+chordBox(p[ci])+'</div></div><div class="chord"><span class="muted small">Depois</span><div id="cs-next">'+chordBox(p[(ci+1)%p.length])+'</div></div></div>';
   h+='<div class="bpmrow"><button data-act="cs-bpm" data-d="-4" aria-label="Mais devagar">−</button><div style="text-align:center"><span class="num" id="cs-bpm">'+G.bpm+'</span> <span class="muted small">BPM</span></div><button data-act="cs-bpm" data-d="4" aria-label="Mais rápido">+</button></div>'+(s.t.ramp?'<p class="muted small" id="cs-ramp" style="text-align:center;margin-top:6px">Subindo aos poucos: começa a '+s.t.bpm+' BPM e sobe 4 a cada volta.</p>':'');
   h+='<p class="sub small" id="gr-status" style="margin:14px 0 10px;min-height:1.4em" aria-live="polite">'+(on?(GR.step<0?'Contagem':'Tocando '+esc(p[ci])+'.'):'Pausado. O tempo só corre enquanto o treino toca.')+'</p>';
@@ -2274,7 +2275,8 @@ V.hoje=function(){
     if(!done&&(b.why||WHY[b.id]))h+='<details class="why extra"><summary>Por que este exercício?</summary><p>'+esc(b.why||WHY[b.id])+'</p></details>';
     if(!done&&!act&&b.id==='tech'&&!b.why)h+='<button class="link" style="padding:0;min-height:0" data-act="blk-alt">Outro exercício</button>'; // troca a técnica de hoje por outra da mesma semana (não na manutenção)
     if(b.id==='warm'&&!done)h+='<div class="extra"><div class="sfb" style="max-width:200px">'+warmSVG()+'</div><div class="acts" style="margin-top:6px"><button class="btn sm quiet" data-act="warm-toggle">'+(SG.on&&SG.kind==='warm'?'Parar':'Tocar junto: um dedo por casa')+'</button><span class="muted small" id="sg-status">'+(SG.on&&SG.kind==='warm'?'Tocando.':SG.bpm+' BPM, casas 1 a 4, da 6ª à 1ª corda e de volta.')+'</span></div></div>';
-    if(b.rhythm)h+='<div class="extra">'+rhythmHTML(b.rhythm)+'</div>';
+    if(b.rhythm){const pr=b.prog||LEVELS[S.level-1].prog[0]||[];h+='<div class="extra">'+rhythmHTML(b.rhythm)+(pr.length?'<p class="muted small" style="margin-top:10px">Acordes para tocar esta batida (os mesmos do tocar junto):</p><div class="cmini" style="margin-top:8px">'+pr.map(c=>'<div class="chord"><strong>'+esc(c)+'</strong>'+chordSVG(c)+'</div>').join('')+'</div>':'')+'</div>';}
+    else if(b.prog)h+='<div class="extra"><div class="cmini" style="margin-top:4px">'+b.prog.map(c=>'<div class="chord"><strong>'+esc(c)+'</strong>'+chordSVG(c)+'</div>').join('')+'</div></div>';
     if(b.pair)h+='<div class="extra pair">'+b.pair.map(c=>'<div class="chord"><strong>'+esc(c)+'</strong>'+chordSVG(c)+'</div>').join('')+'</div>';
     if(b.song&&b.song.chords)h+='<p class="extra small">Acordes: '+esc(b.song.chords)+'</p>';
     if(b.song&&b.song.cifra)h+='<p class="extra"><button class="link" style="padding:4px 0;min-height:0" data-act="song-open" data-id="'+esc(b.song.id)+'">Abrir a cifra com rolagem</button></p>';
@@ -2440,7 +2442,7 @@ V.treinar=function(){
     if(!BAT.prog){const L=LEVELS[S.level-1];BAT.prog=L.prog[0];if(!BAT.touched){BAT.pid=L.rhythm;BAT.bpm=L.bpm;}}const P=PAT[BAT.pid],on=GR.on&&GR.cfg===BAT;
     h+='<div class="chips" style="margin-bottom:14px">'+PATTERNS.map(p=>'<button class="chip" data-act="gr-pat" data-v="'+p.id+'" aria-pressed="'+(p.id===BAT.pid)+'">'+esc(p.name)+'</button>').join('')+'</div>';
     h+='<section class="panel"><h2>'+esc(P.name)+'</h2><p class="sub">'+esc(P.tip)+'</p><div style="margin-top:14px">'+rhythmHTML(P,'gr-grid')+'</div><p class="muted small" style="margin-top:10px">↓ para baixo, ↑ para cima, x abafada, B baixo com o polegar'+(P.arp?', P polegar, b baixo alternado, I indicador, M médio, A anelar':'')+(P.cells.includes('C')?', C os três dedos beliscando as cordas agudas juntos':'')+'. Casa vazia: a mão passa sem tocar.</p>';
-    h+='<div class="progrow" id="gr-prog">'+BAT.prog.map(c=>'<span>'+esc(c)+'</span>').join('')+'</div>';
+    h+='<div class="progrow" id="gr-prog">'+BAT.prog.map(c=>'<span><b>'+esc(c)+'</b><span class="chord">'+chordSVG(c)+'</span></span>').join('')+'</div>'; // nome e desenho: o acorde da vez fica marcado enquanto toca
     h+='<div class="bpmrow"><button data-act="gr-bpm" data-d="-4" aria-label="Mais devagar">−</button><div style="text-align:center"><span class="num" id="gr-bpm">'+BAT.bpm+'</span> <span class="muted small">BPM</span></div><button data-act="gr-bpm" data-d="4" aria-label="Mais rápido">+</button></div>';
     h+='<p class="sub small" id="gr-status" style="margin:14px 0 10px;min-height:1.4em" aria-live="polite">'+(on?'Contagem':'Começa com um compasso de contagem. Um acorde por compasso.')+'</p><button class="btn block" data-act="gr-toggle">'+(on?'Parar':'Ouvir e tocar junto')+'</button></section>';
     h+='<section class="panel"><h3>Acordes do exemplo</h3><div class="chips" style="margin-top:10px">'+PROGS.map((p,i)=>'<button class="chip" data-act="gr-prog" data-i="'+i+'" aria-pressed="'+(p.join()===BAT.prog.join())+'">'+p.join(' ')+'</button>').join('')+'</div><div class="between" style="margin-top:16px"><span>Clique do metrônomo junto</span><button class="chip" data-act="gr-click" aria-pressed="'+BAT.click+'">'+(BAT.click?'Ligado':'Desligado')+'</button></div><p class="muted small" style="margin-top:12px">Quer escolher os acordes? Monte um treino seu em <button class="link" style="padding:0;min-height:0" data-act="nav" data-v="meu">Meu treino</button>.</p><p class="muted small" style="margin-top:8px">Violão do app: '+esc(guitar().name)+'. <button class="link" style="padding:0;min-height:0" data-act="open-perfil">Trocar o timbre</button></p></section>';
@@ -2687,6 +2689,7 @@ if(PWA.host){
 const TABS=[['hoje','Hoje','<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.8 2.8L16 9.5"/>'],['meu','Meu treino','<path d="M4 6h8M16 6h4M4 12h2M10 12h10M4 18h10M18 18h2"/><circle cx="14" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="18" r="2"/>'],['treinar','Treinar','<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/>'],['ferramentas','Ferramentas','<path d="M9 3h6l4 18H5L9 3zM12 17l4-11M7.2 13h9.6"/>'],['acordes','Acordes','<path d="M5 4v16M12 4v16M19 4v16M5 4h14M5 10h14M5 16h14"/><circle cx="12" cy="7" r="1.7" fill="currentColor"/>'],['evolucao','Evolução','<path d="M5 20V11M12 20V4M19 20v-6M2 20h20"/>'],['perfil','Perfil','<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>']];
 /* ---------- novidades de cada versão, mostradas uma vez ---------- */
 const NEWS=[
+ ['1.40.0',['No treino, além da batida e do nome do acorde, o desenho no braço: em Treinar, Batidas, no bloco de ritmo de Hoje (com os acordes do nível) e em Meu treino.']],
  ['1.39.0',['Tema escuro: os campos de texto ficam com a cor certa (a cifra colada aparecia preta sobre fundo escuro).','Ajuda atualizada com as telas novas e uma seção com os atalhos do computador.','Testes de tela também em largura de tablet e auditoria de acessibilidade nos dois temas.']],
  ['1.38.0',['Evolução, Números: “Onde vai o tempo”, os minutos por tipo de bloco (aquecimento, técnica, ritmo, trocas, repertório, prática livre).','Desafio da semana em Hoje: um objetivo tirado dos seus dados (dias, minutos, trocas, uma música inteira ou acertos seguidos no ouvido), com a contagem em Evolução.','Gravação de 30 ou 60 segundos.','No cadastro, “Não sei meu nível”: três perguntas rápidas sugerem o nível inicial.']],
  ['1.37.0',['Cifras com o acorde entre colchetes no meio da letra ([C]letra) agora ganham botões, desenhos e tocar junto.','Forma com pestana: no desenho do acorde da cifra e na biblioteca, a versão na forma de E ou de A para maiores, menores e com sétima.','Rolagem “no ritmo”: no palco, a cifra inteira passa no tempo que a música leva.','Em tablet e computador, a música fica em duas colunas: tocar junto à esquerda, cifra à direita.']],
