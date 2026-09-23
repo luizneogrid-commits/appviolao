@@ -260,8 +260,18 @@ try {
   if (AXE) {
     await browser.eval(AXE + ';"ok"');
     await test('acessibilidade: auditoria axe-core sem problemas sérios ou críticos em todas as telas', `const t=__t,bad=[];const run=async tag=>{const r=await axe.run({exclude:[['#toast']]},{runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21a','wcag21aa']},resultTypes:['violations']});r.violations.filter(v=>v.impact==='serious'||v.impact==='critical').forEach(v=>bad.push(tag+': '+v.id+' ('+v.nodes.length+'x, '+v.nodes[0].target.join(' ')+')'));};
-      for(const [v,subs] of [['hoje',[]],['meu',[]],['treinar',['trocas','batidas','tempo','ouvido']],['ferramentas',['metronomo','afinador']],['acordes',['acordes','notas','teoria','descobrir']],['evolucao',['numeros','roteiro','musicas']]]){t.click('[data-act="nav"][data-v="'+v+'"]');await run(v);for(const s of subs){t.click('[data-act="sub"][data-v="'+s+'"]');await run(v+'/'+s);}}
-      t.perfil();await run('perfil');t.click('[data-act="nav"][data-v="hoje"]');if(bad.length)throw new Error(bad.slice(0,8).join('; '));return true;`);
+      for(const theme of ['','dark']){t.perfil();t.click('[data-act="theme"][data-v="'+theme+'"]');const tg=theme?' (escuro)':'';
+        for(const [v,subs] of [['hoje',[]],['meu',[]],['treinar',['trocas','batidas','tempo','ouvido']],['ferramentas',['metronomo','afinador']],['acordes',['acordes','notas','teoria','descobrir']],['evolucao',['numeros','roteiro','musicas']]]){t.click('[data-act="nav"][data-v="'+v+'"]');await run(v+tg);for(const s of subs){t.click('[data-act="sub"][data-v="'+s+'"]');await run(v+'/'+s+tg);}}
+        t.perfil();await run('perfil'+tg);}
+      t.click('[data-act="theme"][data-v=""]');t.click('[data-act="nav"][data-v="hoje"]');if(bad.length)throw new Error(bad.slice(0,8).join('; '));return true;`);
+    { // largura de tablet: nenhuma tela estoura para o lado nem quebra
+      await browser.cdp.send('Emulation.setDeviceMetricsOverride', { width: 800, height: 1100, deviceScaleFactor: 1, mobile: false });
+      await test('largura de tablet (800 px): todas as telas cabem na largura e abrem sem erro', `const t=__t,bad=[];const chk=tag=>{const w=document.documentElement.scrollWidth,iw=window.innerWidth;if(w>iw+1)bad.push(tag+': '+w+'px em '+iw);if(t.broken())bad.push(tag+': erro na tela');};
+        for(const [v,subs] of [['hoje',[]],['meu',[]],['treinar',['trocas','batidas','tempo','ouvido']],['ferramentas',['metronomo','afinador']],['acordes',['acordes','notas','teoria','descobrir']],['evolucao',['numeros','roteiro','musicas']]]){t.click('[data-act="nav"][data-v="'+v+'"]');chk(v);for(const s of subs){t.click('[data-act="sub"][data-v="'+s+'"]');chk(v+'/'+s);}}
+        t.perfil();chk('perfil');t.click('[data-act="nav"][data-v="hoje"]');if(bad.length)throw new Error(bad.join('; '));return true;`);
+      await browser.cdp.send('Emulation.setDeviceMetricsOverride', { width: 360, height: 640, deviceScaleFactor: 1, mobile: true });
+    }
+    await test('ajuda: a seção de atalhos do computador existe', `const t=__t;t.perfil();const ok=[...document.querySelectorAll('.tcard summary')].some(s=>/Atalhos no computador/.test(s.textContent))&&[...document.querySelectorAll('.tcard')].some(d=>/Descobrir/.test(d.textContent));t.click('[data-act="nav"][data-v="hoje"]');if(!ok)throw new Error('sem a seção de atalhos ou a ajuda antiga');return true;`);
   }
 } finally {
   await browser.close(); srv.close();
