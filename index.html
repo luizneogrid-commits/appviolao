@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Violão Diário</title>
-<meta name="app-version" content="1.45.0">
+<meta name="app-version" content="1.46.0">
 <meta name="description" content="Treino diário de violão: plano por nível, metrônomo, afinador, batidas para tocar junto, acordes e notas.">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#F2EEF0" media="(prefers-color-scheme: light)">
@@ -478,7 +478,7 @@ body.flash::after{content:"";position:fixed;inset:0;background:var(--brass);opac
 @media (min-width:700px){.app{max-width:760px}.cgrid{grid-template-columns:repeat(3,1fr)}.stats{grid-template-columns:repeat(4,1fr)}.thdiag{max-width:420px}.pair{max-width:320px}.tabs button{font-size:.9rem;font-stretch:85%}}
 @media (min-width:1000px){.app{max-width:880px}.cgrid{grid-template-columns:repeat(4,1fr)}}
 @media (min-width:900px){.svgrid{display:grid;grid-template-columns:minmax(300px,2fr) 3fr;gap:22px;align-items:start}.svgrid .svplay{position:sticky;top:12px}.svgrid pre.cifra{margin-top:0;min-width:0;overflow-x:auto}} /* música em tela larga: tocar junto à esquerda, cifra à direita */
-@media print{.svtom,.svplay,.cmini .chord+.chord+.chord+.chord+.chord+.chord+.chord+.chord+.chord,.stagebar,select,.toast{display:none!important}.cifra{white-space:pre-wrap;font-size:11pt}.cif-ch{border:0;background:none;padding:0;font-weight:800;color:#000}.cif-sec{color:#000}.cmini{display:flex;flex-wrap:wrap;gap:8px}.cmini .chord{width:84px}} /* imprimir a cifra: título, os primeiros desenhos e a cifra, sem os controles */
+@media print{.svtom,.svplay,.cmini .chord+.chord+.chord+.chord+.chord+.chord+.chord+.chord+.chord,.stagebar,select,.toast{display:none!important}.cifra{white-space:pre-wrap;font-size:11pt}.cif-ch{border:0;background:none;padding:0;font-weight:800;color:#000}.cif-sec{color:#000}.cmini{display:flex;flex-wrap:wrap;gap:8px}.cmini .chord{width:84px}.fbwrap{overflow:visible;margin:0;padding:0}.heatrow{margin-top:8px}.heat{width:100%;max-width:640px}.badges{grid-template-columns:repeat(3,1fr)}.chart svg{max-width:640px}} /* imprimir a cifra e a evolução: sem os controles, com os gráficos inteiros */
 /* impressão: os acordes viram uma folha para a parede; barras, botões e avisos somem */
 @media print{body{background:#fff;color:#000}body::before,.tabs,.pill,.toast,#cifpop,.seg,.filters,.acts,.link,.btn,.st,.chips,.why,.streak,.neck,.fbinfo{display:none!important}.app{max-width:none;padding:0}.panel,.ctile{border:1px solid #bbb;break-inside:avoid;page-break-inside:avoid;box-shadow:none}.cgrid{grid-template-columns:repeat(4,1fr)}.ctile .name{font-size:1.4rem}.chord .fd{fill:#333}.chord .ft{fill:#fff}.chord .nutc{fill:#000}}
 </style>
@@ -1637,6 +1637,12 @@ function weekBars(dates,vals,goal,aria,unit){ // uma barra por semana (12), com 
   if(goal){const gy=4+H-goal/mx*H;c+='<line class="goal" x1="0" x2="336" y1="'+gy+'" y2="'+gy+'"/>';}
   return c+'</svg>';
 }
+function dowBars(vals){ // sete barras, uma por dia da semana (segunda a domingo), com o valor na dica
+  const mx=Math.max(1,...vals),bw=36,gap=12,H=96,lb=['seg','ter','qua','qui','sex','sáb','dom'];
+  let c='<svg viewBox="0 0 336 124" role="img" aria-label="Minutos por dia da semana">';
+  vals.forEach((v,i)=>{const x=4+i*(bw+gap),bh=v?Math.max(4,v/mx*H):3;c+='<rect class="'+(v?'b':'b0')+'" x="'+x+'" y="'+(4+H-bh)+'" width="'+bw+'" height="'+bh+'" rx="4"><title>'+lb[i]+': '+v+' min</title></rect><text x="'+(x+bw/2)+'" y="120">'+lb[i]+'</text>';});
+  return c+'</svg>';
+}
 function dayBars(days,vals,goal,unit){ // minutos por dia; goal > 0 desenha a linha da meta
   const mx=Math.max(goal,1,Math.max.apply(null,vals)),bw=16,gap=8,H=96;
   let c='<svg viewBox="0 0 336 124" role="img" aria-label="Minutos por dia nos últimos '+days.length+' dias">';
@@ -2441,7 +2447,7 @@ function recPanel(){ // em Hoje
 }
 function recList(){ // em Evolução, Números
   if(!S.recs.length)return '';
-  return '<section class="panel"><h2>Suas gravações</h2><p class="sub small">Ouça a mais nova e uma antiga, uma atrás da outra. Ficam só neste aparelho e não entram na exportação.</p><audio id="rec-audio" controls style="width:100%;margin-top:10px"'+(REC.url?' src="'+REC.url+'"':'')+'></audio><ul class="hist" style="margin-top:8px">'+S.recs.map(r=>'<li><div><b>'+esc(dayTxt(r.d))+'</b><div class="muted small">'+(r.t?new Date(r.t).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})+', ':'')+r.sec+' s</div></div><div class="acts" style="margin-top:0"><button class="btn sm quiet" data-act="rec-play" data-id="'+esc(r.id)+'">Ouvir</button><button class="link" data-act="rec-del" data-id="'+esc(r.id)+'">Apagar</button></div></li>').join('')+'</ul></section>';
+  return '<section class="panel"><h2>Suas gravações</h2><p class="sub small">Ouça a mais nova e uma antiga, uma atrás da outra. Ficam só neste aparelho e não entram na exportação.</p><audio id="rec-audio" controls style="width:100%;margin-top:10px"'+(REC.url?' src="'+REC.url+'"':'')+'></audio><ul class="hist" style="margin-top:8px">'+S.recs.map(r=>'<li><div><b>'+esc(dayTxt(r.d))+'</b><div class="muted small">'+(r.t?new Date(r.t).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})+', ':'')+r.sec+' s</div></div><div class="acts" style="margin-top:0"><button class="btn sm quiet" data-act="rec-play" data-id="'+esc(r.id)+'">Ouvir</button><button class="link" data-act="rec-share" data-id="'+esc(r.id)+'">Compartilhar</button><button class="link" data-act="rec-del" data-id="'+esc(r.id)+'">Apagar</button></div></li>').join('')+'</ul></section>';
 }
 
 V.perfil=function(){ // aba própria na barra de baixo; o índice pula direto para a seção
@@ -2627,7 +2633,7 @@ V.evolucao=function(){
   if(sub.evolucao==='numeros'){
     const ks=Object.keys(S.days).filter(practiced),tot=ks.reduce((a,k)=>a+S.days[k].min,0);
     h+='<div class="stats"><div><b class="num">'+streak()+'</b><span>dias seguidos</span></div><div><b class="num">'+bestStreak()+'</b><span>maior sequência</span></div><div><b class="num">'+tot+'</b><span>minutos tocados</span></div><div><b class="num">'+ks.length+'</b><span>dias praticados</span></div></div>';
-    if(ks.length)h+='<div class="acts" style="margin-top:10px"><button class="btn sm quiet" data-act="share-card">Compartilhar meu progresso</button><span class="muted small">uma imagem com a sequência, os minutos e o nível</span></div>';
+    if(ks.length)h+='<div class="acts" style="margin-top:10px"><button class="btn sm quiet" data-act="share-card">Compartilhar meu progresso</button><span class="muted small">uma imagem com a sequência, os minutos e o nível</span><button class="link" data-act="print">Imprimir a evolução</button></div>';
     const days=[];for(let i=13;i>=0;i--)days.push(addDays(new Date(),-i));
     const vals=days.map(d=>(S.days[dkey(d)]||{}).min||0);
     h+='<section class="panel chart" style="margin-top:14px"><div class="between"><h2>Últimos 14 dias</h2><span class="muted small">linha: meta de '+S.goal+' min</span></div><div style="margin-top:14px">'+dayBars(days,vals,S.goal)+'</div></section>';
@@ -2653,6 +2659,8 @@ V.evolucao=function(){
       Object.keys(S.days).forEach(k=>{const d=S.days[k];let sum=0;Object.keys(d.done||{}).forEach(id=>{const c=typeof d.done[id]==='number'?d.done[id]:0;if(cat[id]!=null)cat[id]+=c;sum+=c;});cat.livre+=Math.max(0,(d.min||0)-sum);});
       const tot=Object.values(cat).reduce((a,b)=>a+b,0),mx=Math.max(1,...Object.values(cat));
       if(tot>0)h+='<section class="panel"><h2>Onde vai o tempo</h2><p class="sub small">Minutos por tipo de bloco, desde o começo.</p><div style="margin-top:6px">'+Object.keys(cat).filter(k=>cat[k]>0).sort((a,b)=>cat[b]-cat[a]).map(k=>'<div class="kv" style="display:block"><div class="between"><span>'+lbl[k]+'</span><b>'+cat[k]+' min <small class="muted">('+Math.round(100*cat[k]/tot)+'%)</small></b></div><i class="tbar" style="width:'+Math.round(100*cat[k]/mx)+'%"></i></div>').join('')+'</div></section>';
+      const dow=[0,0,0,0,0,0,0];Object.keys(S.days).forEach(k=>{if(practiced(k))dow[(parseKey(k).getDay()+6)%7]+=S.days[k].min||0;});
+      if(dow.some(Boolean)){const top=dow.indexOf(Math.max(...dow)),lb=['segunda','terça','quarta','quinta','sexta','sábado','domingo'];h+='<section class="panel chart"><div class="between"><h2>Dias da semana</h2><span class="muted small">minutos, desde o começo</span></div><div style="margin-top:14px">'+dowBars(dow)+'</div><p class="muted small" style="margin-top:6px">Seu dia mais forte é '+lb[top]+'. Os mais vazios são os melhores para o lembrete.</p></section>';}
       const nch=Object.keys(S.chalLog).length;if(S.chal||nch)h+='<section class="panel"><h2>Desafios da semana</h2><div style="margin-top:6px"><div class="kv"><span>Cumpridos</span><b>'+nch+'</b></div>'+(S.chal?'<div class="kv"><span>Esta semana</span><b>'+esc(chalText(S.chal))+(S.chal.done?' ✓':' ('+Math.min(S.chal.target,chalProgress())+' de '+S.chal.target+')')+'</b></div>':'')+'</div></section>';}
     h+='<section class="panel"><h2>Marcas</h2><div style="margin-top:6px"><div class="kv" data-act="go-acordes" role="button" tabindex="0" style="cursor:pointer"><span>Acordes dominados ›</span><b>'+dom+' de '+CHORDS.length+'</b></div><div class="kv" data-act="go-trocas" role="button" tabindex="0" style="cursor:pointer"><span>Melhor troca em 1 minuto ›</span><b>'+(pk?bestOf(pk)+' ('+esc(pk.replace('|',' e '))+')':'ainda sem medição')+'</b></div><div class="kv" data-act="go-metro" role="button" tabindex="0" style="cursor:pointer"><span>Metrônomo mais rápido por 1 minuto ›</span><b>'+(S.maxBpm?S.maxBpm+' BPM':'ainda sem registro')+'</b></div><div class="kv" data-act="go-ouvido" role="button" tabindex="0" style="cursor:pointer"><span>Acertos no treino de ouvido ›</span><b>'+(S.ear.total?Math.round(S.ear.ok/S.ear.total*100)+'% de '+S.ear.total:'ainda sem respostas')+'</b></div><div class="kv"><span>Revisão rápida: itens firmes</span><b>'+Object.keys(S.rev).filter(x=>S.rev[x].s>=3).length+' de '+Object.keys(S.rev).length+'</b></div></div></section>';
   }else if(sub.evolucao==='roteiro'){
@@ -2733,6 +2741,7 @@ if(PWA.host){
 const TABS=[['hoje','Hoje','<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.8 2.8L16 9.5"/>'],['meu','Meu treino','<path d="M4 6h8M16 6h4M4 12h2M10 12h10M4 18h10M18 18h2"/><circle cx="14" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="18" r="2"/>'],['treinar','Treinar','<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/>'],['ferramentas','Ferramentas','<path d="M9 3h6l4 18H5L9 3zM12 17l4-11M7.2 13h9.6"/>'],['acordes','Acordes','<path d="M5 4v16M12 4v16M19 4v16M5 4h14M5 10h14M5 16h14"/><circle cx="12" cy="7" r="1.7" fill="currentColor"/>'],['evolucao','Evolução','<path d="M5 20V11M12 20V4M19 20v-6M2 20h20"/>'],['perfil','Perfil','<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>']];
 /* ---------- novidades de cada versão, mostradas uma vez ---------- */
 const NEWS=[
+ ['1.46.0',['Gravações: “Compartilhar” manda o áudio pelo compartilhamento do celular (no site, baixa o arquivo).','Evolução: “Dias da semana”, os minutos em cada dia da semana desde o começo, com o seu dia mais forte.','Evolução: “Imprimir a evolução”, uma versão para papel com gráficos, marcas e conquistas.']],
  ['1.45.0',['Cifra: “Repetir” ao lado de “Ir para” marca o trecho em loop pela seção (intro, refrão, ponte) com um toque.','Palco com o tocar junto ligado: o acorde da vez e o próximo aparecem grandes no alto da cifra.','Perfil, Som: vibrar na troca de acorde no tocar junto e nas batidas, para praticar com fone sem olhar a tela.']],
  ['1.44.0',['Treinar, Mão esquerda: nove exercícios de mobilidade e de troca de acordes (aranha, independência 1-3-2-4, 4-3-2-1, alongamento, mindinho, trilhos, pivô com dedo âncora, voo dos dedos e pressão mínima), com o exemplo tocado casa por casa e metrônomo.','O aquecimento de Hoje ganha dois exercícios novos e o atalho para a Mão esquerda.']],
  ['1.43.0',['Evolução, Diário: “Ver todos” quando há mais de dez registros.','Conquistas por vir mostram quanto falta (minutos, dias, trocas, respostas, músicas).','Ficha e capturas da loja com o desafio da semana e os desenhos no treino.']],
@@ -2977,7 +2986,10 @@ const ACT={
   'rec-secs':el=>{S.recSecs=+el.dataset.v===60?60:30;save();render();},
   'rec-stop':()=>{recStop();},
   'open-recs':()=>{sub.evolucao='numeros';go('evolucao');setTimeout(()=>{const e=$('#rec-audio');if(e)e.closest('section').scrollIntoView({block:'start'});},60);},
-  'rec-play':el=>{const id=el.dataset.id;recGet(id).then(o=>{if(!o||!o.blob){toast('Esta gravação não está neste aparelho.');S.recs=S.recs.filter(r=>r.id!==id);save();render();return;}if(REC.url)URL.revokeObjectURL(REC.url);REC.url=URL.createObjectURL(o.blob);const a=$('#rec-audio');if(a){a.src=REC.url;const p=a.play();if(p&&p.catch)p.catch(()=>{});}document.querySelectorAll('[data-act="rec-play"]').forEach(b=>b.classList.toggle('on',b.dataset.id===id));},()=>toast('Não consegui abrir a gravação.'));},
+  'rec-share':el=>{const id=el.dataset.id,r=S.recs.find(x=>x.id===id);recGet(id).then(o=>{if(!o||!o.blob){toast('Esta gravação não está neste aparelho.');return;}const type=o.blob.type||'audio/webm',ext=/mp4|m4a|aac/.test(type)?'m4a':/ogg/.test(type)?'ogg':/wav/.test(type)?'wav':'webm',name='violao-diario-'+(r?r.d:today())+'.'+ext;let file=null;try{file=new File([o.blob],name,{type});}catch(e){}
+  if(file&&(NATIVE||/Android|iPhone|iPad/i.test(navigator.userAgent))&&navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){navigator.share({files:[file],title:'Minha gravação no violão'}).catch(()=>{});return;} // no app e no celular, o compartilhamento manda o áudio para quem você quiser; no computador, baixa
+  try{const url=URL.createObjectURL(o.blob),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},1000);toast('Arquivo '+name+' gerado.');}catch(e){toast('Não consegui gerar o arquivo.');}}).catch(()=>toast('Não consegui ler a gravação.'));},
+'rec-play':el=>{const id=el.dataset.id;recGet(id).then(o=>{if(!o||!o.blob){toast('Esta gravação não está neste aparelho.');S.recs=S.recs.filter(r=>r.id!==id);save();render();return;}if(REC.url)URL.revokeObjectURL(REC.url);REC.url=URL.createObjectURL(o.blob);const a=$('#rec-audio');if(a){a.src=REC.url;const p=a.play();if(p&&p.catch)p.catch(()=>{});}document.querySelectorAll('[data-act="rec-play"]').forEach(b=>b.classList.toggle('on',b.dataset.id===id));},()=>toast('Não consegui abrir a gravação.'));},
   'rec-del':el=>{const id=el.dataset.id;S.recs=S.recs.filter(r=>r.id!==id);save();recRemove(id).catch(()=>{});render();},
   mic:()=>{if(MIC){micStop();render();}else micStart();},
   't-start':()=>{audio();if(T.a===T.b)return;T.phase='count';T.startAt=Date.now()+3000;T.viaMic=false;if(S.cntMode==='mic'){countReset();micStart('count');}render();},
