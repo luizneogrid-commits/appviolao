@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Violão Diário</title>
-<meta name="app-version" content="1.41.0">
+<meta name="app-version" content="1.42.0">
 <meta name="description" content="Treino diário de violão: plano por nível, metrônomo, afinador, batidas para tocar junto, acordes e notas.">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#F2EEF0" media="(prefers-color-scheme: light)">
@@ -1158,7 +1158,10 @@ function mSet(v,keep){M.bpm=Math.max(30,Math.min(240,Math.round(v)));if(AC)M.sin
 const tempoName=b=>b<60?'Bem devagar':b<80?'Devagar':b<104?'Moderado':b<132?'Animado':'Rápido';
 function mPaint(){
   const n=$('#m-num');if(n){n.textContent=M.bpm;$('#m-name').textContent=tempoName(M.bpm);$('#m-slider').value=M.bpm;$('#m-go').textContent=M.on?'Parar':'Iniciar';}
-  const p=$('#pill');p.classList.toggle('show',M.on&&!(view==='ferramentas'&&sub.ferramentas==='metronomo'));$('#pill-t').textContent='Metrônomo a '+M.bpm+' BPM';
+  const p=$('#pill'),blk=!!(B&&view!=='hoje'),mOn=M.on&&!(view==='ferramentas'&&sub.ferramentas==='metronomo'); // fora de Hoje, um bloco contando aparece na pílula, com o caminho de volta
+  if(blk){const bt=(planFor(today()).find(b=>b.id===B.id)||{}).title||'Bloco';p.innerHTML='<span id="pill-t">'+esc(bt)+' <b id="pill-b">'+mmss(B.left)+'</b>'+(B.running?'':' (pausado)')+'</span><button data-act="nav" data-v="hoje">Voltar</button>'+(M.on?'<button data-act="m-toggle">Parar som</button>':'');}
+  else p.innerHTML='<span id="pill-t">Metrônomo a '+M.bpm+' BPM</span><button data-act="m-toggle">Parar</button>';
+  p.classList.toggle('show',blk||mOn);
 }
 
 /* ---------- batidas: tocar junto ---------- */
@@ -1499,15 +1502,17 @@ const bestOf=k=>(S.changes[k]||[]).reduce((m,r)=>Math.max(m,r.n),0);
 function earLogAdd(ok){const m=sub.ouvido||'mm',e=S.earLog[m]||(S.earLog[m]={ok:0,total:0});e.total++;if(ok)e.ok++;} // acertos do ouvido por modalidade (Evolução, Números)
 setInterval(()=>{
   const now=Date.now();
-  if(B&&B.running){B.left-=(now-B.last)/1000;B.last=now;const el=$('#blk-time');if(el)el.textContent=mmss(B.left);if(B.left<=0)blockDone(B.id,B.total);}
+  if(B&&B.running){B.left-=(now-B.last)/1000;B.last=now;const el=$('#blk-time');if(el)el.textContent=mmss(B.left);const pb=$('#pill-b');if(pb)pb.textContent=mmss(B.left);if(B.left<=0)blockDone(B.id,B.total);}
   if(T.phase==='count'){const el=$('#t-count');if(el)el.textContent=Math.max(1,Math.ceil((T.startAt-now)/1000));if(now>=T.startAt){T.phase='run';T.endAt=now+60000;T.count=0;if(MIC&&MIC.mode==='count')CNT.hold=now+600;else pluck(76,0,.5);render();}}
   else if(T.phase==='run'){const left=(T.endAt-now)/1000,el=$('#t-left');if(el){el.textContent=mmss(left);$('#t-bar').style.width=Math.max(0,left/60*100)+'%';}if(left<=0)changesDone();}
   csTick(now);
 },200);
 function afterPractice(){if(NATIVE&&S.remind&&(goalMet(today())||(S.remindLate&&practiced(today())))&&remindDoneDay!==today()){remindDoneDay=today();scheduleReminder();}} // meta batida: o lembrete de hoje sai da fila
+function blockBar(){return B?'<div class="acts" style="margin-bottom:12px"><button class="chip" data-act="nav" data-v="hoje">‹ Voltar ao treino ('+mmss(B.left)+(B.running?'':', pausado')+')</button></div>':'';} // nas telas que os blocos abrem (Batidas, Trocas, Tempo, Metrônomo)
 function blockDone(id,credit){
   const d=day(today());if(!d.done[id]){d.done[id]=credit;d.min+=credit;} // guarda os minutos creditados, para o "Desfazer"
   if(B&&B.bpm&&M.on)mStop();if(SG.on)sgStop(true);B=null;if(planFor(today()).every(b=>d.done[b.id]))d.full=true;save();afterPractice(); // concluir o bloco também para o aquecimento ou a escala que estiver tocando
+  const bt=(planFor(today()).find(b=>b.id===id)||{}).title||'Bloco';toast('Bloco concluído: '+bt+' ('+credit+' min).'); // o aviso vale em qualquer tela, porque o tempo acaba mesmo fora de Hoje
   strum(chordMidis('G'));buzz(60);render();
   const nk=$('.neck');if(nk){nk.classList.add('ring');setTimeout(()=>nk.classList.remove('ring'),1300);}
 }
@@ -2414,7 +2419,7 @@ V.meu=function(){
 
 V.treinar=function(){
   let h=topBar('<h1>Treinar</h1><p class="sub">Exercícios que mostram sua evolução em números.</p>')+seg('treinar',[['trocas','Trocas'],['batidas','Batidas'],['tempo','Tempo'],['ouvido','Ouvido']]);
-  if(sub.treinar==='trocas'){
+  if(sub.treinar==='trocas'){h+=blockBar();
     const k=pairKey(T.a,T.b),best=bestOf(k);
     if(T.phase==='idle'){
       const opts=s=>CHORDS.map(c=>'<option'+(c.n===s?' selected':'')+'>'+esc(c.n)+'</option>').join('');
@@ -2441,7 +2446,7 @@ V.treinar=function(){
       const rec=T.count>T.prevBest;
       h+='<section class="panel" style="text-align:center"><p class="sub">'+esc(T.a)+' e '+esc(T.b)+'</p><div class="big num">'+T.count+'</div><p><b>'+(T.count===1?'troca':'trocas')+' em 1 minuto</b></p>'+(T.viaMic?'<p class="sub small">Contadas pelo microfone.</p>':'')+'<p class="sub">'+(T.prevBest===0?'Primeira medição deste par. Agora você tem uma marca para bater.':rec?'Novo recorde. O anterior era '+T.prevBest+'.':'Seu recorde é '+T.prevBest+'. Dias mais lentos fazem parte.')+'</p><div class="stack" style="margin-top:18px"><button class="btn block" data-act="t-start">Tentar de novo</button><button class="btn block line" data-act="t-reset">Escolher outro par</button></div></section>';
     }
-  }else if(sub.treinar==='batidas'){
+  }else if(sub.treinar==='batidas'){h+=blockBar();
     if(!BAT.prog){const L=LEVELS[S.level-1];BAT.prog=L.prog[0];if(!BAT.touched){BAT.pid=L.rhythm;BAT.bpm=L.bpm;}}const P=PAT[BAT.pid],on=GR.on&&GR.cfg===BAT;
     h+='<div class="chips" style="margin-bottom:14px">'+PATTERNS.map(p=>'<button class="chip" data-act="gr-pat" data-v="'+p.id+'" aria-pressed="'+(p.id===BAT.pid)+'">'+esc(p.name)+'</button>').join('')+'</div>';
     h+='<section class="panel"><h2>'+esc(P.name)+'</h2><p class="sub">'+esc(P.tip)+'</p><div style="margin-top:14px">'+rhythmHTML(P,'gr-grid')+'</div><p class="muted small" style="margin-top:10px">↓ para baixo, ↑ para cima, x abafada, B baixo com o polegar'+(P.arp?', P polegar, b baixo alternado, I indicador, M médio, A anelar':'')+(P.cells.includes('C')?', C os três dedos beliscando as cordas agudas juntos':'')+'. Casa vazia: a mão passa sem tocar.</p>';
@@ -2450,7 +2455,7 @@ V.treinar=function(){
     h+='<p class="sub small" id="gr-status" style="margin:14px 0 10px;min-height:1.4em" aria-live="polite">'+(on?'Contagem':'Começa com um compasso de contagem. Um acorde por compasso.')+'</p><button class="btn block" data-act="gr-toggle">'+(on?'Parar':'Ouvir e tocar junto')+'</button></section>';
     h+='<section class="panel"><h3>Acordes do exemplo</h3><div class="chips" style="margin-top:10px">'+PROGS.map((p,i)=>'<button class="chip" data-act="gr-prog" data-i="'+i+'" aria-pressed="'+(p.join()===BAT.prog.join())+'">'+p.join(' ')+'</button>').join('')+'</div><div class="between" style="margin-top:16px"><span>Clique do metrônomo junto</span><button class="chip" data-act="gr-click" aria-pressed="'+BAT.click+'">'+(BAT.click?'Ligado':'Desligado')+'</button></div><p class="muted small" style="margin-top:12px">Quer escolher os acordes? Monte um treino seu em <button class="link" style="padding:0;min-height:0" data-act="nav" data-v="meu">Meu treino</button>.</p><p class="muted small" style="margin-top:8px">Violão do app: '+esc(guitar().name)+'. <button class="link" style="padding:0;min-height:0" data-act="open-perfil">Trocar o timbre</button></p></section>';
     h+=myPatPanel();
-  }else if(sub.treinar==='tempo'){
+  }else if(sub.treinar==='tempo'){h+=blockBar();
     const best=S.stats.timing[String(TM.bpm)];
     const TP=PAT[tmPid()],batida=TM.mode==='batida';
     if(TM.phase==='idle'){
@@ -2502,7 +2507,7 @@ V.treinar=function(){
 
 V.ferramentas=function(){
   let h=topBar('<h1>Ferramentas</h1>')+seg('ferramentas',[['metronomo','Metrônomo'],['afinador','Afinador']]);
-  if(sub.ferramentas==='metronomo'){
+  if(sub.ferramentas==='metronomo'){h+=blockBar();
     h+='<section class="panel metro"><div class="bpm num" id="m-num">'+M.bpm+'</div><div class="bpm-l"><span id="m-name">'+tempoName(M.bpm)+'</span>, batidas por minuto</div><div class="dots" aria-hidden="true">'+Array.from({length:M.beats},(_,i)=>'<i'+(i===0?' class="first"':'')+'></i>').join('')+'</div><input type="range" id="m-slider" min="30" max="240" value="'+M.bpm+'" aria-label="Andamento"><div class="stepper">'+[-5,-1,1,5].map(d=>'<button data-act="m-bpm" data-d="'+d+'" aria-label="'+(d>0?'Aumentar ':'Diminuir ')+Math.abs(d)+' BPM">'+(d>0?'+':'−')+Math.abs(d)+'</button>').join('')+'</div><button class="btn block" id="m-go" data-act="m-toggle">'+(M.on?'Parar':'Iniciar')+'</button><button class="btn block line" style="margin-top:10px" data-act="m-tap">Bater o tempo</button></section>';
     h+='<section class="panel"><h3>Compasso</h3><div class="row" style="margin-top:10px">'+[[2,'2/4'],[3,'3/4'],[4,'4/4'],[6,'6/8']].map(b=>'<button class="chip" data-act="m-beats" data-v="'+b[0]+'" aria-pressed="'+(M.beats===b[0])+'">'+b[1]+'</button>').join('')+'</div>';
     h+='<p class="grp">Subdivisão</p><div class="chips">'+[[1,'Só o tempo'],[2,'Colcheias'],[3,'Tercinas']].map(o=>'<button class="chip" data-act="m-sub" data-v="'+o[0]+'" aria-pressed="'+(M.sub===o[0])+'">'+o[1]+'</button>').join('')+'</div>';
@@ -2692,6 +2697,7 @@ if(PWA.host){
 const TABS=[['hoje','Hoje','<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.8 2.8L16 9.5"/>'],['meu','Meu treino','<path d="M4 6h8M16 6h4M4 12h2M10 12h10M4 18h10M18 18h2"/><circle cx="14" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="18" r="2"/>'],['treinar','Treinar','<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/>'],['ferramentas','Ferramentas','<path d="M9 3h6l4 18H5L9 3zM12 17l4-11M7.2 13h9.6"/>'],['acordes','Acordes','<path d="M5 4v16M12 4v16M19 4v16M5 4h14M5 10h14M5 16h14"/><circle cx="12" cy="7" r="1.7" fill="currentColor"/>'],['evolucao','Evolução','<path d="M5 20V11M12 20V4M19 20v-6M2 20h20"/>'],['perfil','Perfil','<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>']];
 /* ---------- novidades de cada versão, mostradas uma vez ---------- */
 const NEWS=[
+ ['1.42.0',['Bloco em andamento fora de Hoje: a pílula no rodapé mostra o bloco e o tempo que falta e volta para Hoje ao tocar; Batidas, Trocas, Tempo e Metrônomo ganham “Voltar ao treino”.','Quando o tempo do bloco acaba em qualquer tela, um aviso diz qual bloco terminou e quanto contou.']],
  ['1.41.0',['Painéis que viram atalhos: a faixa da semana em Hoje abre Evolução; “Esta semana” abre a meta em Perfil; em Evolução, Repertório abre Músicas, Ouvido por modalidade abre o treino de ouvido e as Marcas levam a Acordes, Trocas e Metrônomo.','Na lista de músicas, tocar no nome abre a cifra.','Barras dos gráficos com dica (dia ou semana e valor) ao tocar ou passar o mouse.','“Somar 5 min” e a situação da música agora confirmam com um aviso.']],
  ['1.40.2',['O painel do desafio da semana, em Hoje, agora é um atalho: toque nele para ir às trocas com o par do desafio, à música, ao treino de ouvido ou ao treino de hoje.']],
  ['1.40.1',['Concluir o bloco de aquecimento (ou a escala tocada junto) para o som na hora; antes ele seguia até trocar de tela.']],
