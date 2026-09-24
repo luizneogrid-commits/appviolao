@@ -75,6 +75,6 @@ export async function launch({ width = 360, height = 640, scale = 1, mobile = tr
       if (r.exceptionDetails) throw new Error(r.exceptionDetails.exception && r.exceptionDetails.exception.description || r.exceptionDetails.text || 'erro na página');
       return r.result && r.result.value;
     },
-    async close() { try { await cdp.send('Browser.close'); } catch (e) {} try { cdp.close(); } catch (e) {} proc.kill(); await sleep(300); rmSync(profile, { recursive: true, force: true }); }
+    async close() { try { await cdp.send('Browser.close'); } catch (e) {} try { cdp.close(); } catch (e) {} proc.kill(); await sleep(300); for (let i = 0; i < 5; i++) { try { rmSync(profile, { recursive: true, force: true }); break; } catch (e) { await sleep(500); } } } // no Windows o perfil pode ficar em uso por um instante; tenta de novo e, se não der, deixa a pasta temporária
   };
 }
