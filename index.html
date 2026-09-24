@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Violão Diário</title>
-<meta name="app-version" content="1.47.0">
+<meta name="app-version" content="1.48.0">
 <meta name="description" content="Treino diário de violão: plano por nível, metrônomo, afinador, batidas para tocar junto, acordes e notas.">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#F2EEF0" media="(prefers-color-scheme: light)">
@@ -401,6 +401,7 @@ span.chip{display:inline-flex;align-items:center;gap:4px}
 .cmini{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px}
 .cmini .chord{border:0;background:none;padding:0;text-align:center;border-radius:12px}
 .cmini strong{font-stretch:75%;font-size:1.1rem}
+.cmini.hf .deg{display:block;font-size:.8rem;font-weight:800;color:var(--primary)}.cmini.hf .fn{display:block;font-size:.72rem;font-weight:650;margin-top:2px}.cmini.hf .nosh{display:block;padding:26px 0 24px} /* campo harmônico: grau em cima, função embaixo */
 .patprev{margin-top:14px}
 .patprev>b{display:block;font-size:.9rem;margin-bottom:6px}
 .ct .acts{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center}
@@ -1795,7 +1796,7 @@ function theoryView(){
   if(rel.length)h+='<h3 style="margin-top:18px">Compare com '+(rel.length===1?'o outro acorde':'os outros acordes')+' de '+esc(T0.pt)+'</h3><p class="muted small">As cordas que mudam aparecem circuladas. Toque em “Ouvir” para ouvir cada acorde sozinho.</p>'+rel.map(o=>{const c=compareInfo(ci,o);
     return '<div class="thcmp"><div class="pair"><div class="chord"><strong>'+esc(ci.n)+'</strong>'+chordSVG(ci.n,c.diff)+'<button class="btn sm quiet" data-act="chord-play" data-c="'+esc(ci.n)+'">Ouvir '+esc(ci.n)+'</button></div><div class="chord"><strong>'+esc(o.n)+'</strong>'+chordSVG(o.n,c.diff)+'<button class="btn sm quiet" data-act="chord-play" data-c="'+esc(o.n)+'">Ouvir '+esc(o.n)+'</button></div></div><p>'+c.text+'</p><button class="link" data-act="play-chords" data-c="'+esc(ci.n)+','+esc(o.n)+'">Ouvir '+esc(ci.n)+' e depois '+esc(o.n)+'</button></div>';}).join('');
   h+='</section>';
-  return h+scalesPanel(ci)+circlePanel(ci)+theoryConcepts();
+  return h+scalesPanel(ci)+harmonicPanel(ci)+circlePanel(ci)+theoryConcepts();
 }
 
 /* ---------- ciclo das quintas e quartas ---------- */
@@ -1921,6 +1922,40 @@ function sgSched(){
     tick(t,k===0?1:0,.25);pluckAt(nt.midi,t,.5,nt.si);
     setTimeout(()=>{if(!SG.on||SG.run!==run)return;document.querySelectorAll('.sfb circle.on').forEach(e=>e.classList.remove('on'));const e=$('#sn-'+nt.si+'-'+nt.f);if(e)e.classList.add('on');const s=$('#sg-status');if(s)s.textContent=nt.pt+(nt.deg?' (grau '+nt.deg+')':'')+': '+(6-nt.si)+'ª corda, '+(nt.f?'casa '+nt.f:'solta')+(nt.deg?'':', dedo '+(nt.fg||nt.f))+(k<SG.seq.length/2?'. Subindo.':'. Descendo.');},Math.max(0,(t-AC.currentTime)*1000));
     SG.next+=60/SG.bpm;SG.i++;}
+}
+/* ---------- campo harmônico: os sete acordes de um tom, com grau e função ---------- */
+const DEG_MAJ=[[0,'','I','repouso'],[2,'m','ii','preparação'],[4,'m','iii','repouso'],[5,'','IV','preparação'],[7,'','V','tensão'],[9,'m','vi','repouso'],[11,'dim','vii°','tensão']];
+const DEG_MIN=[[0,'m','i','repouso'],[2,'dim','ii°','preparação'],[3,'','III','repouso'],[5,'m','iv','preparação'],[7,'m','v','tensão'],[8,'','VI','preparação'],[10,'','VII','tensão']];
+const HF_PROGS={maj:[['I','V','vi','IV'],['I','vi','IV','V'],['I','IV','V','I'],['ii','V','I'],['vi','IV','I','V']],min:[['i','VI','III','VII'],['i','iv','v','i'],['i','VII','VI','VII'],['i','iv','V7','i'],['i','VI','iv','V7']]}; /* graus; no menor, V7 é o dominante da menor harmônica */
+function keyChords(pc,minor){return (minor?DEG_MIN:DEG_MAJ).map(d=>({n:TRN[(pc+d[0])%12]+d[1],deg:d[2],fn:d[3],q:d[1]}));}
+function hfDeg(pc,minor,deg){if(deg==='V7')return TRN[(pc+7)%12]+'7';const d=(minor?DEG_MIN:DEG_MAJ).find(x=>x[2]===deg);return d?TRN[(pc+d[0])%12]+d[1]:'';}
+function hfShape(n){ /* desenho: o da biblioteca ou, sem ele, a forma móvel (pestana) mais baixa no braço; null para o diminuto */
+  if(CH[n])return shape(n);const m=/^([A-G][#b]?)(m|7)?$/.exec(n);if(!m)return null;const pc=pcOf(m[1][0],m[1][1]||''),suf=m[2]||'';
+  const opts=MOV.map((f,k)=>({k,fret:(pc-(f[0][0]==='E'?4:9)+12)%12})).filter(o=>MOV[o.k][1]===suf&&o.fret>0).sort((a,b)=>a.fret-b.fret);
+  return opts.length?movShape(opts[0].k,opts[0].fret):null;
+}
+function hfMidis(n){const c=hfShape(n);if(c)return c.f.map((f,i)=>f<0?null:OPEN[i]+f).filter(m=>m!==null);const m=/^([A-G][#b]?)dim$/.exec(n);if(!m)return null;const r=48+pcOf(m[1][0],m[1][1]||'');return [r,r+3,r+6,r+12];}
+function hfPlay(names,gap){names.forEach((n,k)=>{const ms=hfMidis(n);if(ms)ms.forEach((m,i)=>pluck(m,k*(gap||1.2)+i*.04,.34));});}
+function songOutOfKey(s,tk){ /* acordes da música fora do campo harmônico do tom provável; o V maior do relativo menor (E em Dó maior ou Lá menor) conta como do tom */
+  const set=new Set(DEG_MAJ.map(d=>((tk.k+d[0])%12)+'|'+(d[1]||'M')));set.add(((tk.k+4)%12)+'|M');const out=[];
+  songChords(s).forEach(n=>{const m=CHRE.exec(n);if(!m)return;const q=/^(m|min)(?!aj)/.test(m[3])?'m':/dim|°|º/.test(m[3])?'dim':'M';if(!set.has(pcOf(m[1],m[2])+'|'+q)&&!out.includes(n))out.push(n);});
+  return out;
+}
+function harmonicPanel(ci){
+  if(TH.hk==null){TH.hk=ci.rootPc;TH.hm=ci.tones[1].r==='3m';TH.hs=[];} /* segue o acorde escolhido, até a pessoa escolher um tom */
+  const pc=TH.hk,minor=!!TH.hm,ks=keyChords(pc,minor),name=NPT[pc]+(minor?' menor':' maior'),rel=minor?NPT[(pc+3)%12]+' maior':NPT[(pc+9)%12]+' menor',seq=TH.hs||[],ok=seq.length>=2&&seq.every(n=>CH[n]);
+  let h='<section class="panel" id="campo"><h2>Campo harmônico</h2><p class="sub small">Os sete acordes que nascem da escala de um tom: cada nota da escala vira um acorde só com notas dela. Por isso combinam entre si, e a maioria das músicas usa quase só eles.</p>';
+  h+='<p class="grp">Tom</p><div class="filters">'+TRN.map((n,i)=>'<button class="chip" data-act="hf-key" data-pc="'+i+'" aria-pressed="'+(i===pc)+'">'+n+'</button>').join('')+'</div><div class="chips" style="margin-top:8px"><button class="chip" data-act="hf-mode" data-v="0" aria-pressed="'+!minor+'">Maior</button><button class="chip" data-act="hf-mode" data-v="1" aria-pressed="'+minor+'">Menor</button></div>';
+  h+='<h3 style="margin-top:16px">'+esc(name)+' ('+esc(TRN[pc]+(minor?'m':''))+')</h3><p class="sub small">Relativo: '+esc(rel)+', os mesmos sete acordes começando de outro lugar.'+(minor?' No tom menor, o v costuma virar maior ('+esc(hfDeg(pc,1,'V7'))+'): a nota sensível puxa de volta para a tônica.':'')+'</p>';
+  h+='<div class="cmini hf">'+ks.map(c=>{const sh=hfShape(c.n);return '<button class="chord" data-act="hf-play" data-c="'+esc(c.n)+'" aria-label="Ouvir '+esc(c.n)+', grau '+esc(c.deg)+', '+esc(c.fn)+'"><span class="deg">'+esc(c.deg)+'</span><strong>'+esc(c.n)+'</strong>'+(sh?chordSVG(sh):'<span class="muted small nosh">sem desenho</span>')+'<span class="fn">'+esc(c.fn)+'</span></button>';}).join('')+'</div>';
+  h+='<p class="small muted" style="margin-top:8px"><b>Repouso</b> é onde a música descansa; <b>preparação</b> caminha para a tensão; <b>tensão</b> pede para voltar ao '+(minor?'i':'I')+'. Uma progressão costuma ir do repouso à preparação, à tensão e de volta ao repouso. O diminuto (dim) é raro no violão iniciante: aparece de passagem, e por isso fica sem desenho.</p>';
+  h+='<div class="acts"><button class="btn sm" data-act="hf-cad">Ouvir a cadência '+(minor?'i, iv, V7, i':'I, IV, V, I')+'</button></div>';
+  const progs=HF_PROGS[minor?'min':'maj'].map(p=>({degs:p,names:p.map(d=>hfDeg(pc,minor,d))}));
+  h+='<h3 style="margin-top:18px">Progressões comuns neste tom</h3><ul class="hist" style="margin-top:8px">'+progs.map(p=>{const all=p.names.every(n=>CH[n]);return '<li><div><b>'+esc(p.names.join(' '))+'</b><div class="muted small">'+esc(p.degs.join(' '))+(all?'':' (tem acorde sem desenho no app)')+'</div></div><button class="btn sm quiet" data-act="hf-prog-play" data-c="'+esc(p.names.join(','))+'">Ouvir</button>'+(all?'<button class="btn sm quiet" data-act="hf-gr" data-c="'+esc(p.names.join(','))+'">Tocar junto</button>':'')+'</li>';}).join('')+'</ul>';
+  h+='<h3 style="margin-top:18px">Monte a sua progressão</h3><p class="sub small">Toque nos acordes, na ordem, até oito. Comece e termine no '+(minor?'i':'I')+' para soar resolvido, ou termine no V para ficar no ar.</p><div class="chips" style="margin-top:8px">'+ks.map(c=>'<button class="chip" data-act="hf-add" data-c="'+esc(c.n)+'"'+(seq.length>=8?' disabled':'')+'>'+esc(c.n)+'</button>').join('')+'</div>';
+  h+='<div class="progrow" id="hf-seq" aria-live="polite">'+(seq.length?seq.map(n=>'<span><b>'+esc(n)+'</b></span>').join(''):'<span class="muted" style="font-weight:500;font-size:.9rem;background:none">Nenhum acorde ainda.</span>')+'</div>';
+  h+='<div class="acts"><button class="btn sm" data-act="hf-seq-play"'+(seq.length?'':' disabled')+'>Ouvir</button><button class="btn sm line" id="hf-seq-gr" data-act="hf-gr" data-c="'+esc(seq.join(','))+'"'+(ok?'':' disabled')+'>Tocar junto</button><button class="btn sm line" data-act="hf-save"'+(ok?'':' disabled')+'>Salvar como treino</button><button class="link" data-act="hf-del"'+(seq.length?'':' disabled')+'>Tirar o último</button><button class="link" data-act="hf-clear"'+(seq.length?'':' disabled')+'>Limpar</button></div>'+(seq.length&&!ok?'<p class="muted small">Para tocar junto ou salvar, a progressão precisa de dois acordes ou mais, todos com desenho no app.</p>':'');
+  return h+'</section>';
 }
 function scalesPanel(ci){
   if(TH.sr==null){TH.sr=ci.rootPc;TH.sc=ci.tones[1].r==='3m'?'natural':'maior';} // segue o acorde escolhido
@@ -2134,7 +2169,7 @@ function songKey(s){ // tom provável pelos acordes: cada tom maior ganha pontos
   for(let k=0;k<12;k++){let sc=0;chords.forEach(c=>{const d=deg.find(x=>(k+x[0])%12===c.pc&&x[1]===c.q);sc+=d?d[2]+(c.dom&&d[0]===7?1:0):-1.5;});if(!best||sc>best.sc)best={k,sc};}
   if(best.sc<=0)return null;
   const rel=(best.k+9)%12,minorFirst=chords[0].pc===rel&&chords[0].q==='m';
-  return {major:NPT[best.k]+' maior',minor:NPT[rel]+' menor',minorFirst,chords:deg.slice(0,6).map(x=>TRN[(best.k+x[0])%12]+(x[1]==='m'?'m':''))};
+  return {k:best.k,major:NPT[best.k]+' maior',minor:NPT[rel]+' menor',minorFirst,chords:deg.slice(0,6).map(x=>TRN[(best.k+x[0])%12]+(x[1]==='m'?'m':''))};
 }
 function songsView(){ // a lista como está na tela: busca por nome ou acorde e a ordem escolhida (cadastro, nome, recentes, situação)
   const q=(SV.q||'').trim().toLowerCase();let arr=S.songs.filter(s=>!q||s.title.toLowerCase().includes(q)||(s.chords||'').toLowerCase().includes(q));const rank={aprendendo:0,devagar:1,dominada:2};
@@ -2166,7 +2201,7 @@ const svPlaying=()=>!!(GR.on&&SV.cfg&&GR.cfg===SV.cfg);
 function songView(){
   const s=S.songs.find(x=>x.id===SV.id),k=svShift(s),L=LEVELS[S.level-1],list=songChords(s);
   let h='<section class="panel"><div class="between"><h2>'+esc(s.title)+'</h2><button class="link" style="padding:0;min-height:0" data-act="song-close">Fechar</button></div>'+(list.length?'<p class="cif">'+list.map(esc).join(' ')+'</p><div class="cmini">'+list.map(n=>'<button class="chord" data-act="cif-ch" data-c="'+esc(n)+'" aria-label="Ver e ouvir '+esc(n)+'">'+chordBox(n)+'</button>').join('')+'</div>':s.chords?'<p class="cif">'+esc(s.chords)+'</p>':''); // a faixa com os desenhos dos acordes da música, já transpostos
-  const tk=songKey(s);if(tk&&!SV.stage)h+='<p class="muted small" style="margin-top:8px">Tom provável: <b>'+(tk.minorFirst?tk.minor:tk.major)+'</b> (ou '+(tk.minorFirst?tk.major:tk.minor)+'). Acordes do tom: '+esc(tk.chords.join(', '))+'.</p>';
+  const tk=songKey(s);if(tk&&!SV.stage){const out=songOutOfKey(s,tk);h+='<p class="muted small" style="margin-top:8px">Tom provável: <b>'+(tk.minorFirst?tk.minor:tk.major)+'</b> (ou '+(tk.minorFirst?tk.major:tk.minor)+'). Acordes do tom: '+esc(tk.chords.join(', '))+'. <button class="link" style="padding:0;min-height:0" data-act="open-campo" data-pc="'+(tk.minorFirst?(tk.k+9)%12:tk.k)+'" data-m="'+(tk.minorFirst?1:0)+'">Ver o campo harmônico</button>'+(out.length?'<br>Fora do tom: <b>'+esc(out.join(', '))+'</b>, acorde'+(out.length>1?'s':'')+' de empréstimo: dá cor e cria a expectativa de uma passagem.':'')+'</p>';}
   if(SV.edit||!s.cifra){h+='<textarea class="inp" id="sv-cifra" rows="12" maxlength="12000" placeholder="Cole a cifra: acordes em cima da letra, como nos sites de cifras." aria-label="Cifra" data-song-cifra="'+esc(s.id)+'">'+esc(s.cifra||'')+'</textarea><p class="muted small" style="margin-top:6px">Salva sozinho. Nas linhas de acordes, os que o app conhece viram botões: toque para ver o desenho e ouvir.</p>'+(s.cifra?'<button class="btn block line" style="margin-top:10px" data-act="song-edit">Pronto</button>':'');return h+'</section>';}
   const P=cifraParse(s.cifra,k),playing=svPlaying(),pid=PAT[s.pid]?s.pid:L.rhythm,bpm=s.bpm||PAT[pid].bpm,per=s.per||1,capo=capoSuggest(s);
   const nseq=P.seq.length,la=SV.la==null?0:Math.min(SV.la,nseq-1),lb=SV.lb==null?nseq-1:Math.min(SV.lb,nseq-1),partial=nseq>0&&(SV.la!=null||SV.lb!=null); // trecho em loop
@@ -2498,7 +2533,7 @@ V.treinar=function(){
     h+='<div class="progrow" id="gr-prog">'+BAT.prog.map(c=>'<span><b>'+esc(c)+'</b><span class="chord">'+chordSVG(c)+'</span></span>').join('')+'</div>'; // nome e desenho: o acorde da vez fica marcado enquanto toca
     h+='<div class="bpmrow"><button data-act="gr-bpm" data-d="-4" aria-label="Mais devagar">−</button><div style="text-align:center"><span class="num" id="gr-bpm">'+BAT.bpm+'</span> <span class="muted small">BPM</span></div><button data-act="gr-bpm" data-d="4" aria-label="Mais rápido">+</button></div>';
     h+='<p class="sub small" id="gr-status" style="margin:14px 0 10px;min-height:1.4em" aria-live="polite">'+(on?'Contagem':'Começa com um compasso de contagem. Um acorde por compasso.')+'</p><button class="btn block" data-act="gr-toggle">'+(on?'Parar':'Ouvir e tocar junto')+'</button></section>';
-    h+='<section class="panel"><h3>Acordes do exemplo</h3><div class="chips" style="margin-top:10px">'+PROGS.map((p,i)=>'<button class="chip" data-act="gr-prog" data-i="'+i+'" aria-pressed="'+(p.join()===BAT.prog.join())+'">'+p.join(' ')+'</button>').join('')+'</div><div class="between" style="margin-top:16px"><span>Clique do metrônomo junto</span><button class="chip" data-act="gr-click" aria-pressed="'+BAT.click+'">'+(BAT.click?'Ligado':'Desligado')+'</button></div><p class="muted small" style="margin-top:12px">Quer escolher os acordes? Monte um treino seu em <button class="link" style="padding:0;min-height:0" data-act="nav" data-v="meu">Meu treino</button>.</p><p class="muted small" style="margin-top:8px">Violão do app: '+esc(guitar().name)+'. <button class="link" style="padding:0;min-height:0" data-act="open-perfil">Trocar o timbre</button></p></section>';
+    h+='<section class="panel"><h3>Acordes do exemplo</h3><div class="chips" style="margin-top:10px">'+PROGS.map((p,i)=>'<button class="chip" data-act="gr-prog" data-i="'+i+'" aria-pressed="'+(p.join()===BAT.prog.join())+'">'+p.join(' ')+'</button>').join('')+(PROGS.some(p=>p.join()===BAT.prog.join())?'':'<span class="chip on">Escolhida: '+esc(BAT.prog.join(' '))+'</span>')+'</div><div class="between" style="margin-top:16px"><span>Clique do metrônomo junto</span><button class="chip" data-act="gr-click" aria-pressed="'+BAT.click+'">'+(BAT.click?'Ligado':'Desligado')+'</button></div><p class="muted small" style="margin-top:12px">Quer escolher os acordes? Monte um treino seu em <button class="link" style="padding:0;min-height:0" data-act="nav" data-v="meu">Meu treino</button>.</p><p class="muted small" style="margin-top:8px">Violão do app: '+esc(guitar().name)+'. <button class="link" style="padding:0;min-height:0" data-act="open-perfil">Trocar o timbre</button></p></section>';
     h+=myPatPanel();
   }else if(sub.treinar==='mao'){h+=blockBar()+maoView();
   }else if(sub.treinar==='tempo'){h+=blockBar();
@@ -2745,6 +2780,7 @@ if(PWA.host){
 const TABS=[['hoje','Hoje','<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.8 2.8L16 9.5"/>'],['meu','Meu treino','<path d="M4 6h8M16 6h4M4 12h2M10 12h10M4 18h10M18 18h2"/><circle cx="14" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="18" r="2"/>'],['treinar','Treinar','<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/>'],['ferramentas','Ferramentas','<path d="M9 3h6l4 18H5L9 3zM12 17l4-11M7.2 13h9.6"/>'],['acordes','Acordes','<path d="M5 4v16M12 4v16M19 4v16M5 4h14M5 10h14M5 16h14"/><circle cx="12" cy="7" r="1.7" fill="currentColor"/>'],['evolucao','Evolução','<path d="M5 20V11M12 20V4M19 20v-6M2 20h20"/>'],['perfil','Perfil','<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>']];
 /* ---------- novidades de cada versão, mostradas uma vez ---------- */
 const NEWS=[
+ ['1.48.0',['Acordes, Teoria: “Campo harmônico”, os sete acordes de cada tom (maior ou menor) com grau, função e desenho; a cadência para ouvir; progressões comuns com “Tocar junto”; e “Monte a sua progressão”, para ouvir, tocar junto ou salvar como treino.','Na cifra, a linha do tom provável ganhou “Ver o campo harmônico” e aponta os acordes fora do tom (empréstimos).']],
  ['1.47.0',['Em tablet e computador, Hoje fica em duas colunas: o treino à esquerda; avisos, desafio da semana e cópia de segurança à direita.','Guia do iniciante: “Afinar de ouvido pela casa 5”, com atalho no afinador para quando não há microfone.']],
  ['1.46.0',['Gravações: “Compartilhar” manda o áudio pelo compartilhamento do celular (no site, baixa o arquivo).','Evolução: “Dias da semana”, os minutos em cada dia da semana desde o começo, com o seu dia mais forte.','Evolução: “Imprimir a evolução”, uma versão para papel com gráficos, marcas e conquistas.']],
  ['1.45.0',['Cifra: “Repetir” ao lado de “Ir para” marca o trecho em loop pela seção (intro, refrão, ponte) com um toque.','Palco com o tocar junto ligado: o acorde da vez e o próximo aparecem grandes no alto da cifra.','Perfil, Som: vibrar na troca de acorde no tocar junto e nas batidas, para praticar com fone sem olhar a tela.']],
@@ -3009,7 +3045,19 @@ const ACT={
   'ear-next':()=>{earNew();earPlay();render();},
   'chord-play':el=>strum(chordMidis(el.dataset.c),.045),
   'th-open':el=>{if(!chordInfo(el.dataset.c)){toast('Esse acorde não tem a explicação de teoria.');return;}TH.c=el.dataset.c;TH.sr=null;TH.ck=null;sub.acordes='teoria';if(view!=='acordes')go('acordes');else{render();window.scrollTo(0,0);}},
-  'th-pick':el=>{TH.c=el.dataset.c;TH.sr=null;TH.ck=null;render();},
+  'th-pick':el=>{TH.c=el.dataset.c;TH.sr=null;TH.ck=null;TH.hk=null;render();},
+'hf-key':el=>{TH.hk=+el.dataset.pc;TH.hs=[];render();},
+'hf-mode':el=>{TH.hm=el.dataset.v==='1';TH.hs=[];render();},
+'hf-play':el=>{const ms=hfMidis(el.dataset.c);if(ms)ms.forEach((m,i)=>pluck(m,i*.04,.34));},
+'hf-cad':()=>{const pc=TH.hk,mn=TH.hm?1:0;hfPlay(mn?['i','iv','V7','i'].map(d=>hfDeg(pc,1,d)):['I','IV','V','I'].map(d=>hfDeg(pc,0,d)),1.2);},
+'hf-prog-play':el=>hfPlay(el.dataset.c.split(','),1.2),
+'hf-add':el=>{TH.hs=(TH.hs||[]).concat(el.dataset.c).slice(0,8);render();},
+'hf-del':()=>{TH.hs=(TH.hs||[]).slice(0,-1);render();},
+'hf-clear':()=>{TH.hs=[];render();},
+'hf-seq-play':()=>hfPlay(TH.hs||[],1.2),
+'hf-gr':el=>{const seq=el.dataset.c.split(',').filter(n=>CH[n]);if(seq.length<2)return;grStop(true);BAT.prog=seq;sub.treinar='batidas';go('treinar');toast('No Tocar junto: '+seq.join(' ')+'.');}, /* a progressão vira a do exemplo em Treinar, Batidas */
+'hf-save':()=>{const seq=(TH.hs||[]).filter(n=>CH[n]);if(seq.length<2)return;const L=LEVELS[S.level-1],name='Progressão em '+NPT[TH.hk]+(TH.hm?' menor':' maior');S.custom.push(ctClean({id:'t'+Date.now().toString(36),name,chords:seq,pats:[L.rhythm],bpm:L.bpm,min:10,ramp:false}));if(CE&&!CE.chords.length&&!CE.name)CE=null;save();toast('Treino salvo em Meu treino: '+name+'.');}, /* um editor vazio aberto em Meu treino sai da frente da lista */
+'open-campo':el=>{TH.hk=+el.dataset.pc;TH.hm=el.dataset.m==='1';TH.hs=[];sub.acordes='teoria';go('acordes');setTimeout(()=>{const g=$('#campo');if(g)g.scrollIntoView({block:'start'});},60);}, /* da cifra: o campo harmônico já no tom da música */
   'sc-root':el=>{if(SG.on)sgStop(true);TH.sr=+el.dataset.v;TH.pos=null;render();},
   'sc-pick':el=>{if(SG.on)sgStop(true);TH.sc=el.dataset.v;TH.pos=null;render();},
   'sc-set':el=>{TH.sr=+el.dataset.pc;TH.sc=el.dataset.sc;render();const e=document.getElementById('escalas');if(e)window.scrollTo(0,e.getBoundingClientRect().top+scrollY-8);},
