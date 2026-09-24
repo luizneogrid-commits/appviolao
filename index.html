@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Violão Diário</title>
-<meta name="app-version" content="1.43.0">
+<meta name="app-version" content="1.44.0">
 <meta name="description" content="Treino diário de violão: plano por nível, metrônomo, afinador, batidas para tocar junto, acordes e notas.">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#F2EEF0" media="(prefers-color-scheme: light)">
@@ -780,7 +780,7 @@ const LEVELS=[
   prog:[['Em7','G','Dsus4','A7sus4'],['C','Am','F','G'],['D','Dsus4','D','Dsus2']],
   skills:['Toco sus4 e add9 no lugar certo da música','Mudo o tom de uma música com capotraste ou transposição','Acerto 20 perguntas de ouvido','Gravo 30 segundos e ouço com orelha de músico']}
 ];
-const WARM=['Alongue dedos e punhos. Depois toque cada corda solta, da 6ª à 1ª, ouvindo se está afinada.','Um dedo por casa nas casas 1 a 4, corda por corda, da 6ª até a 1ª. Devagar e sem tensão no ombro.','Alterne indicador e médio da mão direita na 1ª corda solta, no tempo do metrônomo.'];
+const WARM=['Alongue dedos e punhos. Depois toque cada corda solta, da 6ª à 1ª, ouvindo se está afinada.','Um dedo por casa nas casas 1 a 4, corda por corda, da 6ª até a 1ª. Devagar e sem tensão no ombro.','Alterne indicador e médio da mão direita na 1ª corda solta, no tempo do metrônomo.','Aranha: casas 1 a 4 com os dedos 1-2-3-4, corda por corda, bem devagar. Em Treinar, Mão esquerda, o app toca o exemplo.','Independência: na mesma corda, dedos 1, 3, 2 e 4 nas casas 1, 3, 2 e 4; depois 4-3-2-1. Curto e limpo, sem tensão.'];
 const SPLITS={10:[1,3,3,3],15:[2,4,4,5],20:[2,4,4,4,6],30:[3,6,6,6,9]};
 
 /* ---------- roteiro de aprendizagem ---------- */
@@ -1860,27 +1860,59 @@ function scaleBox(notes,p){ // notas da escala nas casas p a p+3 (com as soltas 
 }
 const sgValid=notes=>[0,1,2,3,4,5,6,7,8,9].filter(p=>scaleBox(notes,p).ok);
 function sgPos(notes){const v=sgValid(notes),rf6=(notes[0].pc-4+12)%12;if(TH.pos!=null&&v.includes(TH.pos))return TH.pos;return v.includes(rf6)?rf6:v[0];} // padrão: tônica na 6ª corda
-const SG={on:false,seq:[],i:0,next:0,timer:null,bpm:60,run:0,kind:'scale'};
+const SG={on:false,seq:[],i:0,next:0,timer:null,bpm:60,run:0,kind:'scale'}
+/* ---------- mão esquerda: mobilidade e trocas mais fáceis ---------- */
+const MAO={id:'aranha'};
+const MAO_EX=[
+ {id:'aranha',name:'Aranha (cromático)',why:'Cada dedo aprende a cair na própria casa sem olhar. É a base da agilidade da mão esquerda.',how:'Casas 1 a 4, um dedo por casa (1-2-3-4), corda por corda, da 6ª à 1ª e de volta. Dedos curvados e perto das cordas: o que sobe pouco desce rápido.',f0:1,f1:4,fg:f=>f,seq:()=>{const o=[];for(let si=0;si<6;si++)for(let f=1;f<=4;f++)o.push({si,f,fg:f});return o;}},
+ {id:'indep',name:'Independência: 1-3-2-4',why:'Separa os dedos que gostam de andar juntos (2 e 3, 3 e 4). Numa troca de acorde, cada dedo vai para um lugar diferente ao mesmo tempo.',how:'Na mesma corda, dedos na ordem 1, 3, 2, 4 (casas 1, 3, 2, 4), corda por corda. Limpeza primeiro, velocidade depois.',f0:1,f1:4,fg:f=>f,seq:()=>{const o=[];for(let si=0;si<6;si++)[1,3,2,4].forEach(f=>o.push({si,f,fg:f}));return o;}},
+ {id:'inversa',name:'De trás para a frente: 4-3-2-1',why:'O dedo 4 (mindinho) começa a frase, em vez de ficar de reserva. Na troca de acorde, ele costuma ser o que chega atrasado.',how:'Casas 4, 3, 2, 1 em cada corda, começando pelo mindinho. Se ele escorregar, traga a mão um pouco mais para a frente do braço.',f0:1,f1:4,fg:f=>f,seq:()=>{const o=[];for(let si=0;si<6;si++)[4,3,2,1].forEach(f=>o.push({si,f,fg:f}));return o;}},
+ {id:'along',name:'Alongamento: 1 e 4 afastados',why:'Abre a mão para os acordes largos (C, G com o dedo 4, F com pestana) sem torcer o pulso.',how:'Dedo 1 na casa 5 e dedo 4 na casa 9 da mesma corda, alternando; depois a corda seguinte. Se doer, pare: alongamento é sem dor.',f0:5,f1:9,fg:f=>f===5?1:f===9?4:'',seq:()=>{const o=[];for(let si=0;si<6;si++)o.push({si,f:5,fg:1},{si,f:9,fg:4},{si,f:5,fg:1},{si,f:9,fg:4});return o;}},
+ {id:'mindinho',name:'Dedo 4: mindinho ativo',why:'Um mindinho firme deixa Dm, G e os acordes com sétima limpos, e libera os outros dedos na troca.',how:'Casas 5 e 8 na mesma corda com os dedos 1 e 4 (1-4-1-4), corda por corda. O mindinho cai na ponta, curvado, sem deitar.',f0:5,f1:8,fg:f=>f===5?1:f===8?4:'',seq:()=>{const o=[];for(let si=0;si<6;si++)o.push({si,f:5,fg:1},{si,f:8,fg:4},{si,f:5,fg:1},{si,f:8,fg:4});return o;}},
+ {id:'trilho',name:'Trilhos: mesma casa, cordas vizinhas',why:'Ensina o dedo a mudar de corda sem mudar de casa, que é metade das trocas (C para Am, G para Em).',how:'Dedo 1 na casa 5 da 6ª à 1ª corda; depois dedo 2 na casa 6, dedo 3 na 7 e dedo 4 na 8.',f0:5,f1:8,fg:f=>f-4,seq:()=>{const o=[];for(let k=1;k<=4;k++)for(let si=0;si<6;si++)o.push({si,f:4+k,fg:k});return o;}},
+ {id:'pivo',name:'Pivô: trocas com dedo âncora',why:'Quando um dedo pode ficar no lugar, a troca vira metade do trabalho. Enxergar a âncora acelera qualquer par.',how:'Nos pares abaixo, um dedo fica na mesma casa e corda. Troque olhando só para os dedos que se movem: a âncora nem sai do lugar.'},
+ {id:'voo',name:'Voo dos dedos',why:'Levantar todos os dedos juntos e pousar de uma vez é o que faz a troca soar limpa no tempo, sem um dedo chegar depois.',how:'Monte o acorde, levante a mão um centímetro mantendo o formato e pouse de novo, no tempo do metrônomo. Quatro vezes por acorde; depois o mesmo indo para outro acorde. Confira pelo som se todas as cordas soaram.'},
+ {id:'pressao',name:'Pressão mínima',why:'Apertar demais cansa, atrasa a troca e desafina. A pressão certa é a menor que faz a corda soar limpa.',how:'Monte o acorde, toque as cordas e vá afrouxando até zumbir; depois aperte só o suficiente para limpar o som. Memorize essa força: é a que vale nas trocas.'}
+];
+function pivotPairs(){ // pares de acordes até o nível da pessoa em que algum dedo fica na mesma casa e corda
+  const names=[...new Set(LEVELS.slice(0,S.level).flatMap(l=>l.chords))].filter(n=>CH[n]),out=[];
+  for(let i=0;i<names.length;i++)for(let j=i+1;j<names.length;j++){const A=shape(names[i]),B=shape(names[j]);const anc=[];for(let s=0;s<6;s++)if(A.f[s]>0&&A.f[s]===B.f[s]&&A.d[s]&&A.d[s]===B.d[s]&&!anc.includes(A.d[s]))anc.push(A.d[s]);if(anc.length)out.push({a:names[i],b:names[j],anc});}
+  return out.sort((x,y)=>y.anc.length-x.anc.length).slice(0,12);
+}
+function maoView(){
+  const ex=MAO_EX.find(x=>x.id===MAO.id)||MAO_EX[0],on=SG.on&&SG.kind==='mao';
+  let h='<div class="chips" style="margin-bottom:14px">'+MAO_EX.map(x=>'<button class="chip" data-act="mao-pick" data-v="'+x.id+'" aria-pressed="'+(x.id===ex.id)+'">'+esc(x.name.split(':')[0].split(' (')[0])+'</button>').join('')+'</div>';
+  h+='<section class="panel"><h2>'+esc(ex.name)+'</h2><p class="sub">'+esc(ex.how)+'</p><details class="why extra"><summary>Por que este exercício?</summary><p>'+esc(ex.why)+'</p></details>';
+  if(ex.seq){h+='<div class="sfb" style="max-width:'+(36+40*(ex.f1-ex.f0+1))+'px;margin-top:12px">'+fretGridSVG(ex.f0,ex.f1,ex.fg,ex.name)+'</div>';
+    h+='<div class="bpmrow" style="margin-top:12px"><button data-act="sg-bpm" data-d="-4" aria-label="Mais devagar">−</button><div style="text-align:center"><span class="num" id="sg-bpm">'+SG.bpm+'</span> <span class="muted small">BPM</span></div><button data-act="sg-bpm" data-d="4" aria-label="Mais rápido">+</button></div>';
+    h+='<p class="sub small" id="sg-status" style="margin:10px 0;min-height:1.4em" aria-live="polite">'+(on?'Tocando.':'Toque junto: uma nota por tempo, subindo e voltando. A casa da vez acende.')+'</p><button class="btn block" data-act="mao-toggle">'+(on?'Parar':'Tocar junto')+'</button>';}
+  else if(ex.id==='pivo'){const pairs=pivotPairs();h+=pairs.length?'<div style="margin-top:12px">'+pairs.map(p=>'<div class="between" style="margin-top:8px"><div><b>'+esc(p.a)+' e '+esc(p.b)+'</b><div class="muted small">âncora: dedo '+p.anc.join(' e ')+'</div></div><button class="btn sm quiet" data-act="open-trocas" data-a="'+esc(p.a)+'" data-b="'+esc(p.b)+'">Treinar</button></div>').join('')+'</div>':'<p class="muted small" style="margin-top:12px">Entre os acordes do seu nível ainda não há par com dedo âncora.</p>';}
+  else{const c=LEVELS[S.level-1].chords[0];h+='<div class="pair" style="margin-top:12px"><div class="chord"><strong>'+esc(c)+'</strong>'+chordSVG(c)+'</div></div><div class="acts"><button class="btn sm quiet" data-act="chord-play" data-c="'+esc(c)+'">Ouvir o '+esc(c)+'</button>'+(chordInfo(c)?'<button class="btn sm quiet" data-act="chk-open" data-c="'+esc(c)+'">Conferir pelo som</button>':'')+'<button class="link" data-act="open-metro" data-bpm="60">Metrônomo a 60</button></div>';}
+  h+='<p class="muted small" style="margin-top:14px">Dois ou três minutos por dia bastam; pare se doer. Estes exercícios também entram no aquecimento de Hoje.</p></section>';
+  return h;
+};
 function sgStart(seq,kind){
   const ac=audio();if(!ac)return;if(M.on)mStop();grStop(true);if(TM.timer)tmStop();
   SG.kind=kind||'scale';SG.seq=seq.concat(seq.slice(1,-1).reverse());SG.on=true;SG.i=0;SG.run++;SG.next=ac.currentTime+.15;SG.timer=setInterval(sgSched,25);render();awakeSync();
 }
 // Aquecimento cromático: um dedo por casa, casas 1 a 4, da 6ª à 1ª corda e de volta, no mesmo motor da escala guiada.
 function warmSeq(){const out=[];for(let si=0;si<6;si++)for(let f=1;f<=4;f++)out.push({si,f,midi:OPEN[si]+f,pt:NPT[(OPEN[si]+f)%12],deg:''});return out;}
-function warmSVG(){ // grade de 4 casas com os mesmos ids (sn-corda-casa) do braço das escalas, para a nota da vez acender
-  const fw=40,x0=30,y0=18,rh=17,W=x0+fw*4+6,H=y0+rh*6+4,fx=f=>x0+fw*(S.lefty?4-f:f-1);
-  let s='<svg viewBox="0 0 '+W+' '+H+'" style="width:'+W+'px;height:auto;display:block" role="img" aria-label="Casas 1 a 4, um dedo por casa"><title>Aquecimento: dedos 1, 2, 3 e 4 nas casas 1 a 4, corda por corda</title>';
-  for(let f=1;f<=4;f++)s+='<text class="fh" x="'+(fx(f)+fw/2)+'" y="12">casa '+f+'</text>';
-  for(let row=0;row<6;row++){const si=5-row,y=y0+rh*row+rh/2;s+='<text class="sl" x="'+(x0-9)+'" y="'+(y+3)+'">'+(6-si)+'ª</text><line class="g" x1="'+x0+'" y1="'+y+'" x2="'+(x0+fw*4)+'" y2="'+y+'"/>';
-    for(let f=1;f<=4;f++){const x=fx(f)+fw/2;s+='<circle id="sn-'+si+'-'+f+'" class="snote" cx="'+x+'" cy="'+y+'" r="7.5"/><text class="snt" x="'+x+'" y="'+(y+2.6)+'">'+f+'</text>';}}
+function fretGridSVG(f0,f1,fgOf,title){ // grade de casas f0 a f1 com os ids (sn-corda-casa) do braço das escalas, para a nota da vez acender; o número em cada casa é o dedo
+  const n=f1-f0+1,fw=40,x0=30,y0=18,rh=17,W=x0+fw*n+6,H=y0+rh*6+4,fx=f=>x0+fw*(S.lefty?f1-f:f-f0);
+  let s='<svg viewBox="0 0 '+W+' '+H+'" style="width:'+W+'px;height:auto;display:block" role="img" aria-label="Casas '+f0+' a '+f1+'"><title>'+esc(title)+'</title>';
+  for(let f=f0;f<=f1;f++)s+='<text class="fh" x="'+(fx(f)+fw/2)+'" y="12">casa '+f+'</text>';
+  for(let row=0;row<6;row++){const si=5-row,y=y0+rh*row+rh/2;s+='<text class="sl" x="'+(x0-9)+'" y="'+(y+3)+'">'+(6-si)+'ª</text><line class="g" x1="'+x0+'" y1="'+y+'" x2="'+(x0+fw*n)+'" y2="'+y+'"/>';
+    for(let f=f0;f<=f1;f++){const x=fx(f)+fw/2;s+='<circle id="sn-'+si+'-'+f+'" class="snote" cx="'+x+'" cy="'+y+'" r="7.5"/><text class="snt" x="'+x+'" y="'+(y+2.6)+'">'+fgOf(f)+'</text>';}}
   return s+'</svg>';
+}
+function warmSVG(){return fretGridSVG(1,4,f=>f,'Aquecimento: dedos 1, 2, 3 e 4 nas casas 1 a 4, corda por corda');
 }
 function sgStop(quiet){if(!SG.on)return;SG.on=false;clearInterval(SG.timer);if(AC)dampAll(AC.currentTime+.05);if(!quiet)render();awakeSync();}
 function sgSched(){
   if(!SG.on||!AC)return;
   while(SG.next<AC.currentTime+.12){const k=SG.i%SG.seq.length,nt=SG.seq[k],t=SG.next,run=SG.run;
     tick(t,k===0?1:0,.25);pluckAt(nt.midi,t,.5,nt.si);
-    setTimeout(()=>{if(!SG.on||SG.run!==run)return;document.querySelectorAll('.sfb circle.on').forEach(e=>e.classList.remove('on'));const e=$('#sn-'+nt.si+'-'+nt.f);if(e)e.classList.add('on');const s=$('#sg-status');if(s)s.textContent=nt.pt+(nt.deg?' (grau '+nt.deg+')':'')+': '+(6-nt.si)+'ª corda, '+(nt.f?'casa '+nt.f:'solta')+(nt.deg?'':', dedo '+nt.f)+(k<SG.seq.length/2?'. Subindo.':'. Descendo.');},Math.max(0,(t-AC.currentTime)*1000));
+    setTimeout(()=>{if(!SG.on||SG.run!==run)return;document.querySelectorAll('.sfb circle.on').forEach(e=>e.classList.remove('on'));const e=$('#sn-'+nt.si+'-'+nt.f);if(e)e.classList.add('on');const s=$('#sg-status');if(s)s.textContent=nt.pt+(nt.deg?' (grau '+nt.deg+')':'')+': '+(6-nt.si)+'ª corda, '+(nt.f?'casa '+nt.f:'solta')+(nt.deg?'':', dedo '+(nt.fg||nt.f))+(k<SG.seq.length/2?'. Subindo.':'. Descendo.');},Math.max(0,(t-AC.currentTime)*1000));
     SG.next+=60/SG.bpm;SG.i++;}
 }
 function scalesPanel(ci){
@@ -2285,7 +2317,7 @@ V.hoje=function(){
     h+='<li class="blk'+(done?' done':'')+(act?' active':'')+'"><div><div class="between"><h3>'+b.title+'</h3><span class="mins">'+(done?'Feito':b.min+' min')+'</span></div><p>'+esc(b.text)+'</p>';
     if(!done&&(b.why||WHY[b.id]))h+='<details class="why extra"><summary>Por que este exercício?</summary><p>'+esc(b.why||WHY[b.id])+'</p></details>';
     if(!done&&!act&&b.id==='tech'&&!b.why)h+='<button class="link" style="padding:0;min-height:0" data-act="blk-alt">Outro exercício</button>'; // troca a técnica de hoje por outra da mesma semana (não na manutenção)
-    if(b.id==='warm'&&!done)h+='<div class="extra"><div class="sfb" style="max-width:200px">'+warmSVG()+'</div><div class="acts" style="margin-top:6px"><button class="btn sm quiet" data-act="warm-toggle">'+(SG.on&&SG.kind==='warm'?'Parar':'Tocar junto: um dedo por casa')+'</button><span class="muted small" id="sg-status">'+(SG.on&&SG.kind==='warm'?'Tocando.':SG.bpm+' BPM, casas 1 a 4, da 6ª à 1ª corda e de volta.')+'</span></div></div>';
+    if(b.id==='warm'&&!done)h+='<div class="extra"><div class="sfb" style="max-width:200px">'+warmSVG()+'</div><div class="acts" style="margin-top:6px"><button class="btn sm quiet" data-act="warm-toggle">'+(SG.on&&SG.kind==='warm'?'Parar':'Tocar junto: um dedo por casa')+'</button><span class="muted small" id="sg-status">'+(SG.on&&SG.kind==='warm'?'Tocando.':SG.bpm+' BPM, casas 1 a 4, da 6ª à 1ª corda e de volta.')+'</span></div><button class="link" data-act="open-mao">Mais exercícios para a mão esquerda</button></div>';
     if(b.rhythm){const pr=b.prog||LEVELS[S.level-1].prog[0]||[];h+='<div class="extra">'+rhythmHTML(b.rhythm)+(pr.length?'<p class="muted small" style="margin-top:10px">Acordes para tocar esta batida (os mesmos do tocar junto):</p><div class="cmini" style="margin-top:8px">'+pr.map(c=>'<div class="chord"><strong>'+esc(c)+'</strong>'+chordSVG(c)+'</div>').join('')+'</div>':'')+'</div>';}
     else if(b.prog)h+='<div class="extra"><div class="cmini" style="margin-top:4px">'+b.prog.map(c=>'<div class="chord"><strong>'+esc(c)+'</strong>'+chordSVG(c)+'</div>').join('')+'</div></div>';
     if(b.pair)h+='<div class="extra pair">'+b.pair.map(c=>'<div class="chord"><strong>'+esc(c)+'</strong>'+chordSVG(c)+'</div>').join('')+'</div>';
@@ -2421,7 +2453,7 @@ V.meu=function(){
 };
 
 V.treinar=function(){
-  let h=topBar('<h1>Treinar</h1><p class="sub">Exercícios que mostram sua evolução em números.</p>')+seg('treinar',[['trocas','Trocas'],['batidas','Batidas'],['tempo','Tempo'],['ouvido','Ouvido']]);
+  let h=topBar('<h1>Treinar</h1><p class="sub">Exercícios que mostram sua evolução em números.</p>')+seg('treinar',[['trocas','Trocas'],['batidas','Batidas'],['tempo','Tempo'],['ouvido','Ouvido'],['mao','Mão esquerda']]);
   if(sub.treinar==='trocas'){h+=blockBar();
     const k=pairKey(T.a,T.b),best=bestOf(k);
     if(T.phase==='idle'){
@@ -2458,6 +2490,7 @@ V.treinar=function(){
     h+='<p class="sub small" id="gr-status" style="margin:14px 0 10px;min-height:1.4em" aria-live="polite">'+(on?'Contagem':'Começa com um compasso de contagem. Um acorde por compasso.')+'</p><button class="btn block" data-act="gr-toggle">'+(on?'Parar':'Ouvir e tocar junto')+'</button></section>';
     h+='<section class="panel"><h3>Acordes do exemplo</h3><div class="chips" style="margin-top:10px">'+PROGS.map((p,i)=>'<button class="chip" data-act="gr-prog" data-i="'+i+'" aria-pressed="'+(p.join()===BAT.prog.join())+'">'+p.join(' ')+'</button>').join('')+'</div><div class="between" style="margin-top:16px"><span>Clique do metrônomo junto</span><button class="chip" data-act="gr-click" aria-pressed="'+BAT.click+'">'+(BAT.click?'Ligado':'Desligado')+'</button></div><p class="muted small" style="margin-top:12px">Quer escolher os acordes? Monte um treino seu em <button class="link" style="padding:0;min-height:0" data-act="nav" data-v="meu">Meu treino</button>.</p><p class="muted small" style="margin-top:8px">Violão do app: '+esc(guitar().name)+'. <button class="link" style="padding:0;min-height:0" data-act="open-perfil">Trocar o timbre</button></p></section>';
     h+=myPatPanel();
+  }else if(sub.treinar==='mao'){h+=blockBar()+maoView();
   }else if(sub.treinar==='tempo'){h+=blockBar();
     const best=S.stats.timing[String(TM.bpm)];
     const TP=PAT[tmPid()],batida=TM.mode==='batida';
@@ -2700,6 +2733,7 @@ if(PWA.host){
 const TABS=[['hoje','Hoje','<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.8 2.8L16 9.5"/>'],['meu','Meu treino','<path d="M4 6h8M16 6h4M4 12h2M10 12h10M4 18h10M18 18h2"/><circle cx="14" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="18" r="2"/>'],['treinar','Treinar','<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/>'],['ferramentas','Ferramentas','<path d="M9 3h6l4 18H5L9 3zM12 17l4-11M7.2 13h9.6"/>'],['acordes','Acordes','<path d="M5 4v16M12 4v16M19 4v16M5 4h14M5 10h14M5 16h14"/><circle cx="12" cy="7" r="1.7" fill="currentColor"/>'],['evolucao','Evolução','<path d="M5 20V11M12 20V4M19 20v-6M2 20h20"/>'],['perfil','Perfil','<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>']];
 /* ---------- novidades de cada versão, mostradas uma vez ---------- */
 const NEWS=[
+ ['1.44.0',['Treinar, Mão esquerda: nove exercícios de mobilidade e de troca de acordes (aranha, independência 1-3-2-4, 4-3-2-1, alongamento, mindinho, trilhos, pivô com dedo âncora, voo dos dedos e pressão mínima), com o exemplo tocado casa por casa e metrônomo.','O aquecimento de Hoje ganha dois exercícios novos e o atalho para a Mão esquerda.']],
  ['1.43.0',['Evolução, Diário: “Ver todos” quando há mais de dez registros.','Conquistas por vir mostram quanto falta (minutos, dias, trocas, respostas, músicas).','Ficha e capturas da loja com o desafio da semana e os desenhos no treino.']],
  ['1.42.0',['Bloco em andamento fora de Hoje: a pílula no rodapé mostra o bloco e o tempo que falta e volta para Hoje ao tocar; Batidas, Trocas, Tempo e Metrônomo ganham “Voltar ao treino”.','Quando o tempo do bloco acaba em qualquer tela, um aviso diz qual bloco terminou e quanto contou.']],
  ['1.41.0',['Painéis que viram atalhos: a faixa da semana em Hoje abre Evolução; “Esta semana” abre a meta em Perfil; em Evolução, Repertório abre Músicas, Ouvido por modalidade abre o treino de ouvido e as Marcas levam a Acordes, Trocas e Metrônomo.','Na lista de músicas, tocar no nome abre a cifra.','Barras dos gráficos com dica (dia ou semana e valor) ao tocar ou passar o mouse.','“Somar 5 min” e a situação da música agora confirmam com um aviso.']],
@@ -2769,7 +2803,7 @@ function focusView(){const h=$('#view h1')||$('#view h2');if(!h)return;if(!h.has
 
 const ACT={
   nav:el=>go(el.dataset.v),
-  sub:el=>{const g=el.dataset.g;sub[g]=el.dataset.v;if(g==='acordes'&&sub[g]!=='acordes'&&MIC&&MIC.mode==='check')micStop();if(g==='evolucao'&&svPlaying())grStop(true);if(g==='ouvido'&&MIC&&MIC.mode==='sing')micStop();if(g==='treinar'){grStop(true);if(MIC&&(MIC.mode==='count'||MIC.mode==='sing'))micStop();if(TM.timer){clearInterval(TM.timer);TM.timer=null;TM.phase='idle';}}if(g==='ferramentas'&&sub[g]!=='afinador')micStop();if(g==='ouvido')E.q=null;if(g==='treinar'&&(T.phase==='count'||T.phase==='run'))T.phase='idle';render();},
+  sub:el=>{const g=el.dataset.g;sub[g]=el.dataset.v;if(g==='acordes'&&sub[g]!=='acordes'&&MIC&&MIC.mode==='check')micStop();if(g==='evolucao'&&svPlaying())grStop(true);if(g==='ouvido'&&MIC&&MIC.mode==='sing')micStop();if(g==='treinar'){grStop(true);if(SG.on&&SG.kind==='mao')sgStop(true);if(MIC&&(MIC.mode==='count'||MIC.mode==='sing'))micStop();if(TM.timer){clearInterval(TM.timer);TM.timer=null;TM.phase='idle';}}if(g==='ferramentas'&&sub[g]!=='afinador')micStop();if(g==='ouvido')E.q=null;if(g==='treinar'&&(T.phase==='count'||T.phase==='run'))T.phase='idle';render();},
   'ob-level':el=>{ob.level=+el.dataset.v;render();},
   'ob-goal':el=>{ob.goal=+el.dataset.v;render();},
   'ob-quiz':()=>{ob.quiz=!ob.quiz;render();},
@@ -2897,6 +2931,9 @@ const ACT={
   'sg-bpm':el=>{SG.bpm=Math.max(40,Math.min(160,SG.bpm+(+el.dataset.d)));const n=$('#sg-bpm');if(n)n.textContent=SG.bpm;},
   'sg-toggle':()=>{if(SG.on){sgStop();return;}const sc=SCALES.find(s=>s.id===TH.sc)||SCALES[0],notes=scaleNotes(rootName(TH.sr,sc),sc),box=scaleBox(notes,sgPos(notes));if(box.seq.length)sgStart(box.seq,'scale');},
   'warm-toggle':()=>{if(SG.on){sgStop();return;}sgStart(warmSeq(),'warm');},
+  'mao-pick':el=>{if(SG.on&&SG.kind==='mao')sgStop(true);MAO.id=el.dataset.v;render();},
+  'mao-toggle':()=>{if(SG.on&&SG.kind==='mao'){sgStop();return;}const ex=MAO_EX.find(x=>x.id===MAO.id);if(!ex||!ex.seq)return;sgStart(ex.seq().map(n=>Object.assign(n,{midi:OPEN[n.si]+n.f,pt:NPT[(OPEN[n.si]+n.f)%12],deg:''})),'mao');},
+  'open-mao':()=>{sub.treinar='mao';go('treinar');},
   'open-tempo':el=>{TM.mode='batida';TM.pid=el.dataset.p;TM.bpm=Math.max(50,Math.min(140,+el.dataset.bpm||TM.bpm));sub.treinar='tempo';go('treinar');},
   'tm-mode':el=>{TM.mode=el.dataset.v==='batida'?'batida':'pulso';render();},
   'rv-cell':el=>{if(!RV.on||RV.ans!=null)return;const si=+el.dataset.si,f=+el.dataset.f;if(RV.cells[si]===f)delete RV.cells[si];else RV.cells[si]=f;render();},
