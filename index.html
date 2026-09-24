@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Violão Diário</title>
-<meta name="app-version" content="1.48.0">
+<meta name="app-version" content="1.49.0">
 <meta name="description" content="Treino diário de violão: plano por nível, metrônomo, afinador, batidas para tocar junto, acordes e notas.">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#F2EEF0" media="(prefers-color-scheme: light)">
@@ -1170,7 +1170,7 @@ function mPaint(){
 
 /* ---------- batidas: tocar junto ---------- */
 // O motor toca uma configuração {pid,bpm,prog,click,guitar}: a da aba Batidas (BAT) ou a de um treino montado pela pessoa (CS.cfg).
-const BAT={pid:'baixo',bpm:60,prog:null,click:true,touched:false}
+const BAT={pid:'baixo',bpm:60,prog:null,click:true,touched:false,rand:false,nextProg:null}
 const MP={n:8,cells:Array(8).fill(''),name:'',editId:null},MP_NEXT={'':'↓','↓':'↑','↑':'x','x':'B','B':''}; // editor de batida própria (Treinar, Batidas): cada toque na casa passa para o símbolo seguinte
 function myPatPanel(){
   const mine=S.mypats||[];
@@ -1182,6 +1182,16 @@ function myPatPanel(){
   return h+'</section>';
 };
 const GR={on:false,cfg:BAT,onBar:null,run:0,next:0,step:0,timer:null};
+function randProg(prev){ /* surpresa: quatro acordes sorteados entre os do seu nível e das suas músicas; a volta nova não começa pelo último acorde da anterior */
+  const pool=[...new Set(earPool().concat([...songChordSet()]))].filter(n=>CH[n]);if(pool.length<2)return ['Em','Am'];
+  const seq=shuffle(pool).slice(0,Math.min(4,pool.length));if(prev&&prev.length&&seq.length>1&&seq[0]===prev[prev.length-1])seq.push(seq.shift());return seq;
+}
+const progRowHTML=prog=>prog.map(c=>'<span><b>'+esc(c)+'</b><span class="chord">'+chordSVG(c)+'</span></span>').join(''); /* nome e desenho de cada acorde da progressão */
+function pairSuggest(){ /* pares do roteiro até o nível atual: primeiro os nunca medidos (do nível atual para trás), depois o de menor recorde */
+  const seen=new Set(),all=[];LEVELS.slice(0,S.level).reverse().forEach(l=>(l.pairs||[]).forEach(p=>{const k=pairKey(p[0],p[1]);if(!seen.has(k)&&CH[p[0]]&&CH[p[1]]){seen.add(k);all.push([p[0],p[1],bestOf(k)]);}}));
+  const never=all.filter(p=>!p[2]).slice(0,2).map(p=>[p[0],p[1],'nunca medido']),low=all.filter(p=>p[2]).sort((a,b)=>a[2]-b[2]).slice(0,1).map(p=>[p[0],p[1],'recorde '+p[2]]);
+  return never.concat(low).slice(0,3);
+}
 function grStart(cfg,onBar){
   const ac=audio();if(!ac)return;if(M.on)mStop();
   GR.cfg=cfg||BAT;GR.onBar=onBar||null;GR.run++;GR.t0=Date.now();
@@ -1198,7 +1208,9 @@ function grSched(){
 function grStep(step,t){
   const G=GR.cfg,run=GR.run,onBar=GR.onBar,P=PAT[G.pid],n=P.cells.length,dur=30/G.bpm,later=fn=>setTimeout(()=>{if(GR.on&&GR.run===run)fn();},Math.max(0,(t-AC.currentTime)*1000));
   if(step<0){const i=step+n;if(i%2===0){tick(t,i===0?2:0,.9);later(()=>{const s=$('#gr-status');if(s)s.textContent='Contagem: '+(i/2+1);});}return;}
-  const cs=n/(G.perBar||1),i=step%n,ci=Math.floor(step/cs)%G.prog.length,c=shape(G.prog[ci]),cell=P.cells[i]; // perBar 2: dois acordes por compasso (cifras)
+  const cs=n/(G.perBar||1),i=step%n;if(G.rand&&step>0&&step%(cs*G.prog.length)===0){G.prog.splice(0,G.prog.length,...(G.nextProg||randProg(G.prog)));G.nextProg=null;} /* surpresa: a cada volta, acordes novos */
+  const ci=Math.floor(step/cs)%G.prog.length,c=shape(G.prog[ci]),cell=P.cells[i]; // perBar 2: dois acordes por compasso (cifras)
+  if(G.rand&&i===0&&ci===G.prog.length-1&&!G.nextProg)G.nextProg=randProg(G.prog); /* o sorteio seguinte já existe no último acorde da volta, para ser anunciado */
   const played=[];c.f.forEach((f,si)=>{if(f>=0)played.push(si);});const m=si=>OPEN[si]+c.f[si];
   if(G.click&&i%2===0)tick(t,i===0?2:0,.35);
   if(G.guitar!==false){
@@ -1210,7 +1222,7 @@ function grStep(step,t){
     else if(cell==='C'){[3,4,5].forEach(si=>{if(c.f[si]>=0)pluckAt(m(si),t,.38,si);});} // pinça: indicador, médio e anelar juntos (bossa, samba)
   }
   later(()=>{document.querySelectorAll('#gr-grid>div').forEach((el,k)=>el.classList.toggle('now',k===i));
-    if(i%cs===0){if(S.grVib)buzz(25);document.querySelectorAll('#gr-prog>span').forEach((el,k)=>el.classList.toggle('now',k===ci));const s=$('#gr-status');if(s)s.textContent='Tocando '+G.prog[ci]+'. Entre quando se sentir pronto.';if(onBar)onBar(ci);}});
+    if(i%cs===0){if(S.grVib)buzz(25);if(G.rand&&ci===0){const row=$('#gr-prog');if(row)row.innerHTML=progRowHTML(G.prog);}document.querySelectorAll('#gr-prog>span').forEach((el,k)=>el.classList.toggle('now',k===ci));const s=$('#gr-status');if(s)s.textContent=G.rand?'Tocando '+G.prog[ci]+'. Depois: '+(ci+1<G.prog.length?G.prog[ci+1]:(G.nextProg||[])[0]||'…')+'.':'Tocando '+G.prog[ci]+'. Entre quando se sentir pronto.';if(onBar)onBar(ci);}});
 }
 
 /* ---------- meu treino: acordes e batidas escolhidos pela pessoa ---------- */
@@ -1584,8 +1596,8 @@ const E={q:null,ans:null,ok:0,total:0};
 const IVLS=[[2,'Segunda maior'],[3,'Terça menor'],[4,'Terça maior'],[5,'Quarta justa'],[7,'Quinta justa'],[9,'Sexta maior'],[10,'Sétima menor'],[12,'Oitava']];
 const IVL_LVL=[[12,7,4],[12,7,4,5,3,2],null]; // ouvido em níveis: intervalos de cada nível (o 3º tem todos); acordes: 2, 3 ou 4 opções
 function earLevelUp(ok){ // dez respostas no nível com 80% de acerto sobem intervalos ou acordes ao nível seguinte (até 3)
-  const m=sub.ouvido;if(m!=='ivl'&&m!=='qual')return;const r=S.earRun[m]||(S.earRun[m]={ok:0,total:0});r.total++;if(ok)r.ok++;
-  if(r.total>=10){if(r.ok/r.total>=.8&&(S.earLvl[m]||1)<3){S.earLvl[m]=(S.earLvl[m]||1)+1;toast((m==='ivl'?'Intervalos':'Acordes')+': ouvido no nível '+S.earLvl[m]+' de 3. Mais opções a partir de agora.');}S.earRun[m]={ok:0,total:0};}
+  const m=sub.ouvido;if(m!=='ivl'&&m!=='qual'&&m!=='bat')return;const r=S.earRun[m]||(S.earRun[m]={ok:0,total:0});r.total++;if(ok)r.ok++;
+  if(r.total>=10){if(r.ok/r.total>=.8&&(S.earLvl[m]||1)<3){S.earLvl[m]=(S.earLvl[m]||1)+1;toast((m==='ivl'?'Intervalos':m==='bat'?'Batidas':'Acordes')+': ouvido no nível '+S.earLvl[m]+' de 3. Mais opções a partir de agora.');}S.earRun[m]={ok:0,total:0};}
 }
 function earPool(){const s=new Set();LEVELS.slice(0,S.level).forEach(l=>l.chords.forEach(c=>s.add(c)));return [...s];}
 function earProgs(){const seen=new Set(),out=[];LEVELS.slice(0,S.level).forEach(l=>l.prog.forEach(p=>{const k=p.join(' ');if(!seen.has(k)){seen.add(k);out.push(p);}}));if(out.length<4)PROGS.forEach(p=>{const k=p.join(' ');if(!seen.has(k)){seen.add(k);out.push(p);}});return out;}
@@ -1596,10 +1608,20 @@ function earNew(){
   else if(sub.ouvido==='prog'){const ps=shuffle(earProgs()),a=ps[0];E.q={names:a,ans:a.join(' '),opts:shuffle(ps.slice(0,4).map(p=>p.join(' ')))};}
   else if(sub.ouvido==='sing'){const m=[52,53,55,57,59,60,62,64][Math.floor(Math.random()*8)];E.q={midis:[m],sing:true,ans:NPT[m%12],opts:[]};if(MIC&&MIC.mode==='sing'){MIC.hold=0;MIC.hist=[];}} // uma nota entre Mi3 e Mi4
   else if(sub.ouvido==='fb'){const si=Math.floor(Math.random()*6),f=Math.floor(Math.random()*8),m=OPEN[si]+f;E.q={midis:[m],fb:true,ans:NPT[m%12]+' (por exemplo, '+(6-si)+'ª corda '+(f?'casa '+f:'solta')+')',opts:[]};} // uma nota até a 7ª casa; vale qualquer posição com a mesma altura
+  else if(sub.ouvido==='bat'){const pool=shuffle(PATTERNS.filter(p=>!p.arp&&!p.custom&&p.cells.every(c=>['↓','↑','x','','B'].includes(c)))),k=[2,3,4][(S.earLvl.bat||1)-1],opts=pool.slice(0,Math.min(k,pool.length)),a=opts[0];E.q={bat:a.id,chord:earPool()[0]||'Em',ans:a.id,opts:shuffle(opts.map(p=>p.id))};} /* batidas de mão inteira, sem dedilhado; as opções mostram nome e setas */
   else{const pool=shuffle(earPool()),ans=pool[0],k=[2,3,4][(S.earLvl.qual||1)-1];E.q={midis:chordMidis(ans),ans,opts:shuffle(pool.slice(0,Math.min(k,pool.length)))};}
 }
 const strumSeq=(names,gap)=>names.forEach((n,i)=>chordMidis(n).forEach((m,k)=>pluck(m,i*gap+k*.035,.34))); // acordes um atrás do outro
-function earPlay(){if(!E.q)earNew();if(E.q.names)strumSeq(E.q.names,.85);else strum(E.q.midis,E.q.gap||.035);}
+const patLabel=id=>{const p=PAT[id];return p?p.name+' ('+p.cells.map(c=>c||'·').join(' ')+')':id;}; /* nome da batida com as setas, para as opções do ouvido */
+function patPlayOnce(P,chord,bpm,bars){ /* um ou dois compassos de uma batida num acorde só, com o clique nos tempos (ouvido, Batida) */
+  const ac=audio();if(!ac)return;const c=shape(chord);if(!c)return;const n=P.cells.length,dur=30/bpm,t0=ac.currentTime+.1,played=[];c.f.forEach((f,si)=>{if(f>=0)played.push(si);});const m=si=>OPEN[si]+c.f[si];
+  for(let b=0;b<(bars||1);b++)P.cells.forEach((cell,i)=>{const t=t0+(b*n+i)*dur;if(i%2===0)tick(t,i===0?2:0,.3);
+    if(cell==='↓'){pickAt(t,.05);played.forEach((si,k)=>pluckAt(m(si),t+k*.016,i===0?.36:.3,si));}
+    else if(cell==='↑'){pickAt(t,.03);played.slice(-4).reverse().forEach((si,k)=>pluckAt(m(si),t+k*.012,.22,si));}
+    else if(cell==='x')slapAt(t);
+    else if(cell==='B'){const si=played[i>0&&played.length>1?1:0];pluckAt(m(si),t,.55,si);}});
+}
+function earPlay(){if(!E.q)earNew();if(E.q.bat)patPlayOnce(PAT[E.q.bat],E.q.chord,76,2);else if(E.q.names)strumSeq(E.q.names,.85);else strum(E.q.midis,E.q.gap||.035);}
 
 /* ---------- drawings ---------- */
 function chordSVG(n,hl,ids){ // hl: índices das cordas a destacar (as que mudam numa comparação); ids: um círculo escondido por corda, para o conferir pelo som
@@ -2506,8 +2528,9 @@ V.treinar=function(){
       const mic=S.cntMode==='mic';
       h+='<section class="panel"><h2>Quantas trocas em 1 minuto?</h2><p class="sub">Escolha dois acordes. Toque no desenho para ouvir como cada um soa.</p><div class="row" style="margin:16px 0"><select id="t-a" aria-label="Primeiro acorde">'+opts(T.a)+'</select><span class="muted">e</span><select id="t-b" aria-label="Segundo acorde">'+opts(T.b)+'</select></div><div class="pair">'+[T.a,T.b].map(c=>'<button class="chord play" data-act="chord-play" data-c="'+esc(c)+'" aria-label="Ouvir '+esc(c)+'"><strong>'+esc(c)+'</strong>'+chordSVG(c)+'</button>').join('')+'</div>';
       const tip=anchorTip(T.a,T.b);if(tip)h+='<p class="sub small" style="margin-top:10px"><b>Dedos:</b> '+esc(tip)+'</p>';
+      const sugg=pairSuggest();if(sugg.length)h+='<p class="grp">Par sugerido</p><div class="chips">'+sugg.map(p=>'<button class="chip" data-act="t-pair" data-a="'+esc(p[0])+'" data-b="'+esc(p[1])+'" aria-pressed="'+(pairKey(p[0],p[1])===k)+'">'+esc(p[0])+' e '+esc(p[1])+' · '+p[2]+'</button>').join('')+'</div><p class="sub small" style="margin-top:6px">Pares do seu nível ainda não medidos, ou com o menor recorde.</p>';
       h+='<p class="grp">Como contar</p><div class="chips"><button class="chip" data-act="t-mode" data-v="tap" aria-pressed="'+!mic+'">Tocando na tela</button><button class="chip" data-act="t-mode" data-v="mic" aria-pressed="'+mic+'">Pelo microfone</button></div><p class="sub small" style="margin-top:8px">'+(mic?'O app ouve o violão e conta cada vez que o som muda de um acorde para o outro. Funciona melhor em lugar silencioso, tocando o acorde inteiro. Se ele errar, corrija na hora com os botões −1 e +1.':'Toque no botão grande a cada troca em que o acorde novo soar limpo.')+'</p>';
-      h+='<p class="sub small" style="margin:12px 0 16px">'+(best?'Seu recorde neste par: '+best+' trocas.':'Você ainda não mediu este par.')+'</p><button class="btn block" data-act="t-start"'+(T.a===T.b?' disabled':'')+'>Começar contagem</button></section>';
+      h+='<p class="sub small" style="margin:12px 0 16px">'+(best?'Seu recorde neste par: '+best+' trocas.':'Você ainda não mediu este par.')+'</p><button class="btn block" data-act="t-start"'+(T.a===T.b?' disabled':'')+'>Começar contagem</button><p class="muted small" style="margin-top:12px">Para treinar a troca sem saber o próximo acorde: <button class="link" style="padding:0;min-height:0" data-act="gr-rand">Trocas surpresa no Tocar junto</button>, acordes sorteados a cada volta.</p></section>';
       const ks=Object.keys(S.changes).filter(x=>S.changes[x].length);
       if(ks.length){h+='<section class="panel"><h2>Seus pares</h2><ul class="hist" style="margin-top:8px">'+ks.sort((x,y)=>bestOf(y)-bestOf(x)).map(x=>{const a=S.changes[x];return '<li><div><b>'+esc(x.replace('|',' e '))+'</b><div class="muted small">Recorde '+bestOf(x)+', última '+a[a.length-1].n+'</div></div>'+spark(a)+'</li>';}).join('')+'</ul><p class="muted small" style="margin-top:8px">Referência: 30 trocas por minuto já dá para acompanhar a maioria das músicas. 60 é fluência.</p></section>';}
     }else if(T.phase==='count'){
@@ -2530,10 +2553,10 @@ V.treinar=function(){
     if(!BAT.prog){const L=LEVELS[S.level-1];BAT.prog=L.prog[0];if(!BAT.touched){BAT.pid=L.rhythm;BAT.bpm=L.bpm;}}const P=PAT[BAT.pid],on=GR.on&&GR.cfg===BAT;
     h+='<div class="chips" style="margin-bottom:14px">'+PATTERNS.map(p=>'<button class="chip" data-act="gr-pat" data-v="'+p.id+'" aria-pressed="'+(p.id===BAT.pid)+'">'+esc(p.name)+'</button>').join('')+'</div>';
     h+='<section class="panel"><h2>'+esc(P.name)+'</h2><p class="sub">'+esc(P.tip)+'</p><div style="margin-top:14px">'+rhythmHTML(P,'gr-grid')+'</div><p class="muted small" style="margin-top:10px">↓ para baixo, ↑ para cima, x abafada, B baixo com o polegar'+(P.arp?', P polegar, b baixo alternado, I indicador, M médio, A anelar':'')+(P.cells.includes('C')?', C os três dedos beliscando as cordas agudas juntos':'')+'. Casa vazia: a mão passa sem tocar.</p>';
-    h+='<div class="progrow" id="gr-prog">'+BAT.prog.map(c=>'<span><b>'+esc(c)+'</b><span class="chord">'+chordSVG(c)+'</span></span>').join('')+'</div>'; // nome e desenho: o acorde da vez fica marcado enquanto toca
+    h+='<div class="progrow" id="gr-prog">'+progRowHTML(BAT.prog)+'</div>'; // nome e desenho: o acorde da vez fica marcado enquanto toca
     h+='<div class="bpmrow"><button data-act="gr-bpm" data-d="-4" aria-label="Mais devagar">−</button><div style="text-align:center"><span class="num" id="gr-bpm">'+BAT.bpm+'</span> <span class="muted small">BPM</span></div><button data-act="gr-bpm" data-d="4" aria-label="Mais rápido">+</button></div>';
     h+='<p class="sub small" id="gr-status" style="margin:14px 0 10px;min-height:1.4em" aria-live="polite">'+(on?'Contagem':'Começa com um compasso de contagem. Um acorde por compasso.')+'</p><button class="btn block" data-act="gr-toggle">'+(on?'Parar':'Ouvir e tocar junto')+'</button></section>';
-    h+='<section class="panel"><h3>Acordes do exemplo</h3><div class="chips" style="margin-top:10px">'+PROGS.map((p,i)=>'<button class="chip" data-act="gr-prog" data-i="'+i+'" aria-pressed="'+(p.join()===BAT.prog.join())+'">'+p.join(' ')+'</button>').join('')+(PROGS.some(p=>p.join()===BAT.prog.join())?'':'<span class="chip on">Escolhida: '+esc(BAT.prog.join(' '))+'</span>')+'</div><div class="between" style="margin-top:16px"><span>Clique do metrônomo junto</span><button class="chip" data-act="gr-click" aria-pressed="'+BAT.click+'">'+(BAT.click?'Ligado':'Desligado')+'</button></div><p class="muted small" style="margin-top:12px">Quer escolher os acordes? Monte um treino seu em <button class="link" style="padding:0;min-height:0" data-act="nav" data-v="meu">Meu treino</button>.</p><p class="muted small" style="margin-top:8px">Violão do app: '+esc(guitar().name)+'. <button class="link" style="padding:0;min-height:0" data-act="open-perfil">Trocar o timbre</button></p></section>';
+    h+='<section class="panel"><h3>Acordes do exemplo</h3><div class="chips" style="margin-top:10px">'+PROGS.map((p,i)=>'<button class="chip" data-act="gr-prog" data-i="'+i+'" aria-pressed="'+(!BAT.rand&&p.join()===BAT.prog.join())+'">'+p.join(' ')+'</button>').join('')+'<button class="chip" data-act="gr-prog" data-i="-1" aria-pressed="'+!!BAT.rand+'">Surpresa</button>'+(BAT.rand||PROGS.some(p=>p.join()===BAT.prog.join())?'':'<span class="chip on">Escolhida: '+esc(BAT.prog.join(' '))+'</span>')+'</div>'+(BAT.rand?'<p class="muted small" style="margin-top:8px">Surpresa: acordes sorteados entre os do seu nível e das suas músicas, trocados a cada volta. O próximo é anunciado no último compasso, para treinar a troca sem decorar a sequência.</p>':'')+'<div class="between" style="margin-top:16px"><span>Clique do metrônomo junto</span><button class="chip" data-act="gr-click" aria-pressed="'+BAT.click+'">'+(BAT.click?'Ligado':'Desligado')+'</button></div><p class="muted small" style="margin-top:12px">Quer escolher os acordes? Monte um treino seu em <button class="link" style="padding:0;min-height:0" data-act="nav" data-v="meu">Meu treino</button>.</p><p class="muted small" style="margin-top:8px">Violão do app: '+esc(guitar().name)+'. <button class="link" style="padding:0;min-height:0" data-act="open-perfil">Trocar o timbre</button></p></section>';
     h+=myPatPanel();
   }else if(sub.treinar==='mao'){h+=blockBar()+maoView();
   }else if(sub.treinar==='tempo'){h+=blockBar();
@@ -2562,7 +2585,7 @@ V.treinar=function(){
     }
   }else{
     if(!E.q)earNew();
-    h+=seg('ouvido',[['mm','Maior/menor'],['qual','Acorde'],['ivl','Intervalo'],['prog','Progressão'],['sing','Cantar'],['fb','Braço']]);
+    h+=seg('ouvido',[['mm','Maior/menor'],['qual','Acorde'],['ivl','Intervalo'],['prog','Progressão'],['bat','Batida'],['sing','Cantar'],['fb','Braço']]);
     if(sub.ouvido==='sing'){const on=!!(MIC&&MIC.mode==='sing');
       h+='<section class="panel"><h2>Cante a nota que você ouviu</h2><p class="sub">Ouça, cante a mesma nota e segure. Vale em qualquer oitava: o que importa é a nota, não a altura. Cantar o que se ouve é o primeiro passo para tirar música de ouvido.</p><button class="btn block quiet" style="margin:16px 0" data-act="ear-play">Ouvir a nota'+(E.ans?' ('+esc(E.q.ans)+')':'')+'</button>';
       if(on)h+='<div class="meter"><div class="needle" id="sing-needle"></div></div><div class="between small muted"><span>grave</span><span>aguda</span></div><div class="lvl"><i id="sing-lvl"></i></div><p style="text-align:center;margin:12px 0;font-weight:650;min-height:1.4em" id="sing-msg" aria-live="polite">'+(E.ans==='ok'?'Certo!':'Cante a nota e segure, com a boca perto do celular.')+'</p>';
@@ -2578,9 +2601,9 @@ V.treinar=function(){
       if(a)h+='<p style="margin:14px 0"><b>'+(a.ok?'Certo: '+esc(q.ans)+'.':'Era '+esc(q.ans)+'. As posições certas estão marcadas.')+'</b></p><button class="btn block" data-act="ear-next">Próxima nota</button>';
       else h+='<p class="muted small" style="margin-top:10px">As notas ficam escondidas até você responder.</p>';
       h+='<p class="muted small" style="margin-top:14px">Nesta sessão: '+E.ok+' de '+E.total+'. No total: '+S.ear.ok+' de '+S.ear.total+'.</p></section>';return h;}
-    const EAR={mm:['O acorde é maior ou menor?','Maior costuma soar aberto e alegre. Menor, fechado e triste.','Ouvir o acorde'],qual:['Qual acorde você ouviu?','As opções vêm dos acordes do seu nível.','Ouvir o acorde'],ivl:['Qual é a distância entre as duas notas?','Duas notas, uma depois da outra. Cante a primeira e suba até a segunda: a distância é o intervalo. As escalas em Acordes, Teoria mostram cada um.','Ouvir as duas notas'],prog:['Qual progressão você ouviu?','Quatro acordes em sequência, das progressões do seu nível. Ouça o baixo de cada acorde: ele conta a história.','Ouvir a progressão']}[sub.ouvido]||['','',''];
-    h+='<section class="panel"><h2>'+EAR[0]+'</h2><p class="sub">'+EAR[1]+'</p>'+((sub.ouvido==='ivl'||sub.ouvido==='qual')?'<p class="muted small" style="margin-top:6px">Nível do ouvido: '+(S.earLvl[sub.ouvido]||1)+' de 3'+((S.earLvl[sub.ouvido]||1)<3?'. Sobe com dez respostas e 80% de acerto; nesta rodada, '+((S.earRun[sub.ouvido]||{ok:0}).ok)+' de '+((S.earRun[sub.ouvido]||{total:0}).total)+'.':'.')+'</p>':'')+'<button class="btn block quiet" style="margin:16px 0" data-act="ear-play">'+EAR[2]+'</button><div class="opts'+(sub.ouvido==='prog'?' one':'')+'">'+E.q.opts.map(o=>{let c='opt';if(E.ans){if(o===E.q.ans)c+=' right';else if(o===E.ans)c+=' wrong';}return '<button class="'+c+'" data-act="ear-ans" data-v="'+esc(o)+'">'+esc(o)+'</button>';}).join('')+'</div>';
-    if(E.ans)h+='<p style="margin:14px 0"><b>'+(E.ans===E.q.ans?'Certo.':'Era '+esc(E.q.ans)+'.')+'</b></p><button class="btn block" data-act="ear-next">Próximo</button>';
+    const EAR={mm:['O acorde é maior ou menor?','Maior costuma soar aberto e alegre. Menor, fechado e triste.','Ouvir o acorde'],qual:['Qual acorde você ouviu?','As opções vêm dos acordes do seu nível.','Ouvir o acorde'],ivl:['Qual é a distância entre as duas notas?','Duas notas, uma depois da outra. Cante a primeira e suba até a segunda: a distância é o intervalo. As escalas em Acordes, Teoria mostram cada um.','Ouvir as duas notas'],prog:['Qual progressão você ouviu?','Quatro acordes em sequência, das progressões do seu nível. Ouça o baixo de cada acorde: ele conta a história.','Ouvir a progressão'],bat:['Qual batida você ouviu?','Dois compassos de uma batida da biblioteca, num acorde só, com o clique nos tempos. Repare onde a mão sobe (↑), onde ela abafa (x) e onde passa sem tocar (·).','Ouvir a batida']}[sub.ouvido]||['','',''];
+    h+='<section class="panel"><h2>'+EAR[0]+'</h2><p class="sub">'+EAR[1]+'</p>'+((sub.ouvido==='ivl'||sub.ouvido==='qual'||sub.ouvido==='bat')?'<p class="muted small" style="margin-top:6px">Nível do ouvido: '+(S.earLvl[sub.ouvido]||1)+' de 3'+((S.earLvl[sub.ouvido]||1)<3?'. Sobe com dez respostas e 80% de acerto; nesta rodada, '+((S.earRun[sub.ouvido]||{ok:0}).ok)+' de '+((S.earRun[sub.ouvido]||{total:0}).total)+'.':'.')+'</p>':'')+'<button class="btn block quiet" style="margin:16px 0" data-act="ear-play">'+EAR[2]+'</button><div class="opts'+(sub.ouvido==='prog'||sub.ouvido==='bat'?' one':'')+'">'+E.q.opts.map(o=>{let c='opt';if(E.ans){if(o===E.q.ans)c+=' right';else if(o===E.ans)c+=' wrong';}return '<button class="'+c+'" data-act="ear-ans" data-v="'+esc(o)+'">'+esc(E.q.bat?patLabel(o):o)+'</button>';}).join('')+'</div>';
+    if(E.ans)h+='<p style="margin:14px 0"><b>'+(E.ans===E.q.ans?'Certo.':'Era '+esc(E.q.bat?patLabel(E.q.ans):E.q.ans)+'.')+'</b></p><button class="btn block" data-act="ear-next">Próximo</button>';
     h+='<p class="muted small" style="margin-top:14px">Nesta sessão: '+E.ok+' de '+E.total+'. No total: '+S.ear.ok+' de '+S.ear.total+'.</p></section>';
   }
   return h;
@@ -2690,7 +2713,7 @@ V.evolucao=function(){
     const wa=weekStats(0),wb=weekStats(1);
     h+='<section class="panel"><h2>Esta semana</h2><div style="margin-top:6px"><div class="kv"><span>Minutos</span><b>'+wa.min+(wb.min?' <small class="muted">(semana passada: '+wb.min+')</small>':'')+'</b></div><div class="kv"><span>Dias praticados</span><b>'+wa.days+' de 7'+(wb.min?' <small class="muted">(passada: '+wb.days+')</small>':'')+'</b></div></div></section>';
     h+='<section class="panel"><h2>Conquistas</h2><p class="sub small">'+Object.keys(S.badges).length+' de '+BADGES.length+'</p><div class="badges">'+BADGES.map(b=>{const got=S.badges[b[0]];return '<div class="badge'+(got?' got':'')+'"><b>'+esc(b[1])+'</b><span>'+esc(b[2])+'</span>'+(got?'<small>'+esc(dayTxt(got))+'</small>':badgeLeft(b[0]))+'</div>';}).join('')+'</div></section>';
-    const EM={mm:'Maior ou menor',qual:'Acorde',ivl:'Intervalo',prog:'Progressão',sing:'Cantar a nota',fb:'Onde está a nota'},em=Object.keys(EM).filter(x=>S.earLog[x]&&S.earLog[x].total);
+    const EM={mm:'Maior ou menor',qual:'Acorde',ivl:'Intervalo',prog:'Progressão',bat:'Qual é a batida',sing:'Cantar a nota',fb:'Onde está a nota'},em=Object.keys(EM).filter(x=>S.earLog[x]&&S.earLog[x].total);
     if(em.length)h+='<section class="panel" data-act="go-ouvido" role="button" tabindex="0" style="cursor:pointer"><div class="between"><h2>Ouvido por modalidade</h2><span class="muted small">Treinar ›</span></div><div style="margin-top:6px">'+em.map(x=>{const e=S.earLog[x];return '<div class="kv"><span>'+EM[x]+'</span><b>'+Math.round(100*e.ok/e.total)+'% <small class="muted">('+e.ok+' de '+e.total+')</small></b></div>';}).join('')+'</div><p class="muted small" style="margin-top:8px">Contado a partir da versão 1.27; o total geral, em Marcas, inclui o que veio antes.</p></section>';
     if(S.songs.length){const st={aprendendo:0,devagar:0,dominada:0};S.songs.forEach(s=>{st[s.status]=(st[s.status]||0)+1;});const dom=S.songs.filter(s=>s.status==='dominada').map(s=>s.title),top=S.songs.filter(s=>s.plays).sort((a,b)=>b.plays-a.plays)[0];
       h+='<section class="panel" data-act="go-musicas" role="button" tabindex="0" style="cursor:pointer"><div class="between"><h2>Repertório</h2><span class="muted small">Músicas ›</span></div><div style="margin-top:6px"><div class="kv"><span>Aprendendo</span><b>'+st.aprendendo+'</b></div><div class="kv"><span>Toco devagar</span><b>'+st.devagar+'</b></div><div class="kv"><span>Dominadas</span><b>'+st.dominada+'</b></div>'+(top?'<div class="kv"><span>Mais tocada junto</span><b>'+esc(top.title)+' <small class="muted">('+top.plays+'×)</small></b></div>':'')+'</div>'+(dom.length?'<p class="muted small" style="margin-top:8px">Dominadas: '+esc(dom.join(', '))+'.</p>':'')+'</section>';}
@@ -2780,6 +2803,7 @@ if(PWA.host){
 const TABS=[['hoje','Hoje','<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.8 2.8L16 9.5"/>'],['meu','Meu treino','<path d="M4 6h8M16 6h4M4 12h2M10 12h10M4 18h10M18 18h2"/><circle cx="14" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="18" r="2"/>'],['treinar','Treinar','<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/>'],['ferramentas','Ferramentas','<path d="M9 3h6l4 18H5L9 3zM12 17l4-11M7.2 13h9.6"/>'],['acordes','Acordes','<path d="M5 4v16M12 4v16M19 4v16M5 4h14M5 10h14M5 16h14"/><circle cx="12" cy="7" r="1.7" fill="currentColor"/>'],['evolucao','Evolução','<path d="M5 20V11M12 20V4M19 20v-6M2 20h20"/>'],['perfil','Perfil','<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>']];
 /* ---------- novidades de cada versão, mostradas uma vez ---------- */
 const NEWS=[
+ ['1.49.0',['Tocar junto: “Surpresa”, acordes sorteados entre os do seu nível e das suas músicas, trocados a cada volta, com o próximo anunciado no último compasso. Atalho em Treinar, Trocas.','Trocas: “Par sugerido”, os pares do seu nível ainda não medidos ou com o menor recorde, prontos com um toque.','Ouvido: “Batida”, o app toca dois compassos de uma batida e você diz qual foi; sobe de nível com dez respostas e 80% de acerto.']],
  ['1.48.0',['Acordes, Teoria: “Campo harmônico”, os sete acordes de cada tom (maior ou menor) com grau, função e desenho; a cadência para ouvir; progressões comuns com “Tocar junto”; e “Monte a sua progressão”, para ouvir, tocar junto ou salvar como treino.','Na cifra, a linha do tom provável ganhou “Ver o campo harmônico” e aponta os acordes fora do tom (empréstimos).']],
  ['1.47.0',['Em tablet e computador, Hoje fica em duas colunas: o treino à esquerda; avisos, desafio da semana e cópia de segurança à direita.','Guia do iniciante: “Afinar de ouvido pela casa 5”, com atalho no afinador para quando não há microfone.']],
  ['1.46.0',['Gravações: “Compartilhar” manda o áudio pelo compartilhamento do celular (no site, baixa o arquivo).','Evolução: “Dias da semana”, os minutos em cada dia da semana desde o começo, com o seu dia mais forte.','Evolução: “Imprimir a evolução”, uma versão para papel com gráficos, marcas e conquistas.']],
@@ -2911,7 +2935,9 @@ const ACT={
   'open-batida':el=>{BAT.touched=true;BAT.pid=el.dataset.p;BAT.bpm=+el.dataset.bpm;sub.treinar='batidas';go('treinar');},
   'gr-toggle':()=>{GR.on?grStop():grStart(BAT);},
   'gr-pat':el=>{grStop(true);BAT.pid=el.dataset.v;BAT.bpm=PAT[BAT.pid].bpm;render();},
-  'gr-prog':el=>{grStop(true);BAT.prog=PROGS[+el.dataset.i];render();},
+  'gr-prog':el=>{grStop(true);const i=+el.dataset.i;if(i<0){BAT.prog=randProg();BAT.rand=true;}else{BAT.prog=PROGS[i];BAT.rand=false;}BAT.nextProg=null;render();},
+'gr-rand':()=>{grStop(true);BAT.prog=randProg();BAT.rand=true;BAT.nextProg=null;sub.treinar='batidas';go('treinar');toast('Trocas surpresa: os acordes mudam a cada volta.');}, /* atalho de Trocas */
+'t-pair':el=>{T.a=el.dataset.a;T.b=el.dataset.b;render();},
   'gr-bpm':el=>{BAT.bpm=Math.max(40,Math.min(160,BAT.bpm+(+el.dataset.d)));const n=$('#gr-bpm');if(n)n.textContent=BAT.bpm;},
   'gr-click':()=>{BAT.click=!BAT.click;if(GR.on){const b=document.querySelector('[data-act="gr-click"]');if(b){b.setAttribute('aria-pressed',BAT.click);b.textContent=BAT.click?'Ligado':'Desligado';}}else render();},
   'open-meu':()=>{go('meu');},
@@ -3055,7 +3081,7 @@ const ACT={
 'hf-del':()=>{TH.hs=(TH.hs||[]).slice(0,-1);render();},
 'hf-clear':()=>{TH.hs=[];render();},
 'hf-seq-play':()=>hfPlay(TH.hs||[],1.2),
-'hf-gr':el=>{const seq=el.dataset.c.split(',').filter(n=>CH[n]);if(seq.length<2)return;grStop(true);BAT.prog=seq;sub.treinar='batidas';go('treinar');toast('No Tocar junto: '+seq.join(' ')+'.');}, /* a progressão vira a do exemplo em Treinar, Batidas */
+'hf-gr':el=>{const seq=el.dataset.c.split(',').filter(n=>CH[n]);if(seq.length<2)return;grStop(true);BAT.prog=seq;BAT.rand=false;BAT.nextProg=null;sub.treinar='batidas';go('treinar');toast('No Tocar junto: '+seq.join(' ')+'.');}, /* a progressão vira a do exemplo em Treinar, Batidas */
 'hf-save':()=>{const seq=(TH.hs||[]).filter(n=>CH[n]);if(seq.length<2)return;const L=LEVELS[S.level-1],name='Progressão em '+NPT[TH.hk]+(TH.hm?' menor':' maior');S.custom.push(ctClean({id:'t'+Date.now().toString(36),name,chords:seq,pats:[L.rhythm],bpm:L.bpm,min:10,ramp:false}));if(CE&&!CE.chords.length&&!CE.name)CE=null;save();toast('Treino salvo em Meu treino: '+name+'.');}, /* um editor vazio aberto em Meu treino sai da frente da lista */
 'open-campo':el=>{TH.hk=+el.dataset.pc;TH.hm=el.dataset.m==='1';TH.hs=[];sub.acordes='teoria';go('acordes');setTimeout(()=>{const g=$('#campo');if(g)g.scrollIntoView({block:'start'});},60);}, /* da cifra: o campo harmônico já no tom da música */
   'sc-root':el=>{if(SG.on)sgStop(true);TH.sr=+el.dataset.v;TH.pos=null;render();},

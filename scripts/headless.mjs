@@ -50,7 +50,11 @@ function connect(url) { // cliente do protocolo do DevTools sobre o WebSocket do
 }
 
 // Abre o navegador escondido e devolve {cdp, close}. width x height em px de CSS; scale multiplica para a foto.
-export async function launch({ width = 360, height = 640, scale = 1, mobile = true } = {}) {
+// Se o navegador não subir a tempo (acontece de vez em quando no runner do GitHub), tenta uma segunda vez, com outra porta.
+export async function launch(opts = {}) {
+  try { return await launchOnce(opts); } catch (e) { console.log('navegador não subiu (' + e.message + '); tentando de novo…'); await new Promise(r => setTimeout(r, 1500)); return launchOnce(opts); }
+}
+async function launchOnce({ width = 360, height = 640, scale = 1, mobile = true } = {}) {
   const exe = findBrowser();
   if (!exe) return null;
   const port = 9300 + Math.floor(Math.random() * 500), profile = join(tmpdir(), 'violao-diario-headless-' + process.pid + '-' + port);
