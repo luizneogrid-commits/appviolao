@@ -15,12 +15,12 @@ Um treino curto por dia: metrônomo, afinador, acordes, batidas e teoria.
 Quinze minutos por dia rendem mais que duas horas no sábado. O Violão Diário monta um treino curto para o seu nível, todos os dias, e mostra sua evolução em números.
 
 COMO FUNCIONA
-Você diz onde está (nunca toquei, sei um ou dois acordes, quero vencer a pestana, quero dedilhar, quero escalas e solos) e quanto tempo tem por dia. O app monta um roteiro de 9 níveis com 4 semanas cada, e todo dia entrega um treino com aquecimento, técnica, ritmo, trocas de acorde e repertório. Cada bloco tem um cronômetro e explica por que existe. Depois do último nível, o treino vira manutenção: cada dia revisita uma parte do roteiro, com os seus pares mais lentos e as suas músicas.
+Você diz onde está (nunca toquei, sei um ou dois acordes, quero vencer a pestana, quero dedilhar, quero escalas e solos) e quanto tempo tem por dia. O app monta um roteiro de 9 níveis com 4 semanas cada, e todo dia entrega um treino com aquecimento, técnica, ritmo, trocas de acorde e repertório. Cada bloco tem um cronômetro e explica por que existe, e toda semana traz um desafio tirado dos seus dados. Depois do último nível, o treino vira manutenção: cada dia revisita uma parte do roteiro, com os seus pares mais lentos e as suas músicas.
 
 O QUE VEM DENTRO
 • Metrônomo com subir aos poucos, subdivisão em colcheias ou tercinas, acento no 2 e no 4, compasso mudo, som de bipe, madeira, clave ou bateria simples, vibração e piscar da tela.
 • Afinador pelo microfone, por corda ou cromático, com afinação guiada corda por corda, meio tom abaixo, Drop D e Lá de referência ajustável, e tons de referência.
-• Batidas e dedilhados para tocar junto, com contagem e som de violão: quatro para baixo, desce e sobe, pop, reggae, valsa, bossa nova, samba, xote, baião, P-I-M-A, baixo alternado e mais, além da sua batida própria.
+• Batidas e dedilhados para tocar junto, com contagem, som de violão e o desenho de cada acorde: quatro para baixo, desce e sobe, pop, reggae, valsa, bossa nova, samba, xote, baião, P-I-M-A, baixo alternado e mais, além da sua batida própria.
 • Contador de trocas de acorde por minuto, tocando na tela ou pelo microfone.
 • Conferir um acorde pelo som: o app diz que corda não soou ou que dedo parece fora do lugar.
 • Som de violão de verdade: notas gravadas de violão de nylon, de aço e de guitarra limpa, à sua escolha.
@@ -33,7 +33,7 @@ O QUE VEM DENTRO
 • Meu treino: monte treinos com os seus acordes e batidas, salve e veja o histórico de cada um.
 • Músicas: cadastre as suas ou receba a cifra de outro app pelo menu Compartilhar. A cifra mostra os desenhos dos acordes, o tom provável, as seções (intro, refrão, ponte), transposição e capotraste, rolagem automática e modo palco com roda de músicas, e o tocar junto repete só o trecho que você marcar, com o andamento batido no dedo. Busca e ordem na lista, impressão e sugestões de músicas que você já consegue tocar.
 • Revisão rápida: perguntas curtas na hora certa de rever, com repetição espaçada.
-• Evolução: sequência de dias, minutos por dia e por semana, melhor troca por minuto, calendário do ano, repertório, diário, gravação de 30 segundos, cartão para compartilhar, conquistas e metas comprovadas pelos seus registros.
+• Evolução: sequência de dias, minutos por dia e por semana, melhor troca por minuto, calendário do ano, repertório, diário, desafios da semana, onde vai o tempo, gravação de 30 ou 60 segundos, cartão para compartilhar, conquistas e metas comprovadas pelos seus registros.
 • Prática livre com cronômetro, que conta mesmo com a tela apagada.
 • Lembrete diário no horário que você escolher, aviso de última hora nos dias sem prática e o lembrete no calendário.
 • Letra maior, tema claro ou escuro, modo canhoto e perfis para mais de uma pessoa no mesmo celular.

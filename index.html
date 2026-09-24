@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Violão Diário</title>
-<meta name="app-version" content="1.42.0">
+<meta name="app-version" content="1.43.0">
 <meta name="description" content="Treino diário de violão: plano por nível, metrônomo, afinador, batidas para tocar junto, acordes e notas.">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#F2EEF0" media="(prefers-color-scheme: light)">
@@ -891,6 +891,8 @@ const BADGES=[
  ['musicas5','Repertório','Cinco músicas dominadas.',()=>S.songs.filter(s=>s.status==='dominada').length>=5],
  ['minhabatida','Batida própria','Criou uma batida sua em Treinar, Batidas.',()=>(S.mypats||[]).length>0]
 ];
+const BADGE_LEFT={min100:()=>[totalMin(),100,'min'],min500:()=>[totalMin(),500,'min'],min1000:()=>[totalMin(),1000,'min'],min3000:()=>[totalMin(),3000,'min'],dias100:()=>[Object.keys(S.days).filter(practiced).length,100,'dias'],seq100:()=>[bestStreak(),100,'dias seguidos'],trocas30:()=>[Object.keys(S.changes).reduce((m,x)=>Math.max(m,bestOf(x)),0),30,'trocas por minuto'],trocas60:()=>[Object.keys(S.changes).reduce((m,x)=>Math.max(m,bestOf(x)),0),60,'trocas por minuto'],ouvido:()=>[S.ear.total,20,'respostas'],meutreino:()=>[Object.values(S.ctLog).reduce((a,l)=>a+Object.values(l).reduce((b,e)=>b+(e.n||0),0),0),10,'vezes'],musicas5:()=>[S.songs.filter(s=>s.status==='dominada').length,5,'músicas']}; // conquistas com número: quanto falta
+function badgeLeft(id){const f=BADGE_LEFT[id];if(!f)return '';try{const [cur,tgt,u]=f(),left=Math.max(0,tgt-cur);return left>0?'<small>faltam '+left+' '+u+'</small>':'';}catch(e){return '';}}
 function checkBadges(){const got=[];BADGES.forEach(b=>{try{if(!S.badges[b[0]]&&b[3]()){S.badges[b[0]]=today();got.push(b[1]);}}catch(e){}});if(got.length){save();got.forEach(n=>toast('Conquista: '+n));}}
 function roadEstimate(level,goal,done){ // semanas que faltam, ajustadas pelo tempo diário
   const left=ROAD_TOTAL-(done==null?(level-1)*4:done),f={10:1.3,15:1,20:.85,30:.7}[goal]||1,w=Math.max(1,Math.round(left*f));
@@ -1627,6 +1629,7 @@ function neckSVG(){
   return s+'</svg>';
 }
 function rhythmHTML(P,id){const cnt=['1','e','2','e','3','e','4','e'],n=P.cells.length;return '<div class="rhy"'+(id?' id="'+id+'"':'')+' style="grid-template-columns:repeat('+n+',1fr);max-width:'+(n*40)+'px" aria-label="Padrão: '+esc(P.name)+'">'+P.cells.map((a,i)=>'<div'+(a?' class="on"':'')+'><b>'+a+'</b><span>'+cnt[i]+'</span></div>').join('')+'</div>';}
+let diaryAll=false; // Evolução, Diário: mostrar todos os registros, não só os dez últimos
 function weekBars(dates,vals,goal,aria,unit){ // uma barra por semana (12), com a segunda-feira embaixo a cada duas; goal > 0 desenha a linha da meta
   const mx=Math.max(goal,1,Math.max.apply(null,vals)),bw=20,gap=8,H=96;
   let c='<svg viewBox="0 0 336 124" role="img" aria-label="'+esc(aria)+'">';
@@ -2604,11 +2607,11 @@ V.evolucao=function(){
     h+=recList();
     const bl=[];for(let i=13;i>=0;i--)bl.push(addDays(new Date(),-i));const bv=bl.map(x=>S.bpmLog[dkey(x)]||0);
     if(bv.some(v=>v))h+='<section class="panel chart" style="margin-top:14px"><div class="between"><h2>Metrônomo</h2><span class="muted small">melhor BPM por 1 minuto, em cada dia</span></div><div style="margin-top:14px">'+dayBars(bl,bv,0,'BPM')+'</div></section>';
-    const notes=Object.keys(S.days).filter(x=>S.days[x].note).sort().reverse().slice(0,10);
-    if(notes.length)h+='<section class="panel"><h2>Diário</h2><div style="margin-top:4px">'+notes.map(x=>'<div class="song"><div class="muted small">'+esc(dayTxt(x))+'</div><div>'+esc(S.days[x].note)+'</div></div>').join('')+'</div></section>';
+    const allNotes=Object.keys(S.days).filter(x=>S.days[x].note).sort().reverse(),notes=diaryAll?allNotes:allNotes.slice(0,10);
+    if(notes.length)h+='<section class="panel"><div class="between"><h2>Diário</h2><span class="muted small">'+allNotes.length+(allNotes.length===1?' registro':' registros')+'</span></div><div style="margin-top:4px">'+notes.map(x=>'<div class="song"><div class="muted small">'+esc(dayTxt(x))+'</div><div>'+esc(S.days[x].note)+'</div></div>').join('')+'</div>'+(allNotes.length>10?'<button class="link" style="margin-top:8px" data-act="diary-all">'+(diaryAll?'Ver só os dez últimos':'Ver todos os '+allNotes.length)+'</button>':'')+'</section>';
     const wa=weekStats(0),wb=weekStats(1);
     h+='<section class="panel"><h2>Esta semana</h2><div style="margin-top:6px"><div class="kv"><span>Minutos</span><b>'+wa.min+(wb.min?' <small class="muted">(semana passada: '+wb.min+')</small>':'')+'</b></div><div class="kv"><span>Dias praticados</span><b>'+wa.days+' de 7'+(wb.min?' <small class="muted">(passada: '+wb.days+')</small>':'')+'</b></div></div></section>';
-    h+='<section class="panel"><h2>Conquistas</h2><p class="sub small">'+Object.keys(S.badges).length+' de '+BADGES.length+'</p><div class="badges">'+BADGES.map(b=>{const got=S.badges[b[0]];return '<div class="badge'+(got?' got':'')+'"><b>'+esc(b[1])+'</b><span>'+esc(b[2])+'</span>'+(got?'<small>'+esc(dayTxt(got))+'</small>':'')+'</div>';}).join('')+'</div></section>';
+    h+='<section class="panel"><h2>Conquistas</h2><p class="sub small">'+Object.keys(S.badges).length+' de '+BADGES.length+'</p><div class="badges">'+BADGES.map(b=>{const got=S.badges[b[0]];return '<div class="badge'+(got?' got':'')+'"><b>'+esc(b[1])+'</b><span>'+esc(b[2])+'</span>'+(got?'<small>'+esc(dayTxt(got))+'</small>':badgeLeft(b[0]))+'</div>';}).join('')+'</div></section>';
     const EM={mm:'Maior ou menor',qual:'Acorde',ivl:'Intervalo',prog:'Progressão',sing:'Cantar a nota',fb:'Onde está a nota'},em=Object.keys(EM).filter(x=>S.earLog[x]&&S.earLog[x].total);
     if(em.length)h+='<section class="panel" data-act="go-ouvido" role="button" tabindex="0" style="cursor:pointer"><div class="between"><h2>Ouvido por modalidade</h2><span class="muted small">Treinar ›</span></div><div style="margin-top:6px">'+em.map(x=>{const e=S.earLog[x];return '<div class="kv"><span>'+EM[x]+'</span><b>'+Math.round(100*e.ok/e.total)+'% <small class="muted">('+e.ok+' de '+e.total+')</small></b></div>';}).join('')+'</div><p class="muted small" style="margin-top:8px">Contado a partir da versão 1.27; o total geral, em Marcas, inclui o que veio antes.</p></section>';
     if(S.songs.length){const st={aprendendo:0,devagar:0,dominada:0};S.songs.forEach(s=>{st[s.status]=(st[s.status]||0)+1;});const dom=S.songs.filter(s=>s.status==='dominada').map(s=>s.title),top=S.songs.filter(s=>s.plays).sort((a,b)=>b.plays-a.plays)[0];
@@ -2697,6 +2700,7 @@ if(PWA.host){
 const TABS=[['hoje','Hoje','<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.8 2.8L16 9.5"/>'],['meu','Meu treino','<path d="M4 6h8M16 6h4M4 12h2M10 12h10M4 18h10M18 18h2"/><circle cx="14" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="18" r="2"/>'],['treinar','Treinar','<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/>'],['ferramentas','Ferramentas','<path d="M9 3h6l4 18H5L9 3zM12 17l4-11M7.2 13h9.6"/>'],['acordes','Acordes','<path d="M5 4v16M12 4v16M19 4v16M5 4h14M5 10h14M5 16h14"/><circle cx="12" cy="7" r="1.7" fill="currentColor"/>'],['evolucao','Evolução','<path d="M5 20V11M12 20V4M19 20v-6M2 20h20"/>'],['perfil','Perfil','<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>']];
 /* ---------- novidades de cada versão, mostradas uma vez ---------- */
 const NEWS=[
+ ['1.43.0',['Evolução, Diário: “Ver todos” quando há mais de dez registros.','Conquistas por vir mostram quanto falta (minutos, dias, trocas, respostas, músicas).','Ficha e capturas da loja com o desafio da semana e os desenhos no treino.']],
  ['1.42.0',['Bloco em andamento fora de Hoje: a pílula no rodapé mostra o bloco e o tempo que falta e volta para Hoje ao tocar; Batidas, Trocas, Tempo e Metrônomo ganham “Voltar ao treino”.','Quando o tempo do bloco acaba em qualquer tela, um aviso diz qual bloco terminou e quanto contou.']],
  ['1.41.0',['Painéis que viram atalhos: a faixa da semana em Hoje abre Evolução; “Esta semana” abre a meta em Perfil; em Evolução, Repertório abre Músicas, Ouvido por modalidade abre o treino de ouvido e as Marcas levam a Acordes, Trocas e Metrônomo.','Na lista de músicas, tocar no nome abre a cifra.','Barras dos gráficos com dica (dia ou semana e valor) ao tocar ou passar o mouse.','“Somar 5 min” e a situação da música agora confirmam com um aviso.']],
  ['1.40.2',['O painel do desafio da semana, em Hoje, agora é um atalho: toque nele para ir às trocas com o par do desafio, à música, ao treino de ouvido ou ao treino de hoje.']],
@@ -2804,6 +2808,7 @@ const ACT={
   if(c.kind==='ouvido'){sub.treinar='ouvido';go('treinar');return;}
   if(c.kind==='musica'){const s=S.songs.find(x=>x.id===c.ref);if(!s){toast('A música desse desafio não está mais na lista.');return;}sub.evolucao='musicas';go('evolucao');ACT['song-play']({dataset:{id:s.id}});return;}
   const bl=$('.blocks');if(bl){bl.closest('section').scrollIntoView({block:'start',behavior:'smooth'});setTimeout(()=>window.scrollBy(0,-12),350);}toast(c.kind==='dias'?'Cada dia com treino conta. O de hoje está logo abaixo.':'Os minutos do treino de hoje contam para o desafio.');},
+'diary-all':()=>{diaryAll=!diaryAll;render();},
 'go-evolucao':()=>{sub.evolucao='numeros';go('evolucao');},
 'go-musicas':()=>{sub.evolucao='musicas';SV.id=null;if(view!=='evolucao')go('evolucao');else{render();window.scrollTo(0,0);}},
 'go-ouvido':()=>{sub.treinar='ouvido';go('treinar');},
