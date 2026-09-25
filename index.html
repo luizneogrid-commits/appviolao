@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Violão Diário</title>
-<meta name="app-version" content="1.53.0">
+<meta name="app-version" content="1.54.0">
 <meta name="description" content="Treino diário de violão: plano por nível, metrônomo, afinador, batidas para tocar junto, acordes e notas.">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#F2EEF0" media="(prefers-color-scheme: light)">
@@ -530,7 +530,7 @@ const GUITARS={
   aco:{name:'Aço (folk)',desc:'Cordas de aço, mais brilho e sustentação: o violão folk.',exc:.35,pick:.13,w:.5,dark:0,decay:.9982,body:[['peaking',100,4,4],['peaking',235,5,3],['highshelf',3500,0,2]],gain:.7,detune:.0018,room:.12,sgain:.9},
   eletrico:{name:'Elétrico limpo',desc:'Guitarra com som limpo: palheta perto do cavalete e sustentação longa.',exc:.2,pick:.08,w:.7,dark:0,decay:.9992,body:[['lowpass',4200,.7,0],['peaking',2400,1.2,2]],gain:.85,detune:0,room:.1,sgain:.9}
 }; // room: quanto de sala (reverberação curta) nas vozes de violão; sgain: volume das amostras gravadas
-const DEF={v:1,onboarded:false,name:'',level:1,levelSince:'',goal:15,cntMode:'tap',skills:{},days:{},changes:{},chords:{},songs:[],custom:[],ctLog:{},stats:{tuned:0,play:{},prog4:false},proven:{},badges:{},rest:0,startLevel:0,lastWeekSeen:'',lastMonthSeen:'',rev:{},adj:null,quick:'',remind:'',bpmLog:{},font:0,theme:'',seenVer:'',msub:1,macc:'first',mgap:0,mvib:false,tuning:'padrao',tuneMode:'cordas',lastExport:'',backupAsk:'',recs:[],hojeMore:false,guitar:'nylon',welcomed:false,wgoal:0,mclick:'beep',mflash:false,updSeen:'',lefty:false,easyOn:{},ear:{ok:0,total:0},maxBpm:0,bpm:70,beats:4,altOut:false,installDismissed:false,a4:440,mypats:[],earLog:{},freeStart:0,volGuitar:100,volClick:100,mychords:[],remindLate:false,earLvl:{ivl:1,qual:1},earRun:{},recSecs:30,chal:null,chalLog:{},grVib:false};
+const DEF={v:1,onboarded:false,name:'',level:1,levelSince:'',goal:15,cntMode:'tap',skills:{},days:{},changes:{},chords:{},songs:[],custom:[],ctLog:{},stats:{tuned:0,play:{},prog4:false},proven:{},badges:{},rest:0,startLevel:0,lastWeekSeen:'',lastMonthSeen:'',interleave:'',rev:{},adj:null,quick:'',remind:'',bpmLog:{},font:0,theme:'',seenVer:'',msub:1,macc:'first',mgap:0,mvib:false,tuning:'padrao',tuneMode:'cordas',lastExport:'',backupAsk:'',recs:[],hojeMore:false,guitar:'nylon',welcomed:false,wgoal:0,mclick:'beep',mflash:false,updSeen:'',lefty:false,easyOn:{},ear:{ok:0,total:0},maxBpm:0,bpm:70,beats:4,altOut:false,installDismissed:false,a4:440,mypats:[],earLog:{},freeStart:0,volGuitar:100,volClick:100,mychords:[],remindLate:false,earLvl:{ivl:1,qual:1},earRun:{},recSecs:30,chal:null,chalLog:{},grVib:false};
 let S,hadLocal=false;
 const MP_CELLS=['','↓','↑','x','B']; // casas possíveis numa batida da pessoa (Treinar, Batidas, "Sua batida")
 function adopt(o){
@@ -542,7 +542,7 @@ function adopt(o){
   S.name=typeof S.name==='string'?S.name.slice(0,30):'';S.levelSince=typeof S.levelSince==='string'?S.levelSince:'';S.cntMode=S.cntMode==='mic'?'mic':'tap';
   if(!S.stats||typeof S.stats!=='object')S.stats={};S.stats.tuned=+S.stats.tuned||0;if(!S.stats.play||typeof S.stats.play!=='object')S.stats.play={};S.stats.prog4=!!S.stats.prog4;
   ['proven','badges'].forEach(k=>{if(!S[k]||typeof S[k]!=='object'||Array.isArray(S[k]))S[k]={};});
-  S.rest=S.rest?1:0;S.startLevel=Math.round(+S.startLevel)||0;S.lastWeekSeen=typeof S.lastWeekSeen==='string'?S.lastWeekSeen:'';S.lastMonthSeen=typeof S.lastMonthSeen==='string'?S.lastMonthSeen:'';
+  S.rest=S.rest?1:0;S.startLevel=Math.round(+S.startLevel)||0;S.lastWeekSeen=typeof S.lastWeekSeen==='string'?S.lastWeekSeen:'';S.lastMonthSeen=typeof S.lastMonthSeen==='string'?S.lastMonthSeen:'';S.interleave=['on','off'].includes(S.interleave)?S.interleave:'';
   if(!S.rev||typeof S.rev!=='object'||Array.isArray(S.rev))S.rev={};if(!S.adj||typeof S.adj!=='object')S.adj=null;S.quick=typeof S.quick==='string'?S.quick:'';
   S.remind=typeof S.remind==='string'?S.remind:'';S.remindLate=!!S.remindLate;
   {const lv=x=>[1,2,3].includes(+x)?+x:1;S.earLvl={ivl:lv(S.earLvl&&S.earLvl.ivl),qual:lv(S.earLvl&&S.earLvl.qual)};if(!S.earRun||typeof S.earRun!=='object'||Array.isArray(S.earRun))S.earRun={};} /* ouvido em níveis: intervalos e acordes */
@@ -940,7 +940,24 @@ function maintPlan(k){ // depois do último nível do roteiro: manutenção, um 
   else if(dom.length){const s=pick(dom,1);out.push({id:'rep',title:'Repertório',text:'Toque “'+s.title+'” inteira, sem parar, como se fosse para alguém ouvir.',song:s,why:'Manutenção: tocar as músicas dominadas inteiras mantém o repertório vivo.'});}
   else{const pr=pick(W.progs,2);out.push({id:'rep',title:'Repertório',text:'Toque a progressão '+pr.join(', ')+' em loop, quatro tempos em cada acorde. Suas músicas entram aqui quando você cadastrar em Evolução.',prog:pr});}
   out.forEach((b,i)=>b.min=mins[i]);
-  return out;
+  return interleave(out);
+}
+/* ---------- treino intercalado: rodadas curtas alternando as habilidades (interferência contextual: Shea e Morgan, 1979) ---------- */
+const interleaveOn=()=>S.interleave==='on'||(!S.interleave&&S.level>=3); /* ligado por padrão do nível 3 em diante; iniciantes seguem em blocos */
+function interleave(out){ /* cada bloco de 4 min ou mais vira duas rodadas; as segundas vêm depois das primeiras de todas as habilidades (o aquecimento fica no começo) */
+  if(!interleaveOn())return out;const head=out.filter(b=>b.id==='warm'),rest=out.filter(b=>b.id!=='warm');if(!rest.some(b=>b.min>=4))return out;
+  const r1=[],r2=[];rest.forEach(b=>{if(b.min>=4){const a=Math.ceil(b.min/2);r2.push(Object.assign({},b,{id:b.id+'.2',title:b.title+' (2ª rodada)',min:b.min-a,text:'Segunda rodada, depois das outras habilidades: '+b.text,why:b.why||WHY[b.id]||'',round:2}));b.min=a;b.title+=' (1ª rodada)';}r1.push(b);});
+  return head.concat(r1,r2);
+}
+/* ---------- ensaio mental: 30 segundos imaginando a troca antes de tocar (Driskell, Copper e Moran, 1994) ---------- */
+const MI={on:false,pair:null,left:0,phase:'',timer:null};
+function miStart(pair){miStop(true);MI.on=true;MI.pair=pair;MI.left=30;MI.phase='show';MI.timer=setInterval(miTick,1000);render();}
+function miStop(quiet){if(MI.timer)clearInterval(MI.timer);MI.timer=null;MI.on=false;MI.phase='';if(!quiet)render();}
+function miTick(){MI.left--;if(MI.left===25){MI.phase='imagine';render();return;}if(MI.left<=0){MI.phase='go';clearInterval(MI.timer);MI.timer=null;buzz(60);if(CH[MI.pair[1]])strum(chordMidis(MI.pair[1]));render();return;}const el=$('#mi-left');if(el)el.textContent=MI.left;}
+function mentalPanel(pair){
+  if(!MI.on||!MI.pair||MI.pair.join()!==pair.join())return '<div class="acts" style="margin-top:8px"><button class="btn sm quiet" data-act="mi-start" data-a="'+esc(pair[0])+'" data-b="'+esc(pair[1])+'">Ensaiar de cabeça (30 s)</button><span class="muted small">Imaginar a troca antes de tocar também ensina o gesto.</span></div>';
+  const msg=MI.phase==='show'?'Olhe as duas formas e onde cada dedo vai.':MI.phase==='imagine'?'Feche os olhos e imagine a troca de '+esc(pair[0])+' para '+esc(pair[1])+', dedo por dedo, no ritmo. Mão parada.':'Agora toque a troca de verdade.';
+  return '<div class="extra" id="mi-box"><p class="sub"><b id="mi-msg">'+msg+'</b></p>'+(MI.phase==='show'?'<div class="pair">'+pair.map(c=>'<div class="chord"><strong>'+esc(c)+'</strong>'+chordSVG(c)+'</div>').join('')+'</div>':'')+(MI.phase==='go'?'':'<div class="big num" id="mi-left" style="text-align:center">'+MI.left+'</div>')+'<div class="acts"><button class="link" data-act="mi-stop">'+(MI.phase==='go'?'Fechar':'Parar')+'</button></div></div>';
 }
 function planFor(k){
   if(S.level===LEVELS.length&&levelDone(S.level))return maintPlan(k);
@@ -960,7 +977,7 @@ function planFor(k){
   if(open.length){const s=pick(open,1);out.push({id:'rep',title:'Repertório',text:'Toque “'+s.title+'”. Pare nos trechos difíceis e repita só eles, devagar, antes de seguir.',song:s});}
   else{const pr=pick(W.progs,2);out.push({id:'rep',title:'Repertório',text:'Toque a progressão '+pr.join(', ')+' em loop, quatro tempos em cada acorde. Suas músicas entram aqui quando você cadastrar em Evolução.',prog:pr});}
   out.forEach((b,i)=>b.min=mins[i]);
-  return out;
+  return interleave(out);
 }
 
 /* ---------- audio ---------- */
@@ -1185,7 +1202,7 @@ function mPaint(){
 
 /* ---------- batidas: tocar junto ---------- */
 // O motor toca uma configuração {pid,bpm,prog,click,guitar}: a da aba Batidas (BAT) ou a de um treino montado pela pessoa (CS.cfg).
-const BAT={pid:'baixo',bpm:60,prog:null,click:true,touched:false,rand:false,nextProg:null}
+const BAT={pid:'baixo',bpm:60,prog:null,click:true,touched:false,rand:false,nextProg:null,vary:false,base:null}
 const MP={n:8,cells:Array(8).fill(''),name:'',editId:null},MP_NEXT={'':'↓','↓':'↑','↑':'x','x':'B','B':''}; // editor de batida própria (Treinar, Batidas): cada toque na casa passa para o símbolo seguinte
 function myPatPanel(){
   const mine=S.mypats||[];
@@ -1210,11 +1227,11 @@ function pairSuggest(){ /* pares do roteiro até o nível atual: primeiro os nun
 function grStart(cfg,onBar){
   const ac=audio();if(!ac)return;if(M.on)mStop();
   GR.cfg=cfg||BAT;GR.onBar=onBar||null;GR.run++;GR.t0=Date.now();
-  GR.on=true;GR.step=-PAT[GR.cfg.pid].cells.length;GR.next=ac.currentTime+.12;GR.timer=setInterval(grSched,25);render();
+  GR.on=true;GR.step=-PAT[GR.cfg.pid].cells.length;GR.next=ac.currentTime+.12;GR.at0=GR.next;GR.timer=setInterval(grSched,25);render();
 }
 function grStop(quiet){
   if(!GR.on)return;const mine=CS&&GR.cfg===CS.cfg;if(mine)csAccrue(Date.now()); // parou um treino montado: grava o tempo tocado
-  GR.on=false;clearInterval(GR.timer);if(AC)dampAll(AC.currentTime+.05);if(mine)csFlush();if(!GR.cfg.noRec)recordPlay(GR.cfg,(Date.now()-GR.t0)/1000);if(!quiet)render();
+  if(GR.cfg&&GR.cfg.vary&&GR.cfg.base!=null){GR.cfg.bpm=GR.cfg.base;GR.cfg.base=null;}GR.on=false;clearInterval(GR.timer);if(AC)dampAll(AC.currentTime+.05);if(mine)csFlush();if(!GR.cfg.noRec)recordPlay(GR.cfg,(Date.now()-GR.t0)/1000);if(!quiet)render();
 }
 function grSched(){
   if(!GR.on||!AC)return;
@@ -1224,11 +1241,13 @@ function grStep(step,t){
   const G=GR.cfg,run=GR.run,onBar=GR.onBar,P=PAT[G.pid],n=P.cells.length,dur=30/G.bpm,later=fn=>setTimeout(()=>{if(GR.on&&GR.run===run)fn();},Math.max(0,(t-AC.currentTime)*1000));
   if(step<0){const i=step+n;if(i%2===0){tick(t,i===0?2:0,.9);later(()=>{const s=$('#gr-status');if(s)s.textContent='Contagem: '+(i/2+1);});}return;}
   const cs=n/(G.perBar||1),i=step%n;if(G.rand&&step>0&&step%(cs*G.prog.length)===0){G.prog.splice(0,G.prog.length,...(G.nextProg||randProg(G.prog)));G.nextProg=null;} /* surpresa: a cada volta, acordes novos */
+  const rest=!!G.rest&&step>=0&&((t-GR.at0)%20)>=10; /* descanso curto (Mãos): 10 s tocando, 10 s parado */
+  if(G.vary&&step>0&&step%(cs*G.prog.length)===0){if(G.base==null)G.base=G.bpm;G.bpm=Math.max(40,Math.min(160,Math.round(G.base*(.9+Math.random()*.2))));later(()=>{const n=$('#gr-bpm');if(n)n.textContent=G.bpm;});} /* andamento variável: cada volta sorteia mais ou menos 10% (Schmidt, 1975) */
   const ci=Math.floor(step/cs)%G.prog.length,c=shape(G.prog[ci]),cell=P.cells[i]; // perBar 2: dois acordes por compasso (cifras)
   if(G.rand&&i===0&&ci===G.prog.length-1&&!G.nextProg)G.nextProg=randProg(G.prog); /* o sorteio seguinte já existe no último acorde da volta, para ser anunciado */
   const played=[];c.f.forEach((f,si)=>{if(f>=0)played.push(si);});const m=si=>OPEN[si]+c.f[si];
-  if(G.click&&i%2===0)tick(t,i===0?2:0,.35);
-  if(G.guitar!==false){
+  if(G.click&&i%2===0&&!rest)tick(t,i===0?2:0,.35);
+  if(G.guitar!==false&&!rest){
     if(cell==='↓'){pickAt(t,.05);played.forEach((si,k)=>pluckAt(m(si),t+k*hum(.016,.2),hum(i===0?.36:.3,.15),si));if(P.stac)dampAll(t+dur*.8);} // cada corda com volume e tempo um pouco diferentes, como uma mão de verdade
     else if(cell==='↑'){pickAt(t,.03);played.slice(-4).reverse().forEach((si,k)=>pluckAt(m(si),t+k*hum(.012,.2),hum(.22,.15),si));}
     else if(cell==='x')slapAt(t);
@@ -1236,8 +1255,8 @@ function grStep(step,t){
     else if(cell==='I'||cell==='M'||cell==='A'){const si={I:3,M:4,A:5}[cell];if(c.f[si]>=0)pluckAt(m(si),t,.42,si);}
     else if(cell==='C'){[3,4,5].forEach(si=>{if(c.f[si]>=0)pluckAt(m(si),t,.38,si);});} // pinça: indicador, médio e anelar juntos (bossa, samba)
   }
-  later(()=>{document.querySelectorAll('#gr-grid>div').forEach((el,k)=>el.classList.toggle('now',k===i));
-    if(i%cs===0){if(S.grVib)buzz(25);if(G.rand&&ci===0){const row=$('#gr-prog');if(row)row.innerHTML=progRowHTML(G.prog);}document.querySelectorAll('#gr-prog>span').forEach((el,k)=>el.classList.toggle('now',k===ci));const s=$('#gr-status');if(s)s.textContent=G.rand?'Tocando '+G.prog[ci]+'. Depois: '+(ci+1<G.prog.length?G.prog[ci+1]:(G.nextProg||[])[0]||'…')+'.':'Tocando '+G.prog[ci]+'. Entre quando se sentir pronto.';if(onBar)onBar(ci);}});
+  later(()=>{if(rest){document.querySelectorAll('#gr-grid>div.now').forEach(el=>el.classList.remove('now'));const s=$('#gr-status');if(s)s.textContent='Descanse: '+Math.ceil(20-((t-GR.at0)%20))+' s. A pausa também ensina.';return;}document.querySelectorAll('#gr-grid>div').forEach((el,k)=>el.classList.toggle('now',k===i));
+    if(i%cs===0){if(S.grVib)buzz(25);if(G.rand&&ci===0){const row=$('#gr-prog');if(row)row.innerHTML=progRowHTML(G.prog);}document.querySelectorAll('#gr-prog>span').forEach((el,k)=>el.classList.toggle('now',k===ci));const s=$('#gr-status');if(s)s.textContent=(G.vary&&G.base!=null?'Agora a '+G.bpm+' BPM. ':'')+(G.rand?'Tocando '+G.prog[ci]+'. Depois: '+(ci+1<G.prog.length?G.prog[ci+1]:(G.nextProg||[])[0]||'…')+'.':'Tocando '+G.prog[ci]+'. Entre quando se sentir pronto.');if(onBar)onBar(ci);}});
 }
 
 /* ---------- meu treino: acordes e batidas escolhidos pela pessoa ---------- */
@@ -1907,7 +1926,7 @@ const sgValid=notes=>[0,1,2,3,4,5,6,7,8,9].filter(p=>scaleBox(notes,p).ok);
 function sgPos(notes){const v=sgValid(notes),rf6=(notes[0].pc-4+12)%12;if(TH.pos!=null&&v.includes(TH.pos))return TH.pos;return v.includes(rf6)?rf6:v[0];} // padrão: tônica na 6ª corda
 const SG={on:false,seq:[],i:0,next:0,timer:null,bpm:60,run:0,kind:'scale'}
 /* ---------- mão esquerda: mobilidade e trocas mais fáceis ---------- */
-const MAO={id:'aranha',hand:'L'};
+const MAO={id:'aranha',hand:'L',rest:false};
 const MAO_EX=[
  {id:'aranha',name:'Aranha (cromático)',why:'Cada dedo aprende a cair na própria casa sem olhar. É a base da agilidade da mão esquerda.',how:'Casas 1 a 4, um dedo por casa (1-2-3-4), corda por corda, da 6ª à 1ª e de volta. Dedos curvados e perto das cordas: o que sobe pouco desce rápido.',f0:1,f1:4,fg:f=>f,seq:()=>{const o=[];for(let si=0;si<6;si++)for(let f=1;f<=4;f++)o.push({si,f,fg:f});return o;}},
  {id:'indep',name:'Independência: 1-3-2-4',why:'Separa os dedos que gostam de andar juntos (2 e 3, 3 e 4). Numa troca de acorde, cada dedo vai para um lugar diferente ao mesmo tempo.',how:'Na mesma corda, dedos na ordem 1, 3, 2, 4 (casas 1, 3, 2, 4), corda por corda. Limpeza primeiro, velocidade depois.',f0:1,f1:4,fg:f=>f,seq:()=>{const o=[];for(let si=0;si<6;si++)[1,3,2,4].forEach(f=>o.push({si,f,fg:f}));return o;}},
@@ -1951,7 +1970,7 @@ function mdView(){
   return h;
 }
 function maoView(){
-  const hands='<div class="chips" style="margin-bottom:12px"><button class="chip" data-act="mao-hand" data-v="L" aria-pressed="'+(MAO.hand!=='R')+'">Mão esquerda</button><button class="chip" data-act="mao-hand" data-v="R" aria-pressed="'+(MAO.hand==='R')+'">Mão direita</button></div>';
+  const hands='<div class="chips" style="margin-bottom:12px"><button class="chip" data-act="mao-hand" data-v="L" aria-pressed="'+(MAO.hand!=='R')+'">Mão esquerda</button><button class="chip" data-act="mao-hand" data-v="R" aria-pressed="'+(MAO.hand==='R')+'">Mão direita</button></div><div class="between" style="margin:0 0 12px"><span class="muted small">Toca 10 s, descansa 10 s <small>(a pausa curta consolida o gesto: Bönstrup e colegas, 2019)</small></span><button class="chip" data-act="mao-rest" aria-pressed="'+!!MAO.rest+'">'+(MAO.rest?'Ligado':'Desligado')+'</button></div>';
   if(MAO.hand==='R')return hands+mdView();
   const ex=MAO_EX.find(x=>x.id===MAO.id)||MAO_EX[0],on=SG.on&&SG.kind==='mao';
   let h=hands+'<div class="chips" style="margin-bottom:14px">'+MAO_EX.map(x=>'<button class="chip" data-act="mao-pick" data-v="'+x.id+'" aria-pressed="'+(x.id===ex.id)+'">'+esc(x.name.split(':')[0].split(' (')[0])+'</button>').join('')+'</div>';
@@ -1966,7 +1985,7 @@ function maoView(){
 };
 function sgStart(seq,kind){
   const ac=audio();if(!ac)return;if(M.on)mStop();grStop(true);if(TM.timer)tmStop();
-  SG.kind=kind||'scale';SG.seq=seq.concat(seq.slice(1,-1).reverse());SG.on=true;SG.i=0;SG.run++;SG.next=ac.currentTime+.15;SG.timer=setInterval(sgSched,25);render();awakeSync();
+  SG.kind=kind||'scale';SG.seq=seq.concat(seq.slice(1,-1).reverse());SG.on=true;SG.i=0;SG.run++;SG.next=ac.currentTime+.15;SG.t0=SG.next;SG.timer=setInterval(sgSched,25);render();awakeSync();
 }
 // Aquecimento cromático: um dedo por casa, casas 1 a 4, da 6ª à 1ª corda e de volta, no mesmo motor da escala guiada.
 function warmSeq(){const out=[];for(let si=0;si<6;si++)for(let f=1;f<=4;f++)out.push({si,f,midi:OPEN[si]+f,pt:NPT[(OPEN[si]+f)%12],deg:''});return out;}
@@ -1983,9 +2002,9 @@ function warmSVG(){return fretGridSVG(1,4,f=>f,'Aquecimento: dedos 1, 2, 3 e 4 n
 function sgStop(quiet){if(!SG.on)return;SG.on=false;clearInterval(SG.timer);if(AC)dampAll(AC.currentTime+.05);if(!quiet)render();awakeSync();}
 function sgSched(){
   if(!SG.on||!AC)return;
-  while(SG.next<AC.currentTime+.12){const k=SG.i%SG.seq.length,nt=SG.seq[k],t=SG.next,run=SG.run;
-    tick(t,k===0?1:0,.25);pluckAt(nt.midi,t,.5,nt.si);
-    setTimeout(()=>{if(!SG.on||SG.run!==run)return;document.querySelectorAll('.sfb circle.on').forEach(e=>e.classList.remove('on'));const e=$('#sn-'+nt.si+'-'+nt.f);if(e)e.classList.add('on');const s=$('#sg-status');if(s)s.textContent=nt.pt+(nt.deg?' (grau '+nt.deg+')':'')+': '+(6-nt.si)+'ª corda, '+(nt.f?'casa '+nt.f:'solta')+(nt.deg?'':', dedo '+(nt.fg||nt.f))+(k<SG.seq.length/2?'. Subindo.':'. Descendo.');},Math.max(0,(t-AC.currentTime)*1000));
+  while(SG.next<AC.currentTime+.12){const k=SG.i%SG.seq.length,nt=SG.seq[k],t=SG.next,run=SG.run,rest=MAO.rest&&SG.kind==='mao'&&((t-SG.t0)%20)>=10; /* descanso curto: 10 s tocando, 10 s parado */
+    if(!rest){tick(t,k===0?1:0,.25);pluckAt(nt.midi,t,.5,nt.si);}
+    setTimeout(()=>{if(!SG.on||SG.run!==run)return;document.querySelectorAll('.sfb circle.on').forEach(e=>e.classList.remove('on'));if(rest){const s=$('#sg-status');if(s)s.textContent='Descanse: '+Math.ceil(20-((t-SG.t0)%20))+' s. A pausa também ensina.';return;}const e=$('#sn-'+nt.si+'-'+nt.f);if(e)e.classList.add('on');const s=$('#sg-status');if(s)s.textContent=nt.pt+(nt.deg?' (grau '+nt.deg+')':'')+': '+(6-nt.si)+'ª corda, '+(nt.f?'casa '+nt.f:'solta')+(nt.deg?'':', dedo '+(nt.fg||nt.f))+(k<SG.seq.length/2?'. Subindo.':'. Descendo.');},Math.max(0,(t-AC.currentTime)*1000));
     SG.next+=60/SG.bpm;SG.i++;}
 }
 /* ---------- campo harmônico: os sete acordes de um tom, com grau e função ---------- */
@@ -2444,7 +2463,7 @@ V.hoje=function(){
     h+='<section class="panel"><div class="between"><h3>Sua semana passada</h3><button class="link" style="padding:0;min-height:0" data-act="week-seen">Fechar</button></div><p class="sub">'+a.min+' min em '+a.days+(a.days===1?' dia':' dias')+(b.min?' ('+(a.min>=b.min?'+':'')+(a.min-b.min)+' min em relação à anterior)':'')+'. '+(a.days>=5?'Ritmo ótimo: cinco dias ou mais.':a.days>=3?'Bom ritmo. Tente cinco dias esta semana.':'Semana curta. Dez minutos por dia já mantêm a sequência.')+(S.wgoal?' Meta da semana: '+a.days+' de '+S.wgoal+' dias'+(a.days>=S.wgoal?', batida.':'.'):'')+'</p></section>';}
   h+='</div><div class="hmain">'; // coluna principal: o treino do dia
   const quick=S.quick===k;
-  h+='<section class="panel"><div class="between"><h2>Treino de '+(quick?5:S.goal)+' minutos</h2><span class="muted small">'+d.min+' min hoje</span></div><p class="sub small">Nível '+S.level+', '+esc(L.name)+(quick?'. Versão curta de hoje':'')+'</p>'+(all?'':quick?'<button class="link" style="padding:4px 0;min-height:0" data-act="quick-off">Voltar ao treino de '+S.goal+' min</button>':'<button class="link" style="padding:4px 0;min-height:0" data-act="quick">Dia corrido? Só 5 minutos hoje</button>')+'<ol class="blocks" style="margin-top:10px">';
+  h+='<section class="panel"><div class="between"><h2>Treino de '+(quick?5:S.goal)+' minutos</h2><span class="muted small">'+d.min+' min hoje</span></div><p class="sub small">Nível '+S.level+', '+esc(L.name)+(quick?'. Versão curta de hoje':'')+'</p>'+(all?'':quick?'<button class="link" style="padding:4px 0;min-height:0" data-act="quick-off">Voltar ao treino de '+S.goal+' min</button>':'<button class="link" style="padding:4px 0;min-height:0" data-act="quick">Dia corrido? Só 5 minutos hoje</button>')+(quick||all?'':'<div class="acts" style="margin-top:8px"><span class="muted small">Ordem</span><button class="chip" data-act="interleave" data-v="off" aria-pressed="'+!interleaveOn()+'">Blocos</button><button class="chip" data-act="interleave" data-v="on" aria-pressed="'+interleaveOn()+'">Intercalada</button></div>'+(interleaveOn()?'<p class="muted small" style="margin-top:6px">Rodadas curtas alternando as habilidades: rende menos na hora e mais na retenção (Shea e Morgan, 1979).</p>':S.level>=3?'':'<p class="muted small" style="margin-top:6px">Nos primeiros níveis, um bloco por habilidade; do nível 3 em diante o app passa a intercalar.</p>'))+'<ol class="blocks" style="margin-top:10px">';
   plan.forEach(b=>{
     const done=!!d.done[b.id],act=B&&B.id===b.id;
     h+='<li class="blk'+(done?' done':'')+(act?' active':'')+'"><div><div class="between"><h3>'+b.title+'</h3><span class="mins">'+(done?'Feito':b.min+' min')+'</span></div><p>'+esc(b.text)+'</p>';
@@ -2454,6 +2473,7 @@ V.hoje=function(){
     if(b.rhythm){const pr=b.prog||LEVELS[S.level-1].prog[0]||[];h+='<div class="extra">'+rhythmHTML(b.rhythm)+(pr.length?'<p class="muted small" style="margin-top:10px">Acordes para tocar esta batida (os mesmos do tocar junto):</p><div class="cmini" style="margin-top:8px">'+pr.map(c=>'<div class="chord"><strong>'+esc(c)+'</strong>'+chordSVG(c)+'</div>').join('')+'</div>':'')+'</div>';}
     else if(b.prog)h+='<div class="extra"><div class="cmini" style="margin-top:4px">'+b.prog.map(c=>'<div class="chord"><strong>'+esc(c)+'</strong>'+chordSVG(c)+'</div>').join('')+'</div></div>';
     if(b.pair)h+='<div class="extra pair">'+b.pair.map(c=>'<div class="chord"><strong>'+esc(c)+'</strong>'+chordSVG(c)+'</div>').join('')+'</div>';
+    if(b.pair&&!done&&!act)h+=mentalPanel(b.pair); /* ensaio mental antes de tocar */
     if(b.song&&b.song.chords)h+='<p class="extra small">Acordes: '+esc(b.song.chords)+'</p>';
     if(b.song&&b.song.cifra)h+='<p class="extra"><button class="link" style="padding:4px 0;min-height:0" data-act="song-open" data-id="'+esc(b.song.id)+'">Abrir a cifra com rolagem</button></p>';
     if(done&&/^(tech|rhy|chg)$/.test(b.id)){const v=(d.fb||{})[b.id]; // "Como foi?": ajusta o treino de amanhã
@@ -2595,6 +2615,7 @@ V.treinar=function(){
       h+='<section class="panel"><h2>Quantas trocas em 1 minuto?</h2><p class="sub">Escolha dois acordes. Toque no desenho para ouvir como cada um soa.</p><div class="row" style="margin:16px 0"><select id="t-a" aria-label="Primeiro acorde">'+opts(T.a)+'</select><span class="muted">e</span><select id="t-b" aria-label="Segundo acorde">'+opts(T.b)+'</select></div><div class="pair">'+[T.a,T.b].map(c=>'<button class="chord play" data-act="chord-play" data-c="'+esc(c)+'" aria-label="Ouvir '+esc(c)+'"><strong>'+esc(c)+'</strong>'+chordSVG(c)+'</button>').join('')+'</div>';
       const tip=anchorTip(T.a,T.b);if(tip)h+='<p class="sub small" style="margin-top:10px"><b>Dedos:</b> '+esc(tip)+'</p>';
       const sugg=pairSuggest();if(sugg.length)h+='<p class="grp">Par sugerido</p><div class="chips">'+sugg.map(p=>'<button class="chip" data-act="t-pair" data-a="'+esc(p[0])+'" data-b="'+esc(p[1])+'" aria-pressed="'+(pairKey(p[0],p[1])===k)+'">'+esc(p[0])+' e '+esc(p[1])+' · '+p[2]+'</button>').join('')+'</div><p class="sub small" style="margin-top:6px">Pares do seu nível ainda não medidos, ou com o menor recorde.</p>';
+      h+=mentalPanel([T.a,T.b]);
       h+='<p class="grp">Como contar</p><div class="chips"><button class="chip" data-act="t-mode" data-v="tap" aria-pressed="'+!mic+'">Tocando na tela</button><button class="chip" data-act="t-mode" data-v="mic" aria-pressed="'+mic+'">Pelo microfone</button></div><p class="sub small" style="margin-top:8px">'+(mic?'O app ouve o violão e conta cada vez que o som muda de um acorde para o outro. Funciona melhor em lugar silencioso, tocando o acorde inteiro. Se ele errar, corrija na hora com os botões −1 e +1.':'Toque no botão grande a cada troca em que o acorde novo soar limpo.')+'</p>';
       h+='<p class="sub small" style="margin:12px 0 16px">'+(best?'Seu recorde neste par: '+best+' trocas.':'Você ainda não mediu este par.')+'</p><button class="btn block" data-act="t-start"'+(T.a===T.b?' disabled':'')+'>Começar contagem</button><p class="muted small" style="margin-top:12px">Para treinar a troca sem saber o próximo acorde: <button class="link" style="padding:0;min-height:0" data-act="gr-rand">Trocas surpresa no Tocar junto</button>, acordes sorteados a cada volta.</p></section>';
       const ks=Object.keys(S.changes).filter(x=>S.changes[x].length);
@@ -2622,7 +2643,7 @@ V.treinar=function(){
     h+='<div class="progrow" id="gr-prog">'+progRowHTML(BAT.prog)+'</div>'; // nome e desenho: o acorde da vez fica marcado enquanto toca
     h+='<div class="bpmrow"><button data-act="gr-bpm" data-d="-4" aria-label="Mais devagar">−</button><div style="text-align:center"><span class="num" id="gr-bpm">'+BAT.bpm+'</span> <span class="muted small">BPM</span></div><button data-act="gr-bpm" data-d="4" aria-label="Mais rápido">+</button></div>';
     h+='<p class="sub small" id="gr-status" style="margin:14px 0 10px;min-height:1.4em" aria-live="polite">'+(on?'Contagem':'Começa com um compasso de contagem. Um acorde por compasso.')+'</p><button class="btn block" data-act="gr-toggle">'+(on?'Parar':'Ouvir e tocar junto')+'</button></section>';
-    h+='<section class="panel"><h3>Acordes do exemplo</h3><div class="chips" style="margin-top:10px">'+PROGS.map((p,i)=>'<button class="chip" data-act="gr-prog" data-i="'+i+'" aria-pressed="'+(!BAT.rand&&p.join()===BAT.prog.join())+'">'+p.join(' ')+'</button>').join('')+'<button class="chip" data-act="gr-prog" data-i="-1" aria-pressed="'+!!BAT.rand+'">Surpresa</button>'+(BAT.rand||PROGS.some(p=>p.join()===BAT.prog.join())?'':'<span class="chip on">Escolhida: '+esc(BAT.prog.join(' '))+'</span>')+'</div>'+(BAT.rand?'<p class="muted small" style="margin-top:8px">Surpresa: acordes sorteados entre os do seu nível e das suas músicas, trocados a cada volta. O próximo é anunciado no último compasso, para treinar a troca sem decorar a sequência.</p>':'')+'<div class="between" style="margin-top:16px"><span>Clique do metrônomo junto</span><button class="chip" data-act="gr-click" aria-pressed="'+BAT.click+'">'+(BAT.click?'Ligado':'Desligado')+'</button></div><p class="muted small" style="margin-top:12px">Quer escolher os acordes? Monte um treino seu em <button class="link" style="padding:0;min-height:0" data-act="nav" data-v="meu">Meu treino</button>.</p><p class="muted small" style="margin-top:8px">Violão do app: '+esc(guitar().name)+'. <button class="link" style="padding:0;min-height:0" data-act="open-perfil">Trocar o timbre</button></p></section>';
+    h+='<section class="panel"><h3>Acordes do exemplo</h3><div class="chips" style="margin-top:10px">'+PROGS.map((p,i)=>'<button class="chip" data-act="gr-prog" data-i="'+i+'" aria-pressed="'+(!BAT.rand&&p.join()===BAT.prog.join())+'">'+p.join(' ')+'</button>').join('')+'<button class="chip" data-act="gr-prog" data-i="-1" aria-pressed="'+!!BAT.rand+'">Surpresa</button>'+(BAT.rand||PROGS.some(p=>p.join()===BAT.prog.join())?'':'<span class="chip on">Escolhida: '+esc(BAT.prog.join(' '))+'</span>')+'</div>'+(BAT.rand?'<p class="muted small" style="margin-top:8px">Surpresa: acordes sorteados entre os do seu nível e das suas músicas, trocados a cada volta. O próximo é anunciado no último compasso, para treinar a troca sem decorar a sequência.</p>':'')+'<div class="between" style="margin-top:16px"><span>Clique do metrônomo junto</span><button class="chip" data-act="gr-click" aria-pressed="'+BAT.click+'">'+(BAT.click?'Ligado':'Desligado')+'</button></div><div class="between" style="margin-top:12px"><span>Andamento variável</span><button class="chip" data-act="gr-vary" aria-pressed="'+!!BAT.vary+'">'+(BAT.vary?'Ligado':'Desligado')+'</button></div><p class="muted small" style="margin-top:6px">'+(BAT.vary?'Cada volta sorteia um andamento até 10% acima ou abaixo do escolhido. Variar as condições transfere melhor para músicas novas (Schmidt, 1975).':'Ligado, cada volta sorteia um andamento até 10% acima ou abaixo: treino mais variado, que transfere melhor para as músicas.')+'</p><p class="muted small" style="margin-top:12px">Quer escolher os acordes? Monte um treino seu em <button class="link" style="padding:0;min-height:0" data-act="nav" data-v="meu">Meu treino</button>.</p><p class="muted small" style="margin-top:8px">Violão do app: '+esc(guitar().name)+'. <button class="link" style="padding:0;min-height:0" data-act="open-perfil">Trocar o timbre</button></p></section>';
     h+=myPatPanel();
   }else if(sub.treinar==='mao'){h+=blockBar()+maoView();
   }else if(sub.treinar==='tempo'){h+=blockBar();
@@ -2784,7 +2805,7 @@ V.evolucao=function(){
     if(S.songs.length){const st={aprendendo:0,devagar:0,dominada:0};S.songs.forEach(s=>{st[s.status]=(st[s.status]||0)+1;});const dom=S.songs.filter(s=>s.status==='dominada').map(s=>s.title),top=S.songs.filter(s=>s.plays).sort((a,b)=>b.plays-a.plays)[0];
       h+='<section class="panel" data-act="go-musicas" role="button" tabindex="0" style="cursor:pointer"><div class="between"><h2>Repertório</h2><span class="muted small">Músicas ›</span></div><div style="margin-top:6px"><div class="kv"><span>Aprendendo</span><b>'+st.aprendendo+'</b></div><div class="kv"><span>Toco devagar</span><b>'+st.devagar+'</b></div><div class="kv"><span>Dominadas</span><b>'+st.dominada+'</b></div>'+(top?'<div class="kv"><span>Mais tocada junto</span><b>'+esc(top.title)+' <small class="muted">('+top.plays+'×)</small></b></div>':'')+'</div>'+(dom.length?'<p class="muted small" style="margin-top:8px">Dominadas: '+esc(dom.join(', '))+'.</p>':'')+'</section>';}
     {const cat={warm:0,tech:0,rhy:0,chg:0,rep:0,livre:0},lbl={warm:'Aquecimento',tech:'Técnica',rhy:'Ritmo',chg:'Trocas de acorde',rep:'Repertório',livre:'Prática livre e outros'};
-      Object.keys(S.days).forEach(k=>{const d=S.days[k];let sum=0;Object.keys(d.done||{}).forEach(id=>{const c=typeof d.done[id]==='number'?d.done[id]:0;if(cat[id]!=null)cat[id]+=c;sum+=c;});cat.livre+=Math.max(0,(d.min||0)-sum);});
+      Object.keys(S.days).forEach(k=>{const d=S.days[k];let sum=0;Object.keys(d.done||{}).forEach(id=>{const c=typeof d.done[id]==='number'?d.done[id]:0;const bid=id.split('.')[0];if(cat[bid]!=null)cat[bid]+=c;sum+=c;});cat.livre+=Math.max(0,(d.min||0)-sum);});
       const tot=Object.values(cat).reduce((a,b)=>a+b,0),mx=Math.max(1,...Object.values(cat));
       if(tot>0)h+='<section class="panel"><h2>Onde vai o tempo</h2><p class="sub small">Minutos por tipo de bloco, desde o começo.</p><div style="margin-top:6px">'+Object.keys(cat).filter(k=>cat[k]>0).sort((a,b)=>cat[b]-cat[a]).map(k=>'<div class="kv" style="display:block"><div class="between"><span>'+lbl[k]+'</span><b>'+cat[k]+' min <small class="muted">('+Math.round(100*cat[k]/tot)+'%)</small></b></div><i class="tbar" style="width:'+Math.round(100*cat[k]/mx)+'%"></i></div>').join('')+'</div></section>';
       {const a=monthStats(0),b=monthStats(1);if(a.min||b.min)h+='<section class="panel"><div class="between"><h2>Este mês</h2><span class="muted small">'+esc(a.name)+'</span></div><div class="kv"><span>Minutos</span><b>'+a.min+(b.min?' <small class="muted">('+esc(b.name)+': '+b.min+')</small>':'')+'</b></div><div class="kv"><span>Dias praticados</span><b>'+a.days+' de '+new Date().getDate()+(b.days?' <small class="muted">('+esc(b.name)+': '+b.days+' de '+b.total+')</small>':'')+'</b></div><div class="kv"><span>Maior sequência</span><b>'+a.best+(b.best?' <small class="muted">('+esc(b.name)+': '+b.best+')</small>':'')+'</b></div>'+(a.badges.length?'<div class="kv"><span>Conquistas</span><b>'+esc(a.badges.join(', '))+'</b></div>':'')+'<div class="acts" style="margin-top:8px"><button class="btn sm quiet" data-act="month-share" data-back="0">Compartilhar o mês</button></div></section>';} /* este mês contra o anterior */
@@ -2870,6 +2891,7 @@ if(PWA.host){
 const TABS=[['hoje','Hoje','<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.8 2.8L16 9.5"/>'],['meu','Meu treino','<path d="M4 6h8M16 6h4M4 12h2M10 12h10M4 18h10M18 18h2"/><circle cx="14" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="18" r="2"/>'],['treinar','Treinar','<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/>'],['ferramentas','Ferramentas','<path d="M9 3h6l4 18H5L9 3zM12 17l4-11M7.2 13h9.6"/>'],['acordes','Acordes','<path d="M5 4v16M12 4v16M19 4v16M5 4h14M5 10h14M5 16h14"/><circle cx="12" cy="7" r="1.7" fill="currentColor"/>'],['evolucao','Evolução','<path d="M5 20V11M12 20V4M19 20v-6M2 20h20"/>'],['perfil','Perfil','<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>']];
 /* ---------- novidades de cada versão, mostradas uma vez ---------- */
 const NEWS=[
+ ['1.54.0',['Treino intercalado: do nível 3 em diante, o dia vira rodadas curtas alternando as habilidades (rende menos na hora e mais na retenção). Dá para escolher “Blocos” ou “Intercalada” em Hoje.','Mãos: “Toca 10 s, descansa 10 s”, o exemplo silencia nas pausas, que também consolidam o gesto.','Tocar junto: “Andamento variável”, cada volta sorteia um BPM até 10% acima ou abaixo.','Trocas: “Ensaiar de cabeça (30 s)”, as duas formas aparecem, somem e você imagina a troca antes de tocar.']],
  ['1.53.0',['No cadastro, “Importar um progresso exportado” pula as perguntas: para quem trocou de celular ou de navegador.','Nos primeiros dias do mês, Hoje mostra o mês passado em números (minutos, dias, maior sequência, conquistas), para compartilhar.','Evolução, Números: “Este mês” comparado com o mês anterior.']],
  ['1.52.0',['Ao colar uma cifra de site com “Tom: A” e “Capotraste na 2ª casa”, o app já marca o capotraste e mantém os acordes como escritos; a linha do tom mostra o que veio na cifra.','Adicionar uma música com o mesmo nome de outra pede confirmação, com atalho para abrir a que já existe.','O que você digita em “Adicionar música” fica guardado como rascunho até adicionar ou descartar, mesmo trocando de tela.','O cartão do acorde na cifra mostra a situação, em quantas músicas suas ele aparece e o recorde de trocas, com “Músicas com este acorde”; na busca, o nome de um acorde encontra só o acorde exato.']],
  ['1.51.0',['Treinar, Mãos: além da mão esquerda, oito exercícios para a mão direita (polegar, baixo alternado, i e m, arpejos P-I-M-A e P-A-M-I, valsa, pinça e base de bossa), com o tocar junto acendendo a célula da vez, o acorde à escolha e o BPM.']],
@@ -2944,7 +2966,7 @@ function goBack(){ // botão Voltar do Android e tecla Esc: fecha o que estiver 
   if(view!=='hoje'){go('hoje');return true;}
   return false;
 }
-function go(v){grStop(true);if(SG.on)sgStop(true);if(TM.timer)tmStop();if(!(v==='ferramentas'&&sub.ferramentas==='afinador')||(MIC&&MIC.mode==='count'))micStop();if(T.phase==='count'||T.phase==='run')T.phase='idle';resetArmed=false;ceDelArmed=false;STO.armed=false;SV.delArmed=null;SV.undo=null;view=v;render();window.scrollTo(0,0);focusView();}
+function go(v){grStop(true);if(SG.on)sgStop(true);if(TM.timer)tmStop();if(!(v==='ferramentas'&&sub.ferramentas==='afinador')||(MIC&&MIC.mode==='count'))micStop();if(T.phase==='count'||T.phase==='run')T.phase='idle';if(MI.on)miStop(true);resetArmed=false;ceDelArmed=false;STO.armed=false;SV.delArmed=null;SV.undo=null;view=v;render();window.scrollTo(0,0);focusView();}
 function focusView(){const h=$('#view h1')||$('#view h2');if(!h)return;if(!h.hasAttribute('tabindex'))h.setAttribute('tabindex','-1');try{h.focus({preventScroll:true});}catch(e){}} // ao trocar de aba, o leitor de tela começa pelo título da tela nova
 
 const ACT={
@@ -3009,7 +3031,8 @@ const ACT={
   'gr-prog':el=>{grStop(true);const i=+el.dataset.i;if(i<0){BAT.prog=randProg();BAT.rand=true;}else{BAT.prog=PROGS[i];BAT.rand=false;}BAT.nextProg=null;render();},
 'gr-rand':()=>{grStop(true);BAT.prog=randProg();BAT.rand=true;BAT.nextProg=null;sub.treinar='batidas';go('treinar');toast('Trocas surpresa: os acordes mudam a cada volta.');}, /* atalho de Trocas */
 't-pair':el=>{T.a=el.dataset.a;T.b=el.dataset.b;render();},
-  'gr-bpm':el=>{BAT.bpm=Math.max(40,Math.min(160,BAT.bpm+(+el.dataset.d)));const n=$('#gr-bpm');if(n)n.textContent=BAT.bpm;},
+  'gr-bpm':el=>{const base=BAT.base!=null?BAT.base:BAT.bpm;BAT.bpm=Math.max(40,Math.min(160,base+(+el.dataset.d)));if(BAT.base!=null)BAT.base=BAT.bpm;const n=$('#gr-bpm');if(n)n.textContent=BAT.bpm;},
+'gr-vary':()=>{BAT.vary=!BAT.vary;if(!BAT.vary&&BAT.base!=null){BAT.bpm=BAT.base;BAT.base=null;}render();},
   'gr-click':()=>{BAT.click=!BAT.click;if(GR.on){const b=document.querySelector('[data-act="gr-click"]');if(b){b.setAttribute('aria-pressed',BAT.click);b.textContent=BAT.click?'Ligado':'Desligado';}}else render();},
   'open-meu':()=>{go('meu');},
   'ce-new':()=>{ceNew();render();window.scrollTo(0,0);},
@@ -3086,8 +3109,12 @@ const ACT={
 'md-pick':el=>{if(GR.on&&MD.cfg&&GR.cfg===MD.cfg)grStop(true);MD.id=el.dataset.v;MD.cfg=null;MD.bpm=null;render();},
 'md-chord':el=>{if(GR.on&&MD.cfg&&GR.cfg===MD.cfg)grStop(true);MD.chord=el.dataset.v;MD.cfg=null;render();},
 'md-bpm':el=>{const ex=MD_EX.find(x=>x.id===MD.id)||MD_EX[0];MD.bpm=Math.max(40,Math.min(160,(MD.cfg&&MD.cfg.pid==='md-'+ex.id?MD.cfg.bpm:(MD.bpm||ex.bpm))+(+el.dataset.d)));if(MD.cfg)MD.cfg.bpm=MD.bpm;const n=$('#gr-bpm');if(n)n.textContent=MD.bpm;},
-'md-toggle':()=>{if(GR.on&&MD.cfg&&GR.cfg===MD.cfg){grStop();return;}const ex=MD_EX.find(x=>x.id===MD.id)||MD_EX[0],chord=MD.chord&&CH[MD.chord]?MD.chord:ex.chord;MD.cfg={pid:'md-'+ex.id,bpm:MD.bpm||ex.bpm,prog:[chord],click:true,noRec:true};grStart(MD.cfg);},
+'md-toggle':()=>{if(GR.on&&MD.cfg&&GR.cfg===MD.cfg){grStop();return;}const ex=MD_EX.find(x=>x.id===MD.id)||MD_EX[0],chord=MD.chord&&CH[MD.chord]?MD.chord:ex.chord;MD.cfg={pid:'md-'+ex.id,bpm:MD.bpm||ex.bpm,prog:[chord],click:true,noRec:true,rest:!!MAO.rest};grStart(MD.cfg);},
 'open-md':()=>{MAO.hand='R';sub.treinar='mao';go('treinar');},
+'mao-rest':()=>{MAO.rest=!MAO.rest;if(MD.cfg)MD.cfg.rest=MAO.rest;render();},
+'interleave':el=>{S.interleave=el.dataset.v==='on'?'on':'off';save();render();toast(S.interleave==='on'?'Treino intercalado: rodadas curtas alternando as habilidades.':'Treino em blocos: uma habilidade de cada vez.');},
+'mi-start':el=>{miStart([el.dataset.a,el.dataset.b]);},
+'mi-stop':()=>miStop(),
 'mao-pick':el=>{if(SG.on&&SG.kind==='mao')sgStop(true);MAO.id=el.dataset.v;render();},
   'mao-toggle':()=>{if(SG.on&&SG.kind==='mao'){sgStop();return;}const ex=MAO_EX.find(x=>x.id===MAO.id);if(!ex||!ex.seq)return;sgStart(ex.seq().map(n=>Object.assign(n,{midi:OPEN[n.si]+n.f,pt:NPT[(OPEN[n.si]+n.f)%12],deg:''})),'mao');},
   'open-mao':()=>{sub.treinar='mao';go('treinar');},
