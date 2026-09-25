@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Violão Diário</title>
-<meta name="app-version" content="1.56.0">
+<meta name="app-version" content="1.57.0">
 <meta name="description" content="Treino diário de violão: plano por nível, metrônomo, afinador, batidas para tocar junto, acordes e notas.">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#F2EEF0" media="(prefers-color-scheme: light)">
@@ -532,7 +532,7 @@ const GUITARS={
   aco:{name:'Aço (folk)',desc:'Cordas de aço, mais brilho e sustentação: o violão folk.',exc:.35,pick:.13,w:.5,dark:0,decay:.9982,body:[['peaking',100,4,4],['peaking',235,5,3],['highshelf',3500,0,2]],gain:.7,detune:.0018,room:.12,sgain:.9},
   eletrico:{name:'Elétrico limpo',desc:'Guitarra com som limpo: palheta perto do cavalete e sustentação longa.',exc:.2,pick:.08,w:.7,dark:0,decay:.9992,body:[['lowpass',4200,.7,0],['peaking',2400,1.2,2]],gain:.85,detune:0,room:.1,sgain:.9}
 }; // room: quanto de sala (reverberação curta) nas vozes de violão; sgain: volume das amostras gravadas
-const DEF={v:1,onboarded:false,name:'',level:1,levelSince:'',goal:15,cntMode:'tap',skills:{},days:{},changes:{},chords:{},songs:[],custom:[],ctLog:{},stats:{tuned:0,play:{},prog4:false},proven:{},badges:{},rest:0,startLevel:0,lastWeekSeen:'',lastMonthSeen:'',interleave:'',pre:{},intent:{after:'',place:''},split:false,remind2:'',rev:{},adj:null,quick:'',remind:'',bpmLog:{},font:0,theme:'',seenVer:'',msub:1,macc:'first',mgap:0,mvib:false,tuning:'padrao',tuneMode:'cordas',lastExport:'',backupAsk:'',recs:[],hojeMore:false,guitar:'nylon',welcomed:false,wgoal:0,mclick:'beep',mflash:false,updSeen:'',lefty:false,easyOn:{},ear:{ok:0,total:0},maxBpm:0,bpm:70,beats:4,altOut:false,installDismissed:false,a4:440,mypats:[],earLog:{},freeStart:0,volGuitar:100,volClick:100,mychords:[],remindLate:false,earLvl:{ivl:1,qual:1},earRun:{},recSecs:30,chal:null,chalLog:{},grVib:false};
+const DEF={v:1,onboarded:false,name:'',level:1,levelSince:'',goal:15,cntMode:'tap',skills:{},days:{},changes:{},chords:{},songs:[],custom:[],ctLog:{},stats:{tuned:0,play:{},prog4:false},proven:{},badges:{},rest:0,startLevel:0,lastWeekSeen:'',lastMonthSeen:'',interleave:'',pre:{},intent:{after:'',place:''},split:false,remind2:'',chkLog:{},chkEst:true,rev:{},adj:null,quick:'',remind:'',bpmLog:{},font:0,theme:'',seenVer:'',msub:1,macc:'first',mgap:0,mvib:false,tuning:'padrao',tuneMode:'cordas',lastExport:'',backupAsk:'',recs:[],hojeMore:false,guitar:'nylon',welcomed:false,wgoal:0,mclick:'beep',mflash:false,updSeen:'',lefty:false,easyOn:{},ear:{ok:0,total:0},maxBpm:0,bpm:70,beats:4,altOut:false,installDismissed:false,a4:440,mypats:[],earLog:{},freeStart:0,volGuitar:100,volClick:100,mychords:[],remindLate:false,earLvl:{ivl:1,qual:1},earRun:{},recSecs:30,chal:null,chalLog:{},grVib:false};
 let S,hadLocal=false;
 const MP_CELLS=['','↓','↑','x','B']; // casas possíveis numa batida da pessoa (Treinar, Batidas, "Sua batida")
 function adopt(o){
@@ -544,7 +544,7 @@ function adopt(o){
   S.name=typeof S.name==='string'?S.name.slice(0,30):'';S.levelSince=typeof S.levelSince==='string'?S.levelSince:'';S.cntMode=S.cntMode==='mic'?'mic':'tap';
   if(!S.stats||typeof S.stats!=='object')S.stats={};S.stats.tuned=+S.stats.tuned||0;if(!S.stats.play||typeof S.stats.play!=='object')S.stats.play={};S.stats.prog4=!!S.stats.prog4;
   ['proven','badges'].forEach(k=>{if(!S[k]||typeof S[k]!=='object'||Array.isArray(S[k]))S[k]={};});
-  S.rest=S.rest?1:0;S.startLevel=Math.round(+S.startLevel)||0;S.lastWeekSeen=typeof S.lastWeekSeen==='string'?S.lastWeekSeen:'';S.lastMonthSeen=typeof S.lastMonthSeen==='string'?S.lastMonthSeen:'';S.interleave=['on','off'].includes(S.interleave)?S.interleave:'';if(!S.intent||typeof S.intent!=='object')S.intent={after:'',place:''};S.intent.after=String(S.intent.after||'').slice(0,40);S.intent.place=String(S.intent.place||'').slice(0,40);S.split=!!S.split;S.remind2=/^dd:dd$/.test(String(S.remind2||''))?S.remind2:'';
+  S.rest=S.rest?1:0;S.startLevel=Math.round(+S.startLevel)||0;S.lastWeekSeen=typeof S.lastWeekSeen==='string'?S.lastWeekSeen:'';S.lastMonthSeen=typeof S.lastMonthSeen==='string'?S.lastMonthSeen:'';S.interleave=['on','off'].includes(S.interleave)?S.interleave:'';if(!S.intent||typeof S.intent!=='object')S.intent={after:'',place:''};S.intent.after=String(S.intent.after||'').slice(0,40);S.intent.place=String(S.intent.place||'').slice(0,40);S.split=!!S.split;S.remind2=/^\d\d:\d\d$/.test(String(S.remind2||''))?S.remind2:'';if(!S.chkLog||typeof S.chkLog!=='object'||Array.isArray(S.chkLog))S.chkLog={};S.chkEst=S.chkEst!==false;
   if(!S.rev||typeof S.rev!=='object'||Array.isArray(S.rev))S.rev={};if(!S.pre||typeof S.pre!=='object'||Array.isArray(S.pre))S.pre={};if(!S.adj||typeof S.adj!=='object')S.adj=null;S.quick=typeof S.quick==='string'?S.quick:'';
   S.remind=typeof S.remind==='string'?S.remind:'';S.remindLate=!!S.remindLate;
   {const lv=x=>[1,2,3].includes(+x)?+x:1;S.earLvl={ivl:lv(S.earLvl&&S.earLvl.ivl),qual:lv(S.earLvl&&S.earLvl.qual)};if(!S.earRun||typeof S.earRun!=='object'||Array.isArray(S.earRun))S.earRun={};} /* ouvido em níveis: intervalos e acordes */
@@ -935,7 +935,7 @@ function maintPlan(k){ // depois do último nível do roteiro: manutenção, um 
   const out=[{id:'warm',title:'Aquecimento',text:pick(WARM)}];
   if(five)out.push(tech,rhy);else out.push(seed%2?rhy:tech);
   const tip=anchorTip(pair[0],pair[1]);
-  out.push({id:'chg',title:'Trocas de acorde',text:'Troque entre '+pair[0]+' e '+pair[1]+'. '+(slow.length?'É um dos seus pares mais lentos: 1 minuto contando as trocas, tentando passar a sua marca.':'Devagar primeiro; depois 1 minuto contando as trocas.')+(tip?' '+tip:''),pair,why:'Manutenção: o par que você troca mais devagar é o que mais rende treinar.'});
+  out.push({id:'chg',title:'Trocas de acorde',text:'Troque entre '+pair[0]+' e '+pair[1]+'. '+(slow.length?'É um dos seus pares mais lentos: 1 minuto contando as trocas, tentando passar a sua marca.':'Devagar primeiro; depois 1 minuto contando as trocas.')+(tip?' '+tip:'')+' Meta de hoje: '+tGoal(pairKey(pair[0],pair[1]))+' trocas.',pair,why:'Manutenção: o par que você troca mais devagar é o que mais rende treinar.'});
   if(quick){out.forEach((b,i)=>b.min=mins[i]);return out;}
   const open=S.songs.filter(s=>s.status!=='dominada'),dom=S.songs.filter(s=>s.status==='dominada'),due=songDue(k);
   if(due.length){const s=pick(due,1);out.push({id:'rep',title:'Repertório: revisão',text:'Toque “'+s.title+'” inteira, de cabeça (com os acordes escondidos, se tiver cifra). Depois diga se lembrou: o próximo retorno depende disso.',song:s,recall:true,why:'Revisão espaçada: uma música dominada volta em intervalos crescentes (3, 7, 14 e 30 dias). Lembrar de novo, quando já estava quase esquecendo, é o que fixa (Cepeda e colegas, 2006).'});}
@@ -977,7 +977,7 @@ function planFor(k){
   if(five){out.push(tech,rhy);}else{out.push(seed%2?rhy:tech);}
   if(quick){const tip=anchorTip(pair[0],pair[1]);out.push({id:'chg',title:'Trocas de acorde',text:'Troque entre '+pair[0]+' e '+pair[1]+', devagar, até o acorde novo soar limpo.'+(tip?' '+tip:''),pair});out.forEach((b,i)=>b.min=mins[i]);return out;}
   const tip=anchorTip(pair[0],pair[1]);
-  out.push({id:'chg',title:'Trocas de acorde',text:'Troque entre '+pair[0]+' e '+pair[1]+'. Devagar primeiro: o que conta é o acorde novo soar limpo.'+(tip?' '+tip:'')+' Depois faça 1 minuto contando as trocas.',pair});
+  out.push({id:'chg',title:'Trocas de acorde',text:'Troque entre '+pair[0]+' e '+pair[1]+'. Devagar primeiro: o que conta é o acorde novo soar limpo.'+(tip?' '+tip:'')+' Depois faça 1 minuto contando as trocas. Meta de hoje: '+tGoal(pairKey(pair[0],pair[1]))+' trocas.',pair});
   const open=S.songs.filter(s=>s.status!=='dominada'),due=songDue(k);
   if(due.length){const s=pick(due,1);out.push({id:'rep',title:'Repertório: revisão',text:'Toque “'+s.title+'” inteira, de cabeça (com os acordes escondidos, se tiver cifra). Depois diga se lembrou: o próximo retorno depende disso.',song:s,recall:true,why:'Revisão espaçada: uma música dominada volta em intervalos crescentes (3, 7, 14 e 30 dias). Lembrar de novo, quando já estava quase esquecendo, é o que fixa (Cepeda e colegas, 2006).'});}
   else if(open.length){const s=pick(open,1);out.push({id:'rep',title:'Repertório',text:'Toque “'+s.title+'”. Pare nos trechos difíceis e repita só eles, devagar, antes de seguir.',song:s});}
@@ -1431,8 +1431,12 @@ function micChroma(){ // espectro do microfone → energia de cada uma das 12 no
 /* ---------- conferir um acorde pelo som: que corda não soou, que dedo parece fora do lugar ---------- */
 // Nota do acorde fraca no cromagrama = corda que não soou (dedo mal apertado ou abafada por outro dedo).
 // Nota forte fora do acorde = dedo uma casa acima ou abaixo, ou corda que não devia tocar. É uma ajuda, não um juiz.
-const CHK={c:null,n:0,last:'',ok:0};
-function chkReset(){CHK.n=0;CHK.last='';CHK.ok=0;}
+const CHK={c:null,n:0,last:'',ok:0,est:'',pending:null,agree:0,asked:0};
+function chkReset(){CHK.n=0;CHK.last='';CHK.ok=0;CHK.est='';CHK.pending=null;}
+function chkClean(c){ /* três dias diferentes com o acorde limpo no microfone: dominado (critério de domínio: repetir a versão certa várias vezes) */
+  const l=S.chkLog[c]||(S.chkLog[c]=[]);if(l.includes(today()))return;l.push(today());if(l.length>10)l.shift();
+  if(l.length>=3&&S.chords[c]!=='dominado'){S.chords[c]='dominado';toast('Três dias com o '+c+' limpo: marcado como dominado. Em Acordes dá para mudar.');}save();
+}
 function checkRead(ch){
   const ci=chordInfo(CHK.c),v=voicing(ci),rows=v.filter(r=>!r.muted),want=new Set(rows.map(r=>r.midi%12));
   const ref=[...want].reduce((a,p)=>a+ch[p],0)/want.size||1; // a régua é a energia média das notas do acorde, porque uma corda grave soa bem mais forte que uma aguda
@@ -1456,14 +1460,17 @@ function checkTick(){
   const res=checkRead(r.ch),key=res.ok?'ok':res.msg;
   if(key===CHK.last)CHK.n++;else{CHK.last=key;CHK.n=1;}
   if(CHK.n<3)return; // três leituras iguais seguidas (uns 250 ms) antes de falar
+  if(S.chkEst&&!CHK.est&&CHK.n===3){CHK.est='ask';CHK.pending=res;mark([]);m.textContent='Como soou para você? Responda embaixo antes de ver o que o app ouviu.';const box=$('#chk-est');if(box)box.style.display='';return;} /* estimar antes do feedback (Swinnen e colegas, 1990) */
+  if(CHK.est==='ask')return;
   mark(res.bad);m.textContent=res.ok?'Soou como '+CHK.c+'. Limpo!':res.msg;
-  if(res.ok&&CHK.n===3){CHK.ok++;buzz(12);}
+  if(res.ok&&CHK.n===3){CHK.ok++;buzz(12);chkClean(CHK.c);}
 }
 function checkPanel(){
   if(!CHK.c||!CH[CHK.c])return '';const on=!!(MIC&&MIC.mode==='check');
   let h='<section class="panel"><div class="between"><h2>Conferir o '+esc(CHK.c)+' pelo som</h2><button class="link" style="padding:0;min-height:0" data-act="chk-close">Fechar</button></div><p class="sub small">Toque o acorde inteiro, devagar. O app diz que corda não soou ou que dedo parece fora do lugar. É uma ajuda, não um juiz: o seu ouvido decide.</p>';
   h+='<div class="chkrow"><div class="chord"><strong>'+esc(CHK.c)+'</strong>'+chordSVG(CHK.c,null,true)+'</div><div>'+(on?'<div class="lvl" style="margin:6px 0"><i id="chk-lvl"></i></div><p class="small" id="chk-msg" aria-live="polite" style="font-weight:650;min-height:3.6em">Ouvindo. Toque o '+esc(CHK.c)+'.</p>':micErr?'<p class="small" style="color:var(--warn);font-weight:650">'+(NATIVE?'O app está sem acesso ao microfone. Libere o microfone para o Violão Diário nos ajustes do celular.':'O microfone não está disponível aqui. Permita o acesso quando o navegador pedir.')+'</p>':'<p class="small muted">O microfone fica ligado só enquanto este painel está aberto.</p>')+'</div></div>';
   h+='<div class="acts">'+(on?'<button class="btn sm line" data-act="chk-mic">Desligar microfone</button><button class="link" data-act="mic-again" data-mode="check">Religar o microfone</button>':'<button class="btn sm" data-act="chk-mic">Ligar microfone</button>')+'</div>';
+  h+='<div id="chk-est" class="chips" style="margin-top:10px'+(CHK.est==='ask'?'':';display:none')+'"><button class="chip" data-act="chk-est" data-v="limpo">Soou limpo</button><button class="chip" data-act="chk-est" data-v="abafada">Alguma corda abafada</button><button class="chip" data-act="chk-est" data-v="errada">Alguma nota errada</button></div><div class="between" style="margin-top:10px"><span class="muted small">Estimar antes de ver o resultado <small>(julgar o próprio erro antes do feedback fixa mais)</small></span><button class="chip" data-act="chk-est-toggle" aria-pressed="'+!!S.chkEst+'">'+(S.chkEst?'Ligado':'Desligado')+'</button></div>';
   h+='<div class="chips" style="margin-top:12px">'+[...new Set([CHK.c].concat(LEVELS[S.level-1].chords))].map(n=>'<button class="chip" data-act="chk-open" data-c="'+esc(n)+'" aria-pressed="'+(n===CHK.c)+'">'+esc(n)+'</button>').join('')+'</div>';
   return h+'</section>';
 }
@@ -1572,8 +1579,9 @@ function blockDone(id,credit){
   strum(chordMidis('G'));buzz(60);render();
   const nk=$('.neck');if(nk){nk.classList.add('ring');setTimeout(()=>nk.classList.remove('ring'),1300);}
 }
+function tGoal(k){const b=bestOf(k);return b?b+2:10;} /* meta específica e um pouco acima do atual (Locke e Latham, 2002) */
 function changesDone(){
-  const k=pairKey(T.a,T.b);T.prevBest=bestOf(k);(S.changes[k]=S.changes[k]||[]).push({d:today(),n:T.count});
+  const k=pairKey(T.a,T.b);T.prevBest=bestOf(k);T.goal=tGoal(k);T.hit=T.count>=T.goal;(S.changes[k]=S.changes[k]||[]).push({d:today(),n:T.count});
   if(S.changes[k].length>60)S.changes[k].shift();addMinutes(1);T.phase='done';checkProofs();
   T.viaMic=!!(MIC&&MIC.mode==='count');if(T.viaMic)micStop();
   strum(chordMidis('C'));buzz(120);render();
@@ -1637,7 +1645,7 @@ const IVLS=[[2,'Segunda maior'],[3,'Terça menor'],[4,'Terça maior'],[5,'Quarta
 const IVL_LVL=[[12,7,4],[12,7,4,5,3,2],null]; // ouvido em níveis: intervalos de cada nível (o 3º tem todos); acordes: 2, 3 ou 4 opções
 function earLevelUp(ok){ // dez respostas no nível com 80% de acerto sobem intervalos ou acordes ao nível seguinte (até 3)
   const m=sub.ouvido;if(m!=='ivl'&&m!=='qual'&&m!=='bat')return;const r=S.earRun[m]||(S.earRun[m]={ok:0,total:0});r.total++;if(ok)r.ok++;
-  if(r.total>=10){if(r.ok/r.total>=.8&&(S.earLvl[m]||1)<3){S.earLvl[m]=(S.earLvl[m]||1)+1;toast((m==='ivl'?'Intervalos':m==='bat'?'Batidas':'Acordes')+': ouvido no nível '+S.earLvl[m]+' de 3. Mais opções a partir de agora.');}S.earRun[m]={ok:0,total:0};}
+  if(r.total>=10){if(r.ok/r.total>=.8&&(S.earLvl[m]||1)<3){S.earLvl[m]=(S.earLvl[m]||1)+1;toast((m==='ivl'?'Intervalos':m==='bat'?'Batidas':'Acordes')+': ouvido no nível '+S.earLvl[m]+' de 3. Mais opções a partir de agora.');}else if(r.ok/r.total<.5&&(S.earLvl[m]||1)>1){S.earLvl[m]=(S.earLvl[m]||1)-1;toast((m==='ivl'?'Intervalos':m==='bat'?'Batidas':'Acordes')+': de volta ao nível '+S.earLvl[m]+', para o acerto ficar perto de 80%, que é onde mais se aprende.');}S.earRun[m]={ok:0,total:0};} /* ponto de desafio (Guadagnoli e Lee, 2004) */
 }
 function earPool(){const s=new Set();LEVELS.slice(0,S.level).forEach(l=>l.chords.forEach(c=>s.add(c)));return [...s];}
 function earProgs(){const seen=new Set(),out=[];LEVELS.slice(0,S.level).forEach(l=>l.prog.forEach(p=>{const k=p.join(' ');if(!seen.has(k)){seen.add(k);out.push(p);}}));if(out.length<4)PROGS.forEach(p=>{const k=p.join(' ');if(!seen.has(k)){seen.add(k);out.push(p);}});return out;}
@@ -2640,7 +2648,7 @@ V.treinar=function(){
       const sugg=pairSuggest();if(sugg.length)h+='<p class="grp">Par sugerido</p><div class="chips">'+sugg.map(p=>'<button class="chip" data-act="t-pair" data-a="'+esc(p[0])+'" data-b="'+esc(p[1])+'" aria-pressed="'+(pairKey(p[0],p[1])===k)+'">'+esc(p[0])+' e '+esc(p[1])+' · '+p[2]+'</button>').join('')+'</div><p class="sub small" style="margin-top:6px">Pares do seu nível ainda não medidos, ou com o menor recorde.</p>';
       h+=mentalPanel([T.a,T.b]);
       h+='<p class="grp">Como contar</p><div class="chips"><button class="chip" data-act="t-mode" data-v="tap" aria-pressed="'+!mic+'">Tocando na tela</button><button class="chip" data-act="t-mode" data-v="mic" aria-pressed="'+mic+'">Pelo microfone</button></div><p class="sub small" style="margin-top:8px">'+(mic?'O app ouve o violão e conta cada vez que o som muda de um acorde para o outro. Funciona melhor em lugar silencioso, tocando o acorde inteiro. Se ele errar, corrija na hora com os botões −1 e +1.':'Toque no botão grande a cada troca em que o acorde novo soar limpo.')+'</p>';
-      h+='<p class="sub small" style="margin:12px 0 16px">'+(best?'Seu recorde neste par: '+best+' trocas.':'Você ainda não mediu este par.')+'</p><button class="btn block" data-act="t-start"'+(T.a===T.b?' disabled':'')+'>Começar contagem</button><p class="muted small" style="margin-top:12px">Para treinar a troca sem saber o próximo acorde: <button class="link" style="padding:0;min-height:0" data-act="gr-rand">Trocas surpresa no Tocar junto</button>, acordes sorteados a cada volta.</p></section>';
+      h+='<p class="sub small" style="margin:12px 0 16px">'+(best?'Seu recorde neste par: '+best+' trocas.':'Você ainda não mediu este par.')+' Meta de hoje: '+tGoal(k)+' trocas. <small>Uma meta específica e um pouco acima do atual rende mais do que “faça o seu melhor” (Locke e Latham, 2002).</small></p><button class="btn block" data-act="t-start"'+(T.a===T.b?' disabled':'')+'>Começar contagem</button><p class="muted small" style="margin-top:12px">Para treinar a troca sem saber o próximo acorde: <button class="link" style="padding:0;min-height:0" data-act="gr-rand">Trocas surpresa no Tocar junto</button>, acordes sorteados a cada volta.</p></section>';
       const ks=Object.keys(S.changes).filter(x=>S.changes[x].length);
       if(ks.length){h+='<section class="panel"><h2>Seus pares</h2><ul class="hist" style="margin-top:8px">'+ks.sort((x,y)=>bestOf(y)-bestOf(x)).map(x=>{const a=S.changes[x];return '<li><div><b>'+esc(x.replace('|',' e '))+'</b><div class="muted small">Recorde '+bestOf(x)+', última '+a[a.length-1].n+'</div></div>'+spark(a)+'</li>';}).join('')+'</ul><p class="muted small" style="margin-top:8px">Referência: 30 trocas por minuto já dá para acompanhar a maioria das músicas. 60 é fluência.</p></section>';}
     }else if(T.phase==='count'){
@@ -2657,7 +2665,7 @@ V.treinar=function(){
       }
     }else{
       const rec=T.count>T.prevBest;
-      h+='<section class="panel" style="text-align:center"><p class="sub">'+esc(T.a)+' e '+esc(T.b)+'</p><div class="big num">'+T.count+'</div><p><b>'+(T.count===1?'troca':'trocas')+' em 1 minuto</b></p>'+(T.viaMic?'<p class="sub small">Contadas pelo microfone.</p>':'')+'<p class="sub">'+(T.prevBest===0?'Primeira medição deste par. Agora você tem uma marca para bater.':rec?'Novo recorde. O anterior era '+T.prevBest+'.':'Seu recorde é '+T.prevBest+'. Dias mais lentos fazem parte.')+'</p><div class="stack" style="margin-top:18px"><button class="btn block" data-act="t-start">Tentar de novo</button><button class="btn block line" data-act="t-reset">Escolher outro par</button></div></section>';
+      h+='<section class="panel" style="text-align:center"><p class="sub">'+esc(T.a)+' e '+esc(T.b)+'</p><div class="big num">'+T.count+'</div><p><b>'+(T.count===1?'troca':'trocas')+' em 1 minuto</b></p>'+(T.viaMic?'<p class="sub small">Contadas pelo microfone.</p>':'')+'<p class="sub">'+(T.prevBest===0?'Primeira medição deste par. Agora você tem uma marca para bater.':rec?'Novo recorde. O anterior era '+T.prevBest+'.':'Seu recorde é '+T.prevBest+'. Dias mais lentos fazem parte.')+'</p><p class="sub"><b>'+(T.hit?'Meta de hoje batida: '+T.goal+' trocas. Da próxima vez ela sobe.':'Meta de hoje: '+T.goal+' trocas. Ficou para a próxima; a meta continua a mesma.')+'</b></p><div class="stack" style="margin-top:18px"><button class="btn block" data-act="t-start">Tentar de novo</button><button class="btn block line" data-act="t-reset">Escolher outro par</button></div></section>';
     }
   }else if(sub.treinar==='batidas'){h+=blockBar();
     if(!BAT.prog){const L=LEVELS[S.level-1];BAT.prog=L.prog[0];if(!BAT.touched){BAT.pid=L.rhythm;BAT.bpm=L.bpm;}}const P=PAT[BAT.pid],on=GR.on&&GR.cfg===BAT;
@@ -2712,7 +2720,7 @@ V.treinar=function(){
       else h+='<p class="muted small" style="margin-top:10px">As notas ficam escondidas até você responder.</p>';
       h+='<p class="muted small" style="margin-top:14px">Nesta sessão: '+E.ok+' de '+E.total+'. No total: '+S.ear.ok+' de '+S.ear.total+'.</p></section>';return h;}
     const EAR={mm:['O acorde é maior ou menor?','Maior costuma soar aberto e alegre. Menor, fechado e triste.','Ouvir o acorde'],qual:['Qual acorde você ouviu?','As opções vêm dos acordes do seu nível.','Ouvir o acorde'],ivl:['Qual é a distância entre as duas notas?','Duas notas, uma depois da outra. Cante a primeira e suba até a segunda: a distância é o intervalo. As escalas em Acordes, Teoria mostram cada um.','Ouvir as duas notas'],prog:['Qual progressão você ouviu?','Quatro acordes em sequência, das progressões do seu nível. Ouça o baixo de cada acorde: ele conta a história.','Ouvir a progressão'],bat:['Qual batida você ouviu?','Dois compassos de uma batida da biblioteca, num acorde só, com o clique nos tempos. Repare onde a mão sobe (↑), onde ela abafa (x) e onde passa sem tocar (·).','Ouvir a batida']}[sub.ouvido]||['','',''];
-    h+='<section class="panel"><h2>'+EAR[0]+'</h2><p class="sub">'+EAR[1]+'</p>'+((sub.ouvido==='ivl'||sub.ouvido==='qual'||sub.ouvido==='bat')?'<p class="muted small" style="margin-top:6px">Nível do ouvido: '+(S.earLvl[sub.ouvido]||1)+' de 3'+((S.earLvl[sub.ouvido]||1)<3?'. Sobe com dez respostas e 80% de acerto; nesta rodada, '+((S.earRun[sub.ouvido]||{ok:0}).ok)+' de '+((S.earRun[sub.ouvido]||{total:0}).total)+'.':'.')+'</p>':'')+'<button class="btn block quiet" style="margin:16px 0" data-act="ear-play">'+EAR[2]+'</button><div class="opts'+(sub.ouvido==='prog'||sub.ouvido==='bat'?' one':'')+'">'+E.q.opts.map(o=>{let c='opt';if(E.ans){if(o===E.q.ans)c+=' right';else if(o===E.ans)c+=' wrong';}return '<button class="'+c+'" data-act="ear-ans" data-v="'+esc(o)+'">'+esc(E.q.bat?patLabel(o):o)+'</button>';}).join('')+'</div>';
+    h+='<section class="panel"><h2>'+EAR[0]+'</h2><p class="sub">'+EAR[1]+'</p>'+((sub.ouvido==='ivl'||sub.ouvido==='qual'||sub.ouvido==='bat')?'<p class="muted small" style="margin-top:6px">Nível do ouvido: '+(S.earLvl[sub.ouvido]||1)+' de 3'+((S.earLvl[sub.ouvido]||1)<3?'. Sobe com dez respostas e 80% de acerto, e desce abaixo de 50%; nesta rodada, '+((S.earRun[sub.ouvido]||{ok:0}).ok)+' de '+((S.earRun[sub.ouvido]||{total:0}).total)+'.':'.')+'</p>':'')+'<button class="btn block quiet" style="margin:16px 0" data-act="ear-play">'+EAR[2]+'</button><div class="opts'+(sub.ouvido==='prog'||sub.ouvido==='bat'?' one':'')+'">'+E.q.opts.map(o=>{let c='opt';if(E.ans){if(o===E.q.ans)c+=' right';else if(o===E.ans)c+=' wrong';}return '<button class="'+c+'" data-act="ear-ans" data-v="'+esc(o)+'">'+esc(E.q.bat?patLabel(o):o)+'</button>';}).join('')+'</div>';
     if(E.ans)h+='<p style="margin:14px 0"><b>'+(E.ans===E.q.ans?'Certo.':'Era '+esc(E.q.bat?patLabel(E.q.ans):E.q.ans)+'.')+'</b></p><button class="btn block" data-act="ear-next">Próximo</button>';
     h+='<p class="muted small" style="margin-top:14px">Nesta sessão: '+E.ok+' de '+E.total+'. No total: '+S.ear.ok+' de '+S.ear.total+'.</p></section>';
   }
@@ -2922,6 +2930,7 @@ if(PWA.host){
 const TABS=[['hoje','Hoje','<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.8 2.8L16 9.5"/>'],['meu','Meu treino','<path d="M4 6h8M16 6h4M4 12h2M10 12h10M4 18h10M18 18h2"/><circle cx="14" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="18" r="2"/>'],['treinar','Treinar','<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/>'],['ferramentas','Ferramentas','<path d="M9 3h6l4 18H5L9 3zM12 17l4-11M7.2 13h9.6"/>'],['acordes','Acordes','<path d="M5 4v16M12 4v16M19 4v16M5 4h14M5 10h14M5 16h14"/><circle cx="12" cy="7" r="1.7" fill="currentColor"/>'],['evolucao','Evolução','<path d="M5 20V11M12 20V4M19 20v-6M2 20h20"/>'],['perfil','Perfil','<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>']];
 /* ---------- novidades de cada versão, mostradas uma vez ---------- */
 const NEWS=[
+ ['1.57.0',['Conferir pelo som: antes de ver o resultado, você diz como soou (limpo, corda abafada, nota errada); depois o app mostra o que ouviu e se o diagnóstico bateu.','Três dias diferentes com o acorde limpo no microfone marcam o acorde como dominado.','Trocas: “Meta de hoje” (recorde + 2, ou 10 na primeira vez), em Treinar e no bloco de Hoje, com o resultado no fim da contagem.','Ouvido: com dez respostas abaixo de 50%, o nível desce um, para o acerto ficar perto de 80%.']],
  ['1.56.0',['Perfil, Lembrete: plano “depois de X, em Y, eu treino”; ele aparece em Hoje e no texto do lembrete.','Treino dividido em dois momentos: Hoje mostra Parte 1 e Parte 2, com um segundo horário de aviso no app.','Treino da noite: um lembrete de que dormir bem fixa o que foi praticado; em Evolução, “Quando você treina” mostra manhã, tarde e noite.']],
  ['1.55.0',['Cifra: “Memorizar” esconde 25, 50, 75 ou 100% dos acordes como “?”; toque revela. Lembrar antes de ver fixa mais do que reler.','Acorde novo no bloco de trocas: o desenho fica escondido até você tentar montar pelo nome em Descobrir (ou pedir para ver); a tentativa entra na revisão espaçada.','Músicas dominadas voltam em intervalos crescentes (3, 7, 14 e 30 dias) como “Repertório: revisão”, com “Lembrei” e “Não lembrei”.','A revisão diária também pergunta as batidas do roteiro.']],
  ['1.54.0',['Treino intercalado: do nível 3 em diante, o dia vira rodadas curtas alternando as habilidades (rende menos na hora e mais na retenção). Dá para escolher “Blocos” ou “Intercalada” em Hoje.','Mãos: “Toca 10 s, descansa 10 s”, o exemplo silencia nas pausas, que também consolidam o gesto.','Tocar junto: “Andamento variável”, cada volta sorteia um BPM até 10% acima ou abaixo.','Trocas: “Ensaiar de cabeça (30 s)”, as duas formas aparecem, somem e você imagina a troca antes de tocar.']],
@@ -3171,7 +3180,9 @@ const ACT={
   lefty:el=>{S.lefty=el.dataset.v==='1';save();render();},
   guitar:el=>{S.guitar=GUITARS[el.dataset.v]?el.dataset.v:'nylon';save();if(AC)guitarChain();loadSamples(S.guitar);render();},
   'chk-open':el=>{CHK.c=el.dataset.c;chkReset();sub.acordes='acordes';if(view!=='acordes')go('acordes');else{render();window.scrollTo(0,0);}if(!(MIC&&MIC.mode==='check'))micStart('check');},
-  'chk-close':()=>{if(MIC&&MIC.mode==='check')micStop();CHK.c=null;render();},
+  'chk-est':el=>{if(CHK.est!=='ask'||!CHK.pending)return;const res=CHK.pending,my=el.dataset.v,app=res.ok?'limpo':/casa (acima|abaixo)|em vez de/.test(res.msg||'')?'errada':'abafada';CHK.est='done';CHK.asked++;if(my===app)CHK.agree++;const bad=Array.from(res.bad||[]);for(let i=0;i<6;i++){const e=$('#chk-s'+i);if(e)e.style.display=bad.includes(i)?'':'none';}const m=$('#chk-msg');if(m)m.textContent=(res.ok?'O app ouviu limpo. ':'O app ouviu: '+res.msg+' ')+(my===app?'Seu ouvido acertou o diagnóstico.':'Diferente do que você achou: vale ouvir de novo com atenção.')+' ('+CHK.agree+' de '+CHK.asked+' batendo nesta sessão.)';const box=$('#chk-est');if(box)box.style.display='none';if(res.ok){CHK.ok++;buzz(12);chkClean(CHK.c);}},
+'chk-est-toggle':()=>{S.chkEst=!S.chkEst;CHK.est='';CHK.pending=null;save();render();},
+'chk-close':()=>{if(MIC&&MIC.mode==='check')micStop();CHK.c=null;render();},
   'chk-mic':()=>{if(MIC&&MIC.mode==='check'){micStop();render();}else{if(MIC)micStop();chkReset();micStart('check');}},
   theme:el=>{S.theme=el.dataset.v||'';save();applyLook();render();},
   'news-seen':()=>{S.seenVer=VER;save();render();},
