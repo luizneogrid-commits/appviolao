@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Violão Diário</title>
-<meta name="app-version" content="1.50.0">
+<meta name="app-version" content="1.51.0">
 <meta name="description" content="Treino diário de violão: plano por nível, metrônomo, afinador, batidas para tocar junto, acordes e notas.">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#F2EEF0" media="(prefers-color-scheme: light)">
@@ -1200,7 +1200,7 @@ function grStart(cfg,onBar){
 }
 function grStop(quiet){
   if(!GR.on)return;const mine=CS&&GR.cfg===CS.cfg;if(mine)csAccrue(Date.now()); // parou um treino montado: grava o tempo tocado
-  GR.on=false;clearInterval(GR.timer);if(AC)dampAll(AC.currentTime+.05);if(mine)csFlush();recordPlay(GR.cfg,(Date.now()-GR.t0)/1000);if(!quiet)render();
+  GR.on=false;clearInterval(GR.timer);if(AC)dampAll(AC.currentTime+.05);if(mine)csFlush();if(!GR.cfg.noRec)recordPlay(GR.cfg,(Date.now()-GR.t0)/1000);if(!quiet)render();
 }
 function grSched(){
   if(!GR.on||!AC)return;
@@ -1893,7 +1893,7 @@ const sgValid=notes=>[0,1,2,3,4,5,6,7,8,9].filter(p=>scaleBox(notes,p).ok);
 function sgPos(notes){const v=sgValid(notes),rf6=(notes[0].pc-4+12)%12;if(TH.pos!=null&&v.includes(TH.pos))return TH.pos;return v.includes(rf6)?rf6:v[0];} // padrão: tônica na 6ª corda
 const SG={on:false,seq:[],i:0,next:0,timer:null,bpm:60,run:0,kind:'scale'}
 /* ---------- mão esquerda: mobilidade e trocas mais fáceis ---------- */
-const MAO={id:'aranha'};
+const MAO={id:'aranha',hand:'L'};
 const MAO_EX=[
  {id:'aranha',name:'Aranha (cromático)',why:'Cada dedo aprende a cair na própria casa sem olhar. É a base da agilidade da mão esquerda.',how:'Casas 1 a 4, um dedo por casa (1-2-3-4), corda por corda, da 6ª à 1ª e de volta. Dedos curvados e perto das cordas: o que sobe pouco desce rápido.',f0:1,f1:4,fg:f=>f,seq:()=>{const o=[];for(let si=0;si<6;si++)for(let f=1;f<=4;f++)o.push({si,f,fg:f});return o;}},
  {id:'indep',name:'Independência: 1-3-2-4',why:'Separa os dedos que gostam de andar juntos (2 e 3, 3 e 4). Numa troca de acorde, cada dedo vai para um lugar diferente ao mesmo tempo.',how:'Na mesma corda, dedos na ordem 1, 3, 2, 4 (casas 1, 3, 2, 4), corda por corda. Limpeza primeiro, velocidade depois.',f0:1,f1:4,fg:f=>f,seq:()=>{const o=[];for(let si=0;si<6;si++)[1,3,2,4].forEach(f=>o.push({si,f,fg:f}));return o;}},
@@ -1910,9 +1910,37 @@ function pivotPairs(){ // pares de acordes até o nível da pessoa em que algum 
   for(let i=0;i<names.length;i++)for(let j=i+1;j<names.length;j++){const A=shape(names[i]),B=shape(names[j]);const anc=[];for(let s=0;s<6;s++)if(A.f[s]>0&&A.f[s]===B.f[s]&&A.d[s]&&A.d[s]===B.d[s]&&!anc.includes(A.d[s]))anc.push(A.d[s]);if(anc.length)out.push({a:names[i],b:names[j],anc});}
   return out.sort((x,y)=>y.anc.length-x.anc.length).slice(0,12);
 }
+/* ---------- mão direita: dedilhado, pinça e baixo alternado, tocados pelo motor do tocar junto (células P, b, I, M, A, C) ---------- */
+const MD={id:'polegar',cfg:null,chord:null,bpm:null};
+const MD_EX=[
+ {id:'polegar',name:'Polegar firme (P)',why:'O polegar é o baixo de tudo: sem ele firme e regular, o dedilhado perde o pulso.',how:'Só o polegar, na corda mais grave do acorde, um toque por tempo. Polegar à frente dos outros dedos, tocando para baixo, sem apoiar a mão no tampo.',look:'Som cheio e igual em todos os tempos; o pulso não acelera.',cells:['P','','P','','P','','P',''],chord:'Em',bpm:60},
+ {id:'alternado',name:'Baixo alternado (P e b)',why:'O baixo que alterna entre duas cordas graves é a base do sertanejo, do country e da moda de viola.',how:'Polegar na corda mais grave do acorde no tempo 1, na corda grave seguinte no tempo 2, e assim por diante.',look:'O polegar acha a corda certa sem olhar, pelo toque.',cells:['P','','b','','P','','b',''],chord:'C',bpm:66},
+ {id:'im',name:'Indicador e médio alternando (I, M)',why:'Alternar i e m é o andar da mão direita: é assim que se toca melodia e escala sem cansar.',how:'Indicador na 3ª corda, médio na 2ª, alternando sem parar. Dedos curvados; o movimento vem da base do dedo, não da ponta.',look:'Volume igual entre i e m; a mão não pula.',cells:['I','M','I','M','I','M','I','M'],chord:'Em',bpm:66},
+ {id:'pima',name:'Arpejo P-I-M-A',why:'É o arpejo mais comum: o baixo e as três cordas agudas, subindo.',how:'Polegar no baixo, depois indicador (3ª corda), médio (2ª) e anelar (1ª). Cada dedo numa corda só: a mão fica parada e os dedos trabalham.',look:'As quatro notas com o mesmo volume, sem a 1ª corda gritar.',cells:['P','I','M','A','P','I','M','A'],chord:'Em',bpm:60},
+ {id:'pami',name:'Arpejo P-A-M-I',why:'O arpejo descendo: o anelar entra logo depois do baixo, o que obriga a mão a acertar a corda mais aguda de cara.',how:'Polegar no baixo, depois anelar (1ª corda), médio (2ª) e indicador (3ª).',look:'O anelar, o dedo mais fraco, soa tão forte quanto os outros.',cells:['P','A','M','I','P','A','M','I'],chord:'Am',bpm:60},
+ {id:'valsa',name:'Valsa: P-I-M-I (3 tempos)',why:'Compasso de três tempos: o baixo no 1 e os dedos preenchendo o resto. Serve para valsa, guarânia e muita canção de roda.',how:'Polegar no tempo 1; nos tempos 2 e 3, indicador e médio alternando (3ª e 2ª cordas).',look:'O tempo 1 pesa mais; o 2 e o 3 são leves.',cells:['P','I','M','I','M','I'],chord:'G',bpm:66},
+ {id:'pinca',name:'Pinça com baixo (P e C)',why:'A pinça (indicador, médio e anelar juntos) é a batida da bossa nova e do samba-canção: baixo e acorde se revezam.',how:'Polegar no baixo no tempo 1; no tempo 2, i, m e a beliscam as três cordas agudas juntos. Depois repete.',look:'As três cordas da pinça soam ao mesmo tempo, num só ataque.',cells:['P','','C','','P','','C',''],chord:'Am',bpm:66},
+ {id:'bossa',name:'Base de bossa (P, b e C)',why:'A célula clássica: baixo alternado com a pinça em síncope. É o passo seguinte da pinça simples.',how:'O polegar alterna os baixos nos tempos 1 e 3; a pinça entra no tempo 2, no “e” do 3 e no “e” do 4.',look:'O baixo é regular como um relógio; quem sincopa é a pinça.',cells:['P','','C','','b','C','','C'],chord:'Am',bpm:72}
+];
+MD_EX.forEach(e=>{PAT['md-'+e.id]={id:'md-'+e.id,name:e.name,cells:e.cells,bpm:e.bpm,arp:true,tip:e.how};}); /* entram no PAT (não na lista de batidas) para o motor do tocar junto */
+function mdView(){
+  const ex=MD_EX.find(x=>x.id===MD.id)||MD_EX[0],P=PAT['md-'+ex.id],on=!!(GR.on&&MD.cfg&&GR.cfg===MD.cfg),chord=MD.chord&&CH[MD.chord]?MD.chord:ex.chord,bpm=MD.cfg&&MD.cfg.pid===P.id?MD.cfg.bpm:(MD.bpm||ex.bpm);
+  const pool=[...new Set([ex.chord].concat(earPool()))].filter(n=>CH[n]).slice(0,6);
+  let h='<div class="chips" style="margin-bottom:14px">'+MD_EX.map(x=>'<button class="chip" data-act="md-pick" data-v="'+x.id+'" aria-pressed="'+(x.id===ex.id)+'">'+esc(x.name.split(':')[0].split(' (')[0])+'</button>').join('')+'</div>';
+  h+='<section class="panel"><h2>'+esc(ex.name)+'</h2><p class="sub">'+esc(ex.how)+'</p><details class="why extra"><summary>Por que este exercício?</summary><p>'+esc(ex.why)+'</p></details>';
+  h+='<div style="margin-top:14px">'+rhythmHTML(P,'gr-grid')+'</div><p class="muted small" style="margin-top:8px">P polegar na corda mais grave do acorde, b o baixo alternado (a corda grave seguinte), I indicador na 3ª corda, M médio na 2ª, A anelar na 1ª, C pinça (I, M e A juntos). Casa vazia: ninguém toca.</p>';
+  h+='<p class="grp">Acorde</p><div class="chips">'+pool.map(c=>'<button class="chip" data-act="md-chord" data-v="'+esc(c)+'" aria-pressed="'+(c===chord)+'">'+esc(c)+'</button>').join('')+'</div><div class="pair" style="margin-top:10px"><div class="chord"><strong>'+esc(chord)+'</strong>'+chordSVG(chord)+'</div></div>';
+  h+='<div class="bpmrow" style="margin-top:12px"><button data-act="md-bpm" data-d="-4" aria-label="Mais devagar">−</button><div style="text-align:center"><span class="num" id="gr-bpm">'+bpm+'</span> <span class="muted small">BPM</span></div><button data-act="md-bpm" data-d="4" aria-label="Mais rápido">+</button></div>';
+  h+='<p class="sub small" id="gr-status" style="margin:10px 0;min-height:1.4em" aria-live="polite">'+(on?'Tocando.':'Começa com um compasso de contagem. A célula da vez acende; entre quando se sentir pronto.')+'</p><button class="btn block" data-act="md-toggle">'+(on?'Parar':'Ouvir e tocar junto')+'</button>';
+  h+='<p class="muted small" style="margin-top:12px"><b>O que olhar:</b> '+esc(ex.look)+'</p>';
+  h+='<p class="muted small" style="margin-top:14px">Mão direita solta, pulso levemente arqueado, unhas curtas ou aparadas por igual. Dois ou três minutos por exercício; a velocidade vem depois da limpeza.</p></section>';
+  return h;
+}
 function maoView(){
+  const hands='<div class="chips" style="margin-bottom:12px"><button class="chip" data-act="mao-hand" data-v="L" aria-pressed="'+(MAO.hand!=='R')+'">Mão esquerda</button><button class="chip" data-act="mao-hand" data-v="R" aria-pressed="'+(MAO.hand==='R')+'">Mão direita</button></div>';
+  if(MAO.hand==='R')return hands+mdView();
   const ex=MAO_EX.find(x=>x.id===MAO.id)||MAO_EX[0],on=SG.on&&SG.kind==='mao';
-  let h='<div class="chips" style="margin-bottom:14px">'+MAO_EX.map(x=>'<button class="chip" data-act="mao-pick" data-v="'+x.id+'" aria-pressed="'+(x.id===ex.id)+'">'+esc(x.name.split(':')[0].split(' (')[0])+'</button>').join('')+'</div>';
+  let h=hands+'<div class="chips" style="margin-bottom:14px">'+MAO_EX.map(x=>'<button class="chip" data-act="mao-pick" data-v="'+x.id+'" aria-pressed="'+(x.id===ex.id)+'">'+esc(x.name.split(':')[0].split(' (')[0])+'</button>').join('')+'</div>';
   h+='<section class="panel"><h2>'+esc(ex.name)+'</h2><p class="sub">'+esc(ex.how)+'</p><details class="why extra"><summary>Por que este exercício?</summary><p>'+esc(ex.why)+'</p></details>';
   if(ex.seq){h+='<div class="sfb" style="max-width:'+(36+40*(ex.f1-ex.f0+1))+'px;margin-top:12px">'+fretGridSVG(ex.f0,ex.f1,ex.fg,ex.name)+'</div>';
     h+='<div class="bpmrow" style="margin-top:12px"><button data-act="sg-bpm" data-d="-4" aria-label="Mais devagar">−</button><div style="text-align:center"><span class="num" id="sg-bpm">'+SG.bpm+'</span> <span class="muted small">BPM</span></div><button data-act="sg-bpm" data-d="4" aria-label="Mais rápido">+</button></div>';
@@ -2389,7 +2417,7 @@ V.hoje=function(){
     h+='<li class="blk'+(done?' done':'')+(act?' active':'')+'"><div><div class="between"><h3>'+b.title+'</h3><span class="mins">'+(done?'Feito':b.min+' min')+'</span></div><p>'+esc(b.text)+'</p>';
     if(!done&&(b.why||WHY[b.id]))h+='<details class="why extra"><summary>Por que este exercício?</summary><p>'+esc(b.why||WHY[b.id])+'</p></details>';
     if(!done&&!act&&b.id==='tech'&&!b.why)h+='<button class="link" style="padding:0;min-height:0" data-act="blk-alt">Outro exercício</button>'; // troca a técnica de hoje por outra da mesma semana (não na manutenção)
-    if(b.id==='warm'&&!done)h+='<div class="extra"><div class="sfb" style="max-width:200px">'+warmSVG()+'</div><div class="acts" style="margin-top:6px"><button class="btn sm quiet" data-act="warm-toggle">'+(SG.on&&SG.kind==='warm'?'Parar':'Tocar junto: um dedo por casa')+'</button><span class="muted small" id="sg-status">'+(SG.on&&SG.kind==='warm'?'Tocando.':SG.bpm+' BPM, casas 1 a 4, da 6ª à 1ª corda e de volta.')+'</span></div><button class="link" data-act="open-mao">Mais exercícios para a mão esquerda</button></div>';
+    if(b.id==='warm'&&!done)h+='<div class="extra"><div class="sfb" style="max-width:200px">'+warmSVG()+'</div><div class="acts" style="margin-top:6px"><button class="btn sm quiet" data-act="warm-toggle">'+(SG.on&&SG.kind==='warm'?'Parar':'Tocar junto: um dedo por casa')+'</button><span class="muted small" id="sg-status">'+(SG.on&&SG.kind==='warm'?'Tocando.':SG.bpm+' BPM, casas 1 a 4, da 6ª à 1ª corda e de volta.')+'</span></div><button class="link" data-act="open-mao">Mais exercícios para a mão esquerda</button><button class="link" data-act="open-md">Mão direita: dedilhado e pinça</button></div>';
     if(b.rhythm){const pr=b.prog||LEVELS[S.level-1].prog[0]||[];h+='<div class="extra">'+rhythmHTML(b.rhythm)+(pr.length?'<p class="muted small" style="margin-top:10px">Acordes para tocar esta batida (os mesmos do tocar junto):</p><div class="cmini" style="margin-top:8px">'+pr.map(c=>'<div class="chord"><strong>'+esc(c)+'</strong>'+chordSVG(c)+'</div>').join('')+'</div>':'')+'</div>';}
     else if(b.prog)h+='<div class="extra"><div class="cmini" style="margin-top:4px">'+b.prog.map(c=>'<div class="chord"><strong>'+esc(c)+'</strong>'+chordSVG(c)+'</div>').join('')+'</div></div>';
     if(b.pair)h+='<div class="extra pair">'+b.pair.map(c=>'<div class="chord"><strong>'+esc(c)+'</strong>'+chordSVG(c)+'</div>').join('')+'</div>';
@@ -2525,7 +2553,7 @@ V.meu=function(){
 };
 
 V.treinar=function(){
-  let h=topBar('<h1>Treinar</h1><p class="sub">Exercícios que mostram sua evolução em números.</p>')+seg('treinar',[['trocas','Trocas'],['batidas','Batidas'],['tempo','Tempo'],['ouvido','Ouvido'],['mao','Mão esquerda']]);
+  let h=topBar('<h1>Treinar</h1><p class="sub">Exercícios que mostram sua evolução em números.</p>')+seg('treinar',[['trocas','Trocas'],['batidas','Batidas'],['tempo','Tempo'],['ouvido','Ouvido'],['mao','Mãos']]);
   if(sub.treinar==='trocas'){h+=blockBar();
     const k=pairKey(T.a,T.b),best=bestOf(k);
     if(T.phase==='idle'){
@@ -2557,7 +2585,7 @@ V.treinar=function(){
   }else if(sub.treinar==='batidas'){h+=blockBar();
     if(!BAT.prog){const L=LEVELS[S.level-1];BAT.prog=L.prog[0];if(!BAT.touched){BAT.pid=L.rhythm;BAT.bpm=L.bpm;}}const P=PAT[BAT.pid],on=GR.on&&GR.cfg===BAT;
     h+='<div class="chips" style="margin-bottom:14px">'+PATTERNS.map(p=>'<button class="chip" data-act="gr-pat" data-v="'+p.id+'" aria-pressed="'+(p.id===BAT.pid)+'">'+esc(p.name)+'</button>').join('')+'</div>';
-    h+='<section class="panel"><h2>'+esc(P.name)+'</h2><p class="sub">'+esc(P.tip)+'</p><div style="margin-top:14px">'+rhythmHTML(P,'gr-grid')+'</div><p class="muted small" style="margin-top:10px">↓ para baixo, ↑ para cima, x abafada, B baixo com o polegar'+(P.arp?', P polegar, b baixo alternado, I indicador, M médio, A anelar':'')+(P.cells.includes('C')?', C os três dedos beliscando as cordas agudas juntos':'')+'. Casa vazia: a mão passa sem tocar.</p>';
+    h+='<section class="panel"><h2>'+esc(P.name)+'</h2><p class="sub">'+esc(P.tip)+'</p><div style="margin-top:14px">'+rhythmHTML(P,'gr-grid')+'</div><p class="muted small" style="margin-top:10px">↓ para baixo, ↑ para cima, x abafada, B baixo com o polegar'+(P.arp?', P polegar, b baixo alternado, I indicador, M médio, A anelar':'')+(P.cells.includes('C')?', C os três dedos beliscando as cordas agudas juntos':'')+'. Casa vazia: a mão passa sem tocar.</p><p class="muted small" style="margin-top:8px">Dedilhado, pinça e baixo alternado: <button class="link" style="padding:0;min-height:0" data-act="open-md">exercícios para a mão direita</button>.</p>';
     h+='<div class="progrow" id="gr-prog">'+progRowHTML(BAT.prog)+'</div>'; // nome e desenho: o acorde da vez fica marcado enquanto toca
     h+='<div class="bpmrow"><button data-act="gr-bpm" data-d="-4" aria-label="Mais devagar">−</button><div style="text-align:center"><span class="num" id="gr-bpm">'+BAT.bpm+'</span> <span class="muted small">BPM</span></div><button data-act="gr-bpm" data-d="4" aria-label="Mais rápido">+</button></div>';
     h+='<p class="sub small" id="gr-status" style="margin:14px 0 10px;min-height:1.4em" aria-live="polite">'+(on?'Contagem':'Começa com um compasso de contagem. Um acorde por compasso.')+'</p><button class="btn block" data-act="gr-toggle">'+(on?'Parar':'Ouvir e tocar junto')+'</button></section>';
@@ -2808,6 +2836,7 @@ if(PWA.host){
 const TABS=[['hoje','Hoje','<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.8 2.8L16 9.5"/>'],['meu','Meu treino','<path d="M4 6h8M16 6h4M4 12h2M10 12h10M4 18h10M18 18h2"/><circle cx="14" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="18" r="2"/>'],['treinar','Treinar','<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/>'],['ferramentas','Ferramentas','<path d="M9 3h6l4 18H5L9 3zM12 17l4-11M7.2 13h9.6"/>'],['acordes','Acordes','<path d="M5 4v16M12 4v16M19 4v16M5 4h14M5 10h14M5 16h14"/><circle cx="12" cy="7" r="1.7" fill="currentColor"/>'],['evolucao','Evolução','<path d="M5 20V11M12 20V4M19 20v-6M2 20h20"/>'],['perfil','Perfil','<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>']];
 /* ---------- novidades de cada versão, mostradas uma vez ---------- */
 const NEWS=[
+ ['1.51.0',['Treinar, Mãos: além da mão esquerda, oito exercícios para a mão direita (polegar, baixo alternado, i e m, arpejos P-I-M-A e P-A-M-I, valsa, pinça e base de bossa), com o tocar junto acendendo a célula da vez, o acorde à escolha e o BPM.']],
  ['1.50.0',['Cifra e palco: “Só a letra” esconde as linhas de acordes e os colchetes, para cantar na roda.','Linhas de tablatura (e|--3--) ficam inteiras, rolando de lado, e fora da lista de acordes.','Voltar onde parou: se o app fechar no meio de uma música e você voltar em até 30 minutos, ela reabre no mesmo lugar.','Perfil, Seus dados: o espaço usado, se ele é persistente, e “Apagar as antigas” para as gravações, mantendo as dez últimas.']],
  ['1.49.0',['Tocar junto: “Surpresa”, acordes sorteados entre os do seu nível e das suas músicas, trocados a cada volta, com o próximo anunciado no último compasso. Atalho em Treinar, Trocas.','Trocas: “Par sugerido”, os pares do seu nível ainda não medidos ou com o menor recorde, prontos com um toque.','Ouvido: “Batida”, o app toca dois compassos de uma batida e você diz qual foi; sobe de nível com dez respostas e 80% de acerto.']],
  ['1.48.0',['Acordes, Teoria: “Campo harmônico”, os sete acordes de cada tom (maior ou menor) com grau, função e desenho; a cadência para ouvir; progressões comuns com “Tocar junto”; e “Monte a sua progressão”, para ouvir, tocar junto ou salvar como treino.','Na cifra, a linha do tom provável ganhou “Ver o campo harmônico” e aponta os acordes fora do tom (empréstimos).']],
@@ -3015,7 +3044,13 @@ const ACT={
   'sg-bpm':el=>{SG.bpm=Math.max(40,Math.min(160,SG.bpm+(+el.dataset.d)));const n=$('#sg-bpm');if(n)n.textContent=SG.bpm;},
   'sg-toggle':()=>{if(SG.on){sgStop();return;}const sc=SCALES.find(s=>s.id===TH.sc)||SCALES[0],notes=scaleNotes(rootName(TH.sr,sc),sc),box=scaleBox(notes,sgPos(notes));if(box.seq.length)sgStart(box.seq,'scale');},
   'warm-toggle':()=>{if(SG.on){sgStop();return;}sgStart(warmSeq(),'warm');},
-  'mao-pick':el=>{if(SG.on&&SG.kind==='mao')sgStop(true);MAO.id=el.dataset.v;render();},
+  'mao-hand':el=>{if(SG.on&&SG.kind==='mao')sgStop(true);if(GR.on&&MD.cfg&&GR.cfg===MD.cfg)grStop(true);MAO.hand=el.dataset.v==='R'?'R':'L';render();},
+'md-pick':el=>{if(GR.on&&MD.cfg&&GR.cfg===MD.cfg)grStop(true);MD.id=el.dataset.v;MD.cfg=null;MD.bpm=null;render();},
+'md-chord':el=>{if(GR.on&&MD.cfg&&GR.cfg===MD.cfg)grStop(true);MD.chord=el.dataset.v;MD.cfg=null;render();},
+'md-bpm':el=>{const ex=MD_EX.find(x=>x.id===MD.id)||MD_EX[0];MD.bpm=Math.max(40,Math.min(160,(MD.cfg&&MD.cfg.pid==='md-'+ex.id?MD.cfg.bpm:(MD.bpm||ex.bpm))+(+el.dataset.d)));if(MD.cfg)MD.cfg.bpm=MD.bpm;const n=$('#gr-bpm');if(n)n.textContent=MD.bpm;},
+'md-toggle':()=>{if(GR.on&&MD.cfg&&GR.cfg===MD.cfg){grStop();return;}const ex=MD_EX.find(x=>x.id===MD.id)||MD_EX[0],chord=MD.chord&&CH[MD.chord]?MD.chord:ex.chord;MD.cfg={pid:'md-'+ex.id,bpm:MD.bpm||ex.bpm,prog:[chord],click:true,noRec:true};grStart(MD.cfg);},
+'open-md':()=>{MAO.hand='R';sub.treinar='mao';go('treinar');},
+'mao-pick':el=>{if(SG.on&&SG.kind==='mao')sgStop(true);MAO.id=el.dataset.v;render();},
   'mao-toggle':()=>{if(SG.on&&SG.kind==='mao'){sgStop();return;}const ex=MAO_EX.find(x=>x.id===MAO.id);if(!ex||!ex.seq)return;sgStart(ex.seq().map(n=>Object.assign(n,{midi:OPEN[n.si]+n.f,pt:NPT[(OPEN[n.si]+n.f)%12],deg:''})),'mao');},
   'open-mao':()=>{sub.treinar='mao';go('treinar');},
   'open-tempo':el=>{TM.mode='batida';TM.pid=el.dataset.p;TM.bpm=Math.max(50,Math.min(140,+el.dataset.bpm||TM.bpm));sub.treinar='tempo';go('treinar');},
