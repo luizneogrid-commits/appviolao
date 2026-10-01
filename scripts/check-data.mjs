@@ -22,7 +22,7 @@ function grab(name) {
   }
   return html.slice(start, i + 1);
 }
-const names = ['CHORDS', 'PATTERNS', 'LEVELS', 'ROAD', 'PROOF', 'SONGBOOK', 'SCALES'];
+const names = ['CHORDS', 'PATTERNS', 'LEVELS', 'ROAD', 'PROOF', 'SONGBOOK', 'SCALES', 'FS_DED', 'FS_SOLO'];
 const D = runInNewContext(names.map(grab).join('\n') + '\n({' + names.join(',') + '})', {});
 const CH = new Set(D.CHORDS.map(c => c.n)), PT = new Set(D.PATTERNS.map(p => p.id)), errors = [];
 const err = m => errors.push(m);
@@ -78,9 +78,39 @@ Object.entries(D.PROOF).forEach(([k, p]) => {
 });
 // músicas sugeridas: só acordes que o app tem
 D.SONGBOOK.forEach(s => s[2].forEach(c => { if (!CH.has(c)) err(`música "${s[0]}": acorde desconhecido ${c}`); }));
+// músicas de estudo (dedilhado e solos): acordes que o app toca (biblioteca ou forma móvel), padrão da mão direita e frases bem formados
+const MOVRE = /^[A-G][#b]?(m|7)?$/, SCID = new Set(D.SCALES.map(s => s.id)), FSIDS = new Set(), TOK = /^(\.|([eBGDAE]\d{1,2})(,[eBGDAE]\d{1,2})*)$/;
+D.FS_DED.concat(D.FS_SOLO).forEach(s => {
+  const tag = `música "${s.t}"`;
+  if (FSIDS.has(s.id)) err(`${tag}: id repetido`); FSIDS.add(s.id);
+  if (!s.t || !s.a || !s.key || !s.sobre || !s.lh || !s.lh.tip || !s.rh || !s.rh.tip) err(`${tag}: ficha incompleta`);
+  if (!(s.bpm >= 40 && s.bpm <= 160)) err(`${tag}: bpm ${s.bpm}`);
+  if (![1, 2, 3].includes(s.lvl)) err(`${tag}: nível ${s.lvl}`);
+  if (!Array.isArray(s.prog) || s.prog.length < 2 || s.prog.length > 16) err(`${tag}: base com ${s.prog && s.prog.length} acordes`);
+  (s.prog || []).forEach(c => { if (!CH.has(c) && !MOVRE.test(c)) err(`${tag}: acorde ${c} que o app não toca`); });
+  if (!Array.isArray(s.tech) || !s.tech.length) err(`${tag}: sem técnicas`);
+});
+D.FS_DED.forEach(s => {
+  const tag = `música "${s.t}"`, rh = s.rh;
+  if (!rh.name || ![2, 3].includes(rh.cpb) || !Array.isArray(rh.cells) || rh.cells.length % rh.cpb || rh.cells.length < 6 || rh.cells.length > 12) err(`${tag}: padrão da mão direita fora do formato`);
+  (rh.cells || []).forEach(fs => fs.forEach(x => { if (!['p', 'b', 'i', 'm', 'a', 'c'].includes(x)) err(`${tag}: dedo desconhecido "${x}"`); }));
+});
+D.FS_SOLO.forEach(s => {
+  const tag = `música "${s.t}"`;
+  if (!s.scale || !SCID.has(s.scale.sc) || !/^[A-G][#b]?$/.test(s.scale.root) || !(s.scale.pos >= 0 && s.scale.pos <= 12)) err(`${tag}: escala inválida`);
+  if (!PT.has(s.strum)) err(`${tag}: batida da base desconhecida ${s.strum}`);
+  if (!Array.isArray(s.phrases) || s.phrases.length !== 2) err(`${tag}: precisa de duas frases de estudo`);
+  (s.phrases || []).forEach(p => {
+    if (!p.name || !p.tip || ![2, 3].includes(p.cpb)) err(`${tag}: frase "${p.name}" fora do formato`);
+    String(p.notes).trim().split('|').map(b => b.trim().split(/\s+/).filter(Boolean)).forEach((b, i) => {
+      if (b.length % p.cpb) err(`${tag}, frase "${p.name}": compasso ${i + 1} com ${b.length} células (não divide por ${p.cpb})`);
+      b.forEach(tok => { if (!TOK.test(tok)) err(`${tag}, frase "${p.name}": célula "${tok}"`); (tok.match(/\d+/g) || []).forEach(x => { if (+x > 20) err(`${tag}: casa ${x} alta demais`); }); });
+    });
+  });
+});
 // escalas: graus crescentes dentro da oitava
 D.SCALES.forEach(s => { let last = -1; s.deg.forEach(([st, se]) => { if (se <= last || se >= 12) err(`escala ${s.id}: grau fora de ordem (${st}, ${se})`); last = se; }); });
 
-console.log(`acordes ${CH.size}, batidas ${PT.size}, níveis ${D.LEVELS.length}, semanas ${D.ROAD.reduce((a, l) => a + l.length, 0)}, músicas ${D.SONGBOOK.length}, escalas ${D.SCALES.length}`);
+console.log(`acordes ${CH.size}, batidas ${PT.size}, níveis ${D.LEVELS.length}, semanas ${D.ROAD.reduce((a, l) => a + l.length, 0)}, músicas ${D.SONGBOOK.length}, escalas ${D.SCALES.length}, músicas de estudo ${D.FS_DED.length + D.FS_SOLO.length}`);
 if (errors.length) { console.error('ERROS:\n' + errors.join('\n')); process.exit(1); }
 console.log('dados OK');
